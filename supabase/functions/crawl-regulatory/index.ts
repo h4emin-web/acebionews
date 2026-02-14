@@ -10,6 +10,10 @@ const REGULATORY_SOURCES = [
   { url: "https://nedrug.mfds.go.kr/pbp/CCBAC01", name: "의약품안전나라", source: "의약품안전나라", label: "의약품안전나라 (안전성 서한, 회수·폐기, 공문)" },
   { url: "https://www.fda.gov/drugs/drug-safety-and-availability", name: "FDA Safety", source: "FDA", label: "FDA Safety" },
   { url: "https://www.fda.gov/drugs/guidance-compliance-regulatory-information", name: "FDA Guidance", source: "FDA", label: "FDA Guidance" },
+  { url: "https://www.fda.gov/drugs/new-drugs-fda-cders-new-molecular-entities-and-new-therapeutic-biological-products/novel-drug-approvals-2025", name: "FDA NDA", source: "FDA-NDA", label: "FDA NDA Approvals" },
+  { url: "https://www.fda.gov/drugs/new-drugs-fda-cders-new-molecular-entities-and-new-therapeutic-biological-products/novel-drug-approvals-2026", name: "FDA NDA 2026", source: "FDA-NDA", label: "FDA NDA Approvals 2026" },
+  { url: "https://www.centerwatch.com/clinical-trials/listings/recent-approvals", name: "CenterWatch", source: "FDA-Clinical", label: "FDA Clinical Trial Approvals" },
+  { url: "https://www.fda.gov/drugs/development-approval-process-drugs", name: "FDA Development", source: "FDA-Clinical", label: "FDA Drug Development & Approval" },
 ];
 
 serve(async (req) => {
@@ -60,6 +64,8 @@ serve(async (req) => {
         const sourceTypeMap: Record<string, string> = {
           "의약품안전나라": "안전성 서한, 회수·폐기, 공문",
           FDA: "Safety, Guidance, Approval, Warning",
+          "FDA-NDA": "NDA Approval, NDA Submission, NDA Review",
+          "FDA-Clinical": "Phase 1, Phase 2, Phase 3, BLA, Clinical Hold, Clinical Approval",
         };
 
         const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

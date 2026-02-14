@@ -16,6 +16,13 @@ const NEWS_SOURCES = [
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN" },
   { url: "https://www.pharmaceutical-technology.com", name: "Pharma Technology", region: "해외", country: "EU" },
   { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP" },
+  { url: "https://www.pharmiweb.com/news", name: "PharmiWeb", region: "해외", country: "EU" },
+  { url: "https://www.expresspharma.in", name: "Express Pharma", region: "해외", country: "IN" },
+  { url: "https://www.pharmexec.com", name: "Pharma Executive", region: "해외", country: "US" },
+  { url: "https://www.chinadaily.com.cn/business/pharmaceuticals", name: "China Daily Pharma", region: "해외", country: "CN" },
+  { url: "https://www.yicai.com/news/pharma", name: "Yicai Pharma", region: "해외", country: "CN" },
+  { url: "https://www.biospectrumindia.com", name: "BioSpectrum India", region: "해외", country: "IN" },
+  { url: "https://www.thepharmaletter.com", name: "The Pharma Letter", region: "해외", country: "EU" },
 ];
 
 serve(async (req) => {

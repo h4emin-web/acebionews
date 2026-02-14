@@ -1,29 +1,31 @@
-import { ExternalLink, AlertTriangle, ChevronDown } from "lucide-react";
+import { ExternalLink, FlaskConical, ChevronDown } from "lucide-react";
 import { useRegulatoryNotices } from "@/hooks/useNewsData";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
 
-const typeColors: Record<string, string> = {
-  Safety: "bg-destructive/10 text-destructive",
-  Guidance: "region-badge-domestic",
-  Approval: "region-badge-mfds",
-  Warning: "region-badge-overseas",
+const phaseColors: Record<string, string> = {
+  "Phase 1": "bg-sky-500/10 text-sky-600",
+  "Phase 2": "bg-amber-500/10 text-amber-600",
+  "Phase 3": "bg-emerald-500/10 text-emerald-600",
+  "BLA": "bg-violet-500/10 text-violet-600",
+  "Clinical Approval": "bg-emerald-500/10 text-emerald-600",
+  "Clinical Hold": "bg-destructive/10 text-destructive",
 };
 
 type Props = {
   onKeywordClick: (kw: string) => void;
 };
 
-export const FdaSection = ({ onKeywordClick }: Props) => {
-  const { data: notices = [], isLoading } = useRegulatoryNotices("FDA");
+export const FdaClinicalSection = ({ onKeywordClick }: Props) => {
+  const { data: notices = [], isLoading } = useRegulatoryNotices("FDA-Clinical");
   const [open, setOpen] = useState(true);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
-        <AlertTriangle className="w-4 h-4 text-pharma-amber" />
-        <h2 className="text-sm font-semibold text-foreground">미국 FDA 주요사항</h2>
-        <span className="text-[10px] text-muted-foreground ml-auto font-mono mr-2">🇺🇸 FDA</span>
+        <FlaskConical className="w-4 h-4 text-violet-500" />
+        <h2 className="text-sm font-semibold text-foreground">FDA 임상시험 승인</h2>
+        <span className="text-[10px] text-muted-foreground ml-auto font-mono mr-2">🇺🇸 Clinical</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
       <CollapsibleContent>
@@ -31,14 +33,14 @@ export const FdaSection = ({ onKeywordClick }: Props) => {
           <div className="px-5 py-6 text-center text-xs text-muted-foreground">검색중...</div>
         ) : notices.length === 0 ? (
           <div className="px-5 py-6 text-center text-xs text-muted-foreground">
-            등록된 FDA 공지사항이 없습니다
+            등록된 임상시험 정보가 없습니다
           </div>
         ) : (
           <div className="divide-y divide-border">
             {notices.map((n) => (
               <div key={n.id} className="px-5 py-3 hover:bg-muted/50 transition-colors group">
                 <div className="flex items-start justify-between gap-3 mb-1">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${typeColors[n.type] || "bg-muted text-muted-foreground"}`}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${phaseColors[n.type] || "bg-muted text-muted-foreground"}`}>
                     {n.type}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
