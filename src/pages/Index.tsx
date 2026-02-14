@@ -1,25 +1,17 @@
 import { useState, useMemo } from "react";
 import { Pill, Clock } from "lucide-react";
-import { mockNews, mockMfdsNotices, allApiKeywords, categories, countryFlags, countryNames } from "@/data/mockNews";
+import { mockNews, mockMfdsNotices, allApiKeywords, countryFlags, countryNames } from "@/data/mockNews";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
-import { CategoryFilter } from "@/components/CategoryFilter";
 import { TrendingKeywords } from "@/components/TrendingKeywords";
 import { MfdsSection } from "@/components/MfdsSection";
+import { FdaSection } from "@/components/FdaSection";
 import { MonthSelector } from "@/components/MonthSelector";
 
 const Index = () => {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [regionFilter, setRegionFilter] = useState<string | null>(null);
-  const [countryFilter, setCountryFilter] = useState<string | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 1)); // Feb 2026
-
-  const countries = useMemo(() => {
-    const codes = Array.from(new Set(mockNews.map((n) => n.country)));
-    return codes.map((c) => ({ code: c, flag: countryFlags[c] || "🌍", name: countryNames[c] || c }));
-  }, []);
+  const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 1));
 
   const filtered = useMemo(() => {
     return mockNews.filter((n) => {
@@ -30,18 +22,12 @@ const Index = () => {
         n.apiKeywords.some((kw) => kw.toLowerCase().includes(search.toLowerCase())) ||
         n.title.toLowerCase().includes(search.toLowerCase()) ||
         n.summary.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = !activeCategory || n.category === activeCategory;
-      const matchRegion = !regionFilter || n.region === regionFilter;
-      const matchCountry = !countryFilter || n.country === countryFilter;
-      return matchMonth && matchSearch && matchCategory && matchRegion && matchCountry;
+      return matchMonth && matchSearch;
     });
-  }, [search, activeCategory, regionFilter, countryFilter, currentMonth]);
+  }, [search, currentMonth]);
 
   const handleKeywordClick = (kw: string) => {
     setSearch(kw);
-    setActiveCategory(null);
-    setRegionFilter(null);
-    setCountryFilter(null);
   };
 
   return (
@@ -70,23 +56,10 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Main */}
       <main className="container max-w-6xl mx-auto px-4 py-6 space-y-5">
         <SearchBar value={search} onChange={setSearch} suggestions={allApiKeywords} />
         <StatsBar news={filtered} totalKeywords={allApiKeywords.length} />
-        <TrendingKeywords news={mockNews} onKeywordClick={handleKeywordClick} />
-
-        {/* Filters */}
-        <CategoryFilter
-          categories={categories}
-          active={activeCategory}
-          onChange={setActiveCategory}
-          regionFilter={regionFilter}
-          onRegionChange={setRegionFilter}
-          countryFilter={countryFilter}
-          onCountryChange={setCountryFilter}
-          countries={countries}
-        />
+        <TrendingKeywords news={filtered} onKeywordClick={handleKeywordClick} />
 
         {search && (
           <div className="flex items-center gap-2 text-sm">
@@ -96,7 +69,7 @@ const Index = () => {
           </div>
         )}
 
-        {/* Two-column layout: News + MFDS sidebar */}
+        {/* Two-column: News + Sidebar */}
         <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
             {filtered.length > 0 ? (
@@ -107,14 +80,13 @@ const Index = () => {
               <div className="text-center py-16 card-elevated rounded-lg">
                 <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
                 <p className="text-muted-foreground text-sm">검색 결과가 없습니다</p>
-                <p className="text-muted-foreground text-xs mt-1">다른 원료명이나 키워드로 검색해보세요</p>
               </div>
             )}
           </div>
 
-          {/* MFDS Sidebar */}
           <aside className="space-y-4">
             <MfdsSection notices={mockMfdsNotices} onKeywordClick={handleKeywordClick} />
+            <FdaSection onKeywordClick={handleKeywordClick} />
           </aside>
         </div>
 
