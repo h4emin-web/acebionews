@@ -1,0 +1,2 @@
+ALTER TABLE public.regulatory_notices DROP CONSTRAINT regulatory_notices_source_check;
+ALTER TABLE public.regulatory_notices ADD CONSTRAINT regulatory_notices_source_check CHECK (source = ANY (ARRAY['MFDS'::text, '의약품안전나라'::text, 'FDA'::text, 'FDA-NDA'::text, 'FDA-Clinical'::text]));
