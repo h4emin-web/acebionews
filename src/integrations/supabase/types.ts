@@ -14,7 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      news_articles: {
+        Row: {
+          api_keywords: string[]
+          category: string
+          country: string
+          created_at: string
+          date: string
+          id: string
+          original_language: string | null
+          region: string
+          source: string
+          summary: string
+          title: string
+          url: string
+        }
+        Insert: {
+          api_keywords?: string[]
+          category?: string
+          country?: string
+          created_at?: string
+          date: string
+          id?: string
+          original_language?: string | null
+          region: string
+          source: string
+          summary: string
+          title: string
+          url: string
+        }
+        Update: {
+          api_keywords?: string[]
+          category?: string
+          country?: string
+          created_at?: string
+          date?: string
+          id?: string
+          original_language?: string | null
+          region?: string
+          source?: string
+          summary?: string
+          title?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      regulatory_notices: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          related_apis: string[]
+          source: string
+          title: string
+          type: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          related_apis?: string[]
+          source: string
+          title: string
+          type: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          related_apis?: string[]
+          source?: string
+          title?: string
+          type?: string
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
