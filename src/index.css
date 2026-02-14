@@ -6,54 +6,57 @@
 
 @layer base {
   :root {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 93%;
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
 
-    --card: 222 40% 10%;
-    --card-foreground: 210 40% 93%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 222 40% 10%;
-    --popover-foreground: 210 40% 93%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 174 72% 46%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 210 90% 42%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 30% 16%;
-    --secondary-foreground: 210 30% 80%;
+    --secondary: 215 20% 95%;
+    --secondary-foreground: 222 30% 30%;
 
-    --muted: 222 25% 14%;
-    --muted-foreground: 215 16% 52%;
+    --muted: 215 15% 93%;
+    --muted-foreground: 215 14% 46%;
 
-    --accent: 174 60% 36%;
-    --accent-foreground: 210 40% 96%;
+    --accent: 174 60% 40%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 222 25% 18%;
-    --input: 222 25% 18%;
-    --ring: 174 72% 46%;
+    --border: 215 20% 90%;
+    --input: 215 20% 90%;
+    --ring: 210 90% 42%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 222 40% 8%;
-    --sidebar-foreground: 210 30% 80%;
-    --sidebar-primary: 174 72% 46%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 30% 14%;
-    --sidebar-accent-foreground: 210 30% 80%;
-    --sidebar-border: 222 25% 18%;
-    --sidebar-ring: 174 72% 46%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 30% 30%;
+    --sidebar-primary: 210 90% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 20% 95%;
+    --sidebar-accent-foreground: 222 30% 30%;
+    --sidebar-border: 215 20% 90%;
+    --sidebar-ring: 210 90% 42%;
 
     /* Custom tokens */
-    --pharma-glow: 174 80% 50%;
+    --pharma-blue: 210 90% 42%;
+    --pharma-teal: 174 60% 40%;
     --pharma-amber: 38 92% 50%;
-    --pharma-rose: 350 80% 55%;
-    --pharma-violet: 260 60% 55%;
-    --gradient-primary: linear-gradient(135deg, hsl(174 72% 46%), hsl(190 80% 40%));
-    --gradient-card: linear-gradient(145deg, hsl(222 40% 11%), hsl(222 40% 8%));
-    --shadow-glow: 0 0 20px hsl(174 72% 46% / 0.15);
-    --shadow-card: 0 4px 24px hsl(222 47% 4% / 0.5);
+    --pharma-rose: 350 72% 50%;
+    --pharma-violet: 260 55% 50%;
+    --pharma-green: 152 60% 38%;
+    --pharma-orange: 24 85% 52%;
+    --tag-bg: 210 80% 95%;
+    --tag-text: 210 80% 35%;
+    --shadow-card: 0 1px 3px hsl(215 20% 80% / 0.4), 0 4px 12px hsl(215 20% 80% / 0.15);
+    --shadow-card-hover: 0 2px 8px hsl(215 20% 80% / 0.5), 0 8px 24px hsl(215 20% 80% / 0.2);
   }
 }
 
@@ -63,7 +66,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
     font-family: 'Inter', sans-serif;
   }
 
@@ -73,25 +76,35 @@
 }
 
 @layer utilities {
-  .glass-card {
-    background: linear-gradient(145deg, hsl(222 40% 11% / 0.8), hsl(222 40% 8% / 0.6));
-    backdrop-filter: blur(12px);
-    border: 1px solid hsl(222 25% 20% / 0.5);
+  .card-elevated {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
   }
 
-  .glow-border {
-    border: 1px solid hsl(174 72% 46% / 0.3);
-    box-shadow: 0 0 15px hsl(174 72% 46% / 0.1);
+  .card-elevated:hover {
+    box-shadow: var(--shadow-card-hover);
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, hsl(174 72% 56%), hsl(190 80% 50%));
+    background: linear-gradient(135deg, hsl(210 90% 42%), hsl(174 60% 40%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .animate-pulse-slow {
-    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  .region-badge-domestic {
+    background: hsl(210 80% 95%);
+    color: hsl(210 80% 35%);
+  }
+
+  .region-badge-overseas {
+    background: hsl(38 90% 94%);
+    color: hsl(38 70% 32%);
+  }
+
+  .region-badge-mfds {
+    background: hsl(152 50% 93%);
+    color: hsl(152 50% 28%);
   }
 }

@@ -1,5 +1,6 @@
 import { ExternalLink, Globe, MapPin } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
+import { countryFlags } from "@/data/mockNews";
 
 type Props = {
   news: NewsItem;
@@ -8,24 +9,24 @@ type Props = {
 };
 
 export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
+  const flag = countryFlags[news.country] || "🌍";
+
   return (
     <article
-      className="glass-card rounded-lg p-5 hover:border-primary/30 transition-all duration-300 group animate-fade-in"
-      style={{ animationDelay: `${index * 60}ms` }}
+      className="card-elevated rounded-lg p-5 transition-all duration-200 group animate-fade-in"
+      style={{ animationDelay: `${index * 50}ms` }}
     >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-3 mb-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide uppercase ${
-              news.region === "국내"
-                ? "bg-primary/15 text-primary"
-                : "bg-pharma-amber/15 text-pharma-amber"
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${
+              news.region === "국내" ? "region-badge-domestic" : "region-badge-overseas"
             }`}
           >
             {news.region === "국내" ? <MapPin className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-            {news.region}
+            {flag} {news.region}
           </span>
-          <span className="text-[11px] text-muted-foreground font-mono">{news.source}</span>
+          <span className="text-[11px] text-muted-foreground">{news.source}</span>
         </div>
         <span className="text-[11px] text-muted-foreground font-mono shrink-0">{news.date}</span>
       </div>
@@ -42,18 +43,13 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
             <button
               key={kw}
               onClick={() => onKeywordClick(kw)}
-              className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+              className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-primary/8 text-primary hover:bg-primary/15 transition-colors cursor-pointer border border-primary/10"
             >
               {kw}
             </button>
           ))}
         </div>
-        <a
-          href={news.url}
-          className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a href={news.url} className="text-muted-foreground hover:text-primary transition-colors shrink-0" target="_blank" rel="noreferrer">
           <ExternalLink className="w-3.5 h-3.5" />
         </a>
       </div>
