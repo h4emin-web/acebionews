@@ -6,7 +6,6 @@ type Props = {
 };
 
 export const TrendingKeywords = ({ news, onKeywordClick }: Props) => {
-  // Count keyword frequency
   const kwCount: Record<string, number> = {};
   news.forEach((n) => n.apiKeywords.forEach((kw) => {
     kwCount[kw] = (kwCount[kw] || 0) + 1;
@@ -17,7 +16,7 @@ export const TrendingKeywords = ({ news, onKeywordClick }: Props) => {
     .slice(0, 12);
 
   return (
-    <div className="glass-card rounded-lg p-4">
+    <div className="card-elevated rounded-lg p-4">
       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
         🔥 트렌딩 원료 키워드
       </h3>
@@ -26,10 +25,10 @@ export const TrendingKeywords = ({ news, onKeywordClick }: Props) => {
           <button
             key={kw}
             onClick={() => onKeywordClick(kw)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-secondary hover:bg-primary/15 hover:text-primary text-secondary-foreground transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-muted hover:bg-primary/10 hover:text-primary text-muted-foreground transition-all cursor-pointer"
           >
             {kw}
-            <span className="text-[10px] text-muted-foreground">({count})</span>
+            <span className="text-[10px] opacity-60">({count})</span>
           </button>
         ))}
       </div>

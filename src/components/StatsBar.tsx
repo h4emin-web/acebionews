@@ -9,15 +9,15 @@ export const StatsBar = ({ news, totalKeywords }: Props) => {
 
   const stats = [
     { icon: Newspaper, label: "전체 뉴스", value: news.length, color: "text-primary" },
-    { icon: MapPin, label: "국내", value: domestic, color: "text-primary" },
+    { icon: MapPin, label: "국내", value: domestic, color: "text-pharma-blue" },
     { icon: Globe, label: "해외", value: overseas, color: "text-pharma-amber" },
-    { icon: Pill, label: "원료 키워드", value: totalKeywords, color: "text-pharma-violet" },
+    { icon: Pill, label: "원료 키워드", value: totalKeywords, color: "text-pharma-teal" },
   ];
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {stats.map((s) => (
-        <div key={s.label} className="glass-card rounded-lg px-4 py-3 flex items-center gap-3">
+        <div key={s.label} className="card-elevated rounded-lg px-4 py-3 flex items-center gap-3">
           <s.icon className={`w-5 h-5 ${s.color}`} />
           <div>
             <p className="text-lg font-bold text-foreground font-mono">{s.value}</p>

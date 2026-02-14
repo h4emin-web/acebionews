@@ -15,7 +15,7 @@ export const SearchBar = ({ value, onChange, suggestions }: Props) => {
 
   return (
     <div className="relative w-full max-w-xl">
-      <div className={`flex items-center gap-3 px-4 py-3 rounded-lg bg-secondary border transition-all duration-200 ${focused ? "glow-border" : "border-border"}`}>
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-lg bg-card border transition-all duration-200 ${focused ? "border-primary ring-2 ring-primary/10" : "border-border"}`}>
         <Search className="w-5 h-5 text-muted-foreground shrink-0" />
         <input
           type="text"
@@ -33,12 +33,12 @@ export const SearchBar = ({ value, onChange, suggestions }: Props) => {
         )}
       </div>
       {focused && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
           {filtered.slice(0, 8).map((s) => (
             <button
               key={s}
               onMouseDown={() => onChange(s)}
-              className="w-full text-left px-4 py-2.5 text-sm hover:bg-secondary transition-colors text-foreground"
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors text-foreground"
             >
               <span className="text-primary font-mono text-xs mr-2">API</span>
               {s}
