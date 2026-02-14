@@ -23,8 +23,10 @@ const Index = () => {
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
 
-  // When searching, show search results (last 6 months); otherwise show monthly news
-  const displayNews = search ? searchResults : newsArticles;
+  // Filter out news without API keywords
+  const displayNews = (search ? searchResults : newsArticles).filter(
+    (n) => n.api_keywords && n.api_keywords.length > 0
+  );
   const isLoading = search ? searchLoading : newsLoading;
 
   const handleKeywordClick = (kw: string) => {
