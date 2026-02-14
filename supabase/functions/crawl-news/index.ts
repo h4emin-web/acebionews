@@ -151,6 +151,9 @@ Return at most 5 most relevant articles. If no pharma API news found, return an 
         const articles = parsed.articles || [];
 
         for (const article of articles) {
+          // Skip articles without valid API keywords
+          if (!article.apiKeywords || article.apiKeywords.length === 0) continue;
+          
           results.push({
             title: article.title,
             summary: article.summary,
@@ -159,7 +162,7 @@ Return at most 5 most relevant articles. If no pharma API news found, return an 
             country: source.country,
             date: article.date || new Date().toISOString().split("T")[0],
             url: article.url || source.url,
-            api_keywords: article.apiKeywords || [],
+            api_keywords: article.apiKeywords,
             category: article.category || "",
             original_language: source.region === "국내" ? "ko" : "en",
           });
@@ -171,13 +174,25 @@ Return at most 5 most relevant articles. If no pharma API news found, return an 
       }
     }
 
-    // Insert into database
+    // Deduplicate: check existing titles from today
     if (results.length > 0) {
-      const { error } = await supabase.from("news_articles").insert(results);
-      if (error) {
-        console.error("DB insert error:", error);
-        throw error;
+      const today = new Date().toISOString().split("T")[0];
+      const { data: existing } = await supabase
+        .from("news_articles")
+        .select("title")
+        .gte("created_at", today);
+
+      const existingTitles = new Set((existing || []).map((e: any) => e.title));
+      const newResults = results.filter((r) => !existingTitles.has(r.title));
+
+      if (newResults.length > 0) {
+        const { error } = await supabase.from("news_articles").insert(newResults);
+        if (error) {
+          console.error("DB insert error:", error);
+          throw error;
+        }
       }
+      console.log(`Inserted ${newResults.length} new articles (${results.length - newResults.length} duplicates skipped)`);
     }
 
     return new Response(
