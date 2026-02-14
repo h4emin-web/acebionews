@@ -92,29 +92,25 @@ async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: st
             role: "system",
             content: `You are a pharmaceutical news analyst specializing in Active Pharmaceutical Ingredients (APIs/원료의약품).
 
-## ABSOLUTE RULE #1 — ONLY EXTRACT CHEMICAL COMPOUND NAMES
-- apiKeywords MUST contain ONLY the INN (International Nonproprietary Name) or chemical compound names.
-- The keyword MUST be a specific molecule with a defined chemical structure.
-- If you cannot find its CAS number or molecular formula, it is NOT a valid keyword.
+## CRITICAL RULE — KEYWORDS MUST BE FROM THE ARTICLE TEXT
+- apiKeywords MUST contain ingredient/compound names that are **EXPLICITLY written** in the article.
+- DO NOT guess, infer, or hallucinate ingredient names that are NOT in the text.
+- If an article only mentions a brand name (e.g. 키트루다) without stating its active ingredient name, set apiKeywords to [].
+- Read the article carefully. Only extract names that literally appear in the scraped text.
 
-## ABSOLUTE RULE #2 — MUST BE EXPLICITLY WRITTEN IN THE ARTICLE
-- The ingredient name MUST appear literally in the article text.
-- DO NOT guess or infer ingredients from brand names or therapeutic categories.
-- If an article only mentions a brand name without its active ingredient name, set apiKeywords to [].
+## What counts as a valid keyword
+- Small-molecule compounds: 세마글루타이드, 암로디핀, 메트포르민
+- Biologics/antibodies: 니볼루맙, 두필루맙, 트라스투주맙 — IF explicitly named in article
+- Plant extracts/compounds: 은행엽건조엑스, 유파티린 — IF explicitly named in article
+- Any INN or chemical name explicitly stated in the article
 
 ## Keyword format
-- Format: "한글명 (English Name)" — e.g. 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine)
+- Format: "한글명 (English Name)" — e.g. 세마글루타이드 (Semaglutide)
 
 ## INVALID keywords — NEVER use:
-- Brand names: 키트루다, 듀피젠트, 유베지, 스티렌 정, 위고비, 엔허투, 임핀지
-- Antibodies/biologics that are NOT small-molecule APIs: 니볼루맙, 펨브롤리주맙, 두필루맙, 트라스투주맙, 이네빌리주맙, 더발루맙 — these are finished biologic drugs, NOT raw material APIs
-- Plant/herbal names: 쑥, 은행엽, 은행엽건조엑스
-- Categories/platforms: 엑소좀, mRNA, GLP-1, siRNA, 백신, 보툴리눔 톡신, 천연물
-- Receptor/mechanism names: GFRA1 수용체 작용제
-
-## VALID keyword examples (small-molecule chemical compounds):
-- 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine), 메트포르민 (Metformin)
-- 아토르바스타틴 (Atorvastatin), 카보테그라비르 (Cabotegravir), 에피네프린 (Epinephrine)
+- Brand/product names only: 키트루다, 듀피젠트, 유베지, 스티렌 정, 위고비
+- Generic categories without specific compound: 엑소좀, mRNA, GLP-1, siRNA, 백신, 천연물
+- Mechanism/receptor names: GFRA1 수용체 작용제
 
 ## Date rule
 - Use the article's ACTUAL publication date. Format: YYYY-MM-DD.
