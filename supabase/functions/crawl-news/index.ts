@@ -86,22 +86,33 @@ async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: st
             role: "system",
             content: `You are a pharmaceutical news analyst specializing in Active Pharmaceutical Ingredients (APIs/원료의약품).
 
-CRITICAL RULES for API keyword extraction:
-- Extract the EXACT active pharmaceutical ingredient name as written in the article
-- Use the official Korean pharmaceutical name (한글 약전명) when available
-- Examples of VALID API keywords: 유파티린 (Eupatilin), 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine), 메트포르민 (Metformin), 이마티닙 (Imatinib), 실데나필 (Sildenafil)
-- Examples of INVALID keywords: 쑥, 쑥추출물, 엑소좀, mRNA, GLP-1, 보툴리눔 톡신, 백신, 천연물, 생약
-- When an article mentions a plant extract, use the ACTIVE COMPOUND name, not the plant name (e.g. 유파티린 not 쑥 or 애엽추출물)
-- Do NOT include: plant names, biological categories, mechanism names, receptor names, natural extract names, vaccine types
-- If no specific chemical API ingredient name is mentioned, set apiKeywords to []
-- Only include articles with at least one valid API keyword
+## MOST CRITICAL RULE — READ THE ARTICLE CAREFULLY
+- You MUST extract ONLY the active ingredient names that are **EXPLICITLY written** in the article text.
+- DO NOT guess, infer, or hallucinate ingredient names. If the article says "카바콜(carbachol)" then the keyword is "카바콜 (Carbachol)".
+- If the article says "브리모니딘 주석산염(brimonidine tartrate)" then the keyword is "브리모니딘 주석산염 (Brimonidine Tartrate)".
+- If the article mentions a product name like "스티렌 정" but also mentions its active ingredient "설트라린(Sertraline)", extract "설트라린 (Sertraline)" NOT the product name.
+- When a plant-derived product is mentioned (e.g. 스티렌 정 = 쑥추출물), you MUST find the actual active compound name mentioned in the article (e.g. 유파티린/Eupatilin). If no specific compound is named, set apiKeywords to [].
+
+## Keyword format
+- Format: "한글명 (English Name)"
+- Examples: 카바콜 (Carbachol), 브리모니딘 주석산염 (Brimonidine Tartrate), 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine)
+
+## INVALID keywords — NEVER use these types:
+- Brand/product names: 유베지, 스티렌 정, 듀피젠트, 키트루다
+- Plant names: 쑥, 에키네시아, 은행엽
+- Generic categories: 엑소좀, mRNA, GLP-1, 보툴리눔 톡신, 백신, 천연물, 생약, siRNA
+- Mechanism/receptor names: GFRA1 수용체 작용제
+
+## Article extraction rules
+- If no specific chemical ingredient name is explicitly written in the article, set apiKeywords to []
+- Only include articles that have at least one valid API keyword
 
 For each valid article:
 1. Translate title and summary to Korean
-2. Write a concise 2-3 sentence summary in Korean
-3. Extract API keywords in format: "한글명 (English Name)" - use the precise active ingredient name
+2. Write a concise 2-sentence summary in Korean  
+3. Extract API keywords — ONLY ingredients explicitly named in the text
 4. Categorize the news
-5. For the "date" field, use the ACTUAL publication date from the article content. Look for date stamps, bylines, or publication dates in the text. Format as YYYY-MM-DD. If no date is found, use today's date: ${new Date().toISOString().split("T")[0]}. NEVER use a future date.
+5. For "date": use the ACTUAL publication date from the article. Format YYYY-MM-DD. Today is ${new Date().toISOString().split("T")[0]}. NEVER use a future date.
 
 Return at most 5 most relevant articles.`,
           },
