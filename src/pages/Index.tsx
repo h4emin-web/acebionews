@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
-import { Pill, Clock, RefreshCw } from "lucide-react";
+import { Pill, Clock, RefreshCw, Search } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
 import { MonthSelector } from "@/components/MonthSelector";
-import { useNewsArticles, useAllApiKeywords } from "@/hooks/useNewsData";
+import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,17 +21,11 @@ const Index = () => {
     currentMonth.getMonth()
   );
   const { data: allKeywords = [] } = useAllApiKeywords();
+  const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
 
-  const filtered = useMemo(() => {
-    if (!search) return newsArticles;
-    return newsArticles.filter((n) => {
-      return (
-        n.api_keywords.some((kw) => kw.toLowerCase().includes(search.toLowerCase())) ||
-        n.title.toLowerCase().includes(search.toLowerCase()) ||
-        n.summary.toLowerCase().includes(search.toLowerCase())
-      );
-    });
-  }, [search, newsArticles]);
+  // When searching, show search results (last 6 months); otherwise show monthly news
+  const displayNews = search ? searchResults : newsArticles;
+  const isLoading = search ? searchLoading : newsLoading;
 
   const handleKeywordClick = (kw: string) => {
     setSearch(kw);
@@ -49,7 +43,7 @@ const Index = () => {
       if (regRes.error) throw regRes.error;
 
       toast({
-        title: "크롤링 완료",
+        title: "검색 완료",
         description: `뉴스 ${newsRes.data?.count || 0}건, 공지 ${regRes.data?.count || 0}건 수집`,
       });
 
@@ -57,8 +51,8 @@ const Index = () => {
     } catch (err) {
       console.error("Crawl error:", err);
       toast({
-        title: "크롤링 오류",
-        description: err instanceof Error ? err.message : "크롤링 중 오류가 발생했습니다",
+        title: "오류",
+        description: err instanceof Error ? err.message : "데이터 수집 중 오류가 발생했습니다",
         variant: "destructive",
       });
     } finally {
@@ -89,7 +83,7 @@ const Index = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${crawling ? "animate-spin" : ""}`} />
-              {crawling ? "크롤링 중..." : "새로고침"}
+              {crawling ? "검색중..." : "새로고침"}
             </button>
             <MonthSelector currentMonth={currentMonth} onChange={setCurrentMonth} />
             <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -102,26 +96,26 @@ const Index = () => {
 
       <main className="container max-w-6xl mx-auto px-4 py-6 space-y-5">
         <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
-        <StatsBar news={filtered} totalKeywords={allKeywords.length} />
+        <StatsBar news={displayNews} totalKeywords={allKeywords.length} />
 
         {search && (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">검색:</span>
             <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono text-xs font-medium">{search}</span>
-            <span className="text-muted-foreground text-xs">— {filtered.length}건</span>
+            <span className="text-muted-foreground text-xs">— 최근 6개월 {displayNews.length}건</span>
           </div>
         )}
 
         {/* Two-column: News + Sidebar */}
         <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
-            {newsLoading ? (
+            {isLoading ? (
               <div className="text-center py-16 card-elevated rounded-lg">
-                <RefreshCw className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-spin" />
-                <p className="text-muted-foreground text-sm">뉴스를 불러오는 중...</p>
+                <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
+                <p className="text-muted-foreground text-sm">검색중...</p>
               </div>
-            ) : filtered.length > 0 ? (
-              filtered.map((news, i) => (
+            ) : displayNews.length > 0 ? (
+              displayNews.map((news, i) => (
                 <NewsCard
                   key={news.id}
                   news={{
@@ -144,8 +138,10 @@ const Index = () => {
               <div className="text-center py-16 card-elevated rounded-lg">
                 <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
                 <p className="text-muted-foreground text-sm">
-                  {newsArticles.length === 0
-                    ? "아직 크롤링된 뉴스가 없습니다. '새로고침' 버튼을 클릭해주세요."
+                  {search
+                    ? "해당 원료의약품 관련 뉴스가 없습니다"
+                    : newsArticles.length === 0
+                    ? "아직 수집된 뉴스가 없습니다. '새로고침' 버튼을 클릭해주세요."
                     : "검색 결과가 없습니다"}
                 </p>
               </div>

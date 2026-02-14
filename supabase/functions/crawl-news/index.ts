@@ -80,13 +80,13 @@ serve(async (req) => {
 Extract news articles from the provided website content. For each article:
 1. Translate the title and summary to Korean if not already in Korean
 2. Write a concise 2-3 sentence summary in Korean
-3. Extract related API/원료의약품 keywords (ingredient names in Korean)
+3. Extract related API/원료의약품 keywords in format: "한글명 (English Name)" e.g. "세마글루타이드 (Semaglutide)", "암로디핀 (Amlodipine)"
 4. Categorize the news (e.g., 항암제, 비만 치료제, 고혈압, 항생제, 규제/GMP, 바이오시밀러, 무역/공급망, etc.)
 
 Return ONLY a valid JSON array. Each item must have:
 - title: string (Korean)
 - summary: string (Korean, 2-3 sentences)
-- apiKeywords: string[] (Korean API ingredient names)
+- apiKeywords: string[] (format: "한글명 (English Name)")
 - category: string (Korean)
 - url: string (article URL if available, otherwise empty)
 - date: string (YYYY-MM-DD format, today's date if not clear)

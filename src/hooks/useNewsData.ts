@@ -46,6 +46,29 @@ export function useNewsArticles(year: number, month: number) {
   });
 }
 
+// Search: get last 6 months of news matching a keyword
+export function useSearchNews(keyword: string) {
+  return useQuery({
+    queryKey: ["search-news", keyword],
+    enabled: !!keyword,
+    queryFn: async () => {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const startDate = sixMonthsAgo.toISOString().split("T")[0];
+
+      const { data, error } = await supabase
+        .from("news_articles")
+        .select("*")
+        .gte("date", startDate)
+        .contains("api_keywords", [keyword])
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as NewsArticle[];
+    },
+  });
+}
+
 export function useRegulatoryNotices(source: string) {
   return useQuery({
     queryKey: ["regulatory-notices", source],

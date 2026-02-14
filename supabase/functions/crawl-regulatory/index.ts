@@ -7,9 +7,7 @@ const corsHeaders = {
 };
 
 const REGULATORY_SOURCES = [
-  { url: "https://www.mfds.go.kr/brd/m_74/list.do", name: "MFDS", source: "MFDS", label: "식약처 공문" },
-  { url: "https://www.mfds.go.kr/brd/m_99/list.do", name: "MFDS공지", source: "MFDS", label: "식약처 공지사항" },
-  { url: "https://nedrug.mfds.go.kr/pbp/CCBBB01/getList", name: "의약품안전나라", source: "의약품안전나라", label: "의약품안전나라" },
+  { url: "https://nedrug.mfds.go.kr/pbp/CCBAC01", name: "의약품안전나라", source: "의약품안전나라", label: "의약품안전나라 (안전성 서한, 회수·폐기, 공문)" },
   { url: "https://www.fda.gov/drugs/drug-safety-and-availability", name: "FDA Safety", source: "FDA", label: "FDA Safety" },
   { url: "https://www.fda.gov/drugs/guidance-compliance-regulatory-information", name: "FDA Guidance", source: "FDA", label: "FDA Guidance" },
 ];
@@ -60,8 +58,7 @@ serve(async (req) => {
         }
 
         const sourceTypeMap: Record<string, string> = {
-          MFDS: "공문, 공지사항, 행정예고, 허가",
-          "의약품안전나라": "안전성정보, 허가변경, 회수·판매중지, 부작용",
+          "의약품안전나라": "안전성 서한, 회수·폐기, 공문",
           FDA: "Safety, Guidance, Approval, Warning",
         };
 
@@ -79,7 +76,7 @@ serve(async (req) => {
                 content: `You extract regulatory notices related to pharmaceuticals and APIs (원료의약품).
 For each notice:
 1. Translate title to Korean if needed
-2. Extract related API/원료의약품 names as keywords (in Korean)
+2. Extract related API/원료의약품 names as keywords in format: "한글명 (English Name)" e.g. "메트포르민 (Metformin)"
 3. Classify type as one of: ${sourceTypeMap[regSource.source]}
 
 Return at most 8 most recent/relevant notices.`,

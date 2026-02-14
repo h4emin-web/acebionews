@@ -23,7 +23,7 @@ export const FdaSection = ({ onKeywordClick }: Props) => {
         <span className="text-[10px] text-muted-foreground ml-auto font-mono">🇺🇸 FDA</span>
       </div>
       {isLoading ? (
-        <div className="px-5 py-6 text-center text-xs text-muted-foreground">로딩 중...</div>
+        <div className="px-5 py-6 text-center text-xs text-muted-foreground">검색중...</div>
       ) : notices.length === 0 ? (
         <div className="px-5 py-6 text-center text-xs text-muted-foreground">
           등록된 FDA 공지사항이 없습니다
