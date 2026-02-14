@@ -151,11 +151,21 @@ Return at most 8 most recent/relevant notices.`,
     }
 
     if (results.length > 0) {
-      const { error } = await supabase.from("regulatory_notices").insert(results);
-      if (error) {
-        console.error("DB insert error:", error);
-        throw error;
+      // Deduplicate
+      const { data: existing } = await supabase
+        .from("regulatory_notices")
+        .select("title");
+      const existingTitles = new Set((existing || []).map((e: any) => e.title));
+      const newResults = results.filter((r) => !existingTitles.has(r.title));
+
+      if (newResults.length > 0) {
+        const { error } = await supabase.from("regulatory_notices").insert(newResults);
+        if (error) {
+          console.error("DB insert error:", error);
+          throw error;
+        }
       }
+      console.log(`Inserted ${newResults.length} new notices (${results.length - newResults.length} duplicates skipped)`);
     }
 
     return new Response(
