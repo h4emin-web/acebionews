@@ -19,7 +19,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [crawling, setCrawling] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [todayOnly, setTodayOnly] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const { toast } = useToast();
@@ -44,10 +44,8 @@ const Index = () => {
     });
   }
 
-  // Generate days in the selected month (up to today if current month)
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const isCurrentMonth = currentYear === now.getFullYear() && currentMonth === now.getMonth();
-  const maxDay = isCurrentMonth ? now.getDate() : daysInMonth;
+  const todayDay = now.getDate();
+  const selectedDay = todayOnly ? todayDay : null;
 
   const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
   const { data: allKeywords = [] } = useAllApiKeywords();
@@ -64,7 +62,7 @@ const Index = () => {
 
   const handleMonthSelect = (year: number, month: number) => {
     setSelectedDate(new Date(year, month, 1));
-    setSelectedDay(null);
+    setTodayOnly(false);
     setMonthPickerOpen(false);
   };
 
@@ -171,31 +169,17 @@ const Index = () => {
               </PopoverContent>
             </Popover>
 
-            <div className="flex items-center gap-1 overflow-x-auto max-w-[280px] scrollbar-thin">
-              <button
-                onClick={() => setSelectedDay(null)}
-                className={`shrink-0 px-2 py-1 rounded text-[11px] font-medium transition-colors ${
-                  selectedDay === null
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                전체
-              </button>
-              {Array.from({ length: maxDay }, (_, i) => i + 1).map((day) => (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDay(day)}
-                  className={`shrink-0 w-6 h-6 rounded text-[11px] font-medium transition-colors ${
-                    selectedDay === day
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-accent"
-                  }`}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => setTodayOnly(!todayOnly)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
+                todayOnly
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-foreground border-border hover:bg-muted"
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              오늘 뉴스
+            </button>
 
             <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground shrink-0">
               <Clock className="w-3.5 h-3.5" />
