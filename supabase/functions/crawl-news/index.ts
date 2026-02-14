@@ -77,21 +77,22 @@ serve(async (req) => {
               {
                 role: "system",
                 content: `You are a pharmaceutical news analyst specializing in Active Pharmaceutical Ingredients (APIs/원료의약품).
-Extract news articles from the provided website content. For each article:
+
+CRITICAL RULES for API keyword extraction:
+- ONLY extract actual chemical/pharmaceutical ingredient names (원료의약품명) that are manufactured and supplied as raw materials for drug production
+- Examples of VALID API keywords: 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine), 메트포르민 (Metformin), 이마티닙 (Imatinib)
+- Examples of INVALID keywords: 엑소좀, mRNA 백신 원료, GLP-1 수용체 작용제, GFRA1 수용체 작용제, 쑥추출물, 보툴리눔 톡신, 백신 원료
+- Do NOT include: biological categories, mechanism names, receptor names, natural extracts, vaccine types, general terms
+- If a news article does not mention any specific API ingredient name, set apiKeywords to an empty array []
+- Only include articles that have at least one valid API keyword. Skip articles with no relevant API ingredients.
+
+For each valid article:
 1. Translate the title and summary to Korean if not already in Korean
 2. Write a concise 2-3 sentence summary in Korean
-3. Extract related API/원료의약품 keywords in format: "한글명 (English Name)" e.g. "세마글루타이드 (Semaglutide)", "암로디핀 (Amlodipine)"
-4. Categorize the news (e.g., 항암제, 비만 치료제, 고혈압, 항생제, 규제/GMP, 바이오시밀러, 무역/공급망, etc.)
+3. Extract API keywords in format: "한글명 (English Name)" e.g. "세마글루타이드 (Semaglutide)"
+4. Categorize the news
 
-Return ONLY a valid JSON array. Each item must have:
-- title: string (Korean)
-- summary: string (Korean, 2-3 sentences)
-- apiKeywords: string[] (format: "한글명 (English Name)")
-- category: string (Korean)
-- url: string (article URL if available, otherwise empty)
-- date: string (YYYY-MM-DD format, today's date if not clear)
-
-Return at most 5 most relevant articles about pharmaceuticals and APIs. If no pharma news found, return an empty array [].`,
+Return at most 5 most relevant articles. If no pharma API news found, return an empty array [].`,
               },
               {
                 role: "user",
