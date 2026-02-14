@@ -7,7 +7,6 @@ import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
 import { FdaNdaSection } from "@/components/FdaNdaSection";
 import { FdaClinicalSection } from "@/components/FdaClinicalSection";
-import { MonthSelector } from "@/components/MonthSelector";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -15,19 +14,21 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const Index = () => {
   const [search, setSearch] = useState("");
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 1));
   const [crawling, setCrawling] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(
-    currentMonth.getFullYear(),
-    currentMonth.getMonth()
-  );
+  // Always show current month
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+
+  const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth);
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
 
-  // Filter out news without API keywords
   const displayNews = (search ? searchResults : newsArticles).filter(
     (n) => n.api_keywords && n.api_keywords.length > 0
   );
@@ -49,11 +50,10 @@ const Index = () => {
       if (regRes.error) throw regRes.error;
 
       toast({
-        title: "검색 완료",
+        title: "수집 완료",
         description: `뉴스 ${newsRes.data?.count || 0}건, 공지 ${regRes.data?.count || 0}건 수집`,
       });
 
-      // Invalidate all queries so data appears immediately
       queryClient.invalidateQueries({ queryKey: ["news-articles"] });
       queryClient.invalidateQueries({ queryKey: ["search-news"] });
       queryClient.invalidateQueries({ queryKey: ["all-api-keywords"] });
@@ -72,7 +72,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-md">
         <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -93,9 +92,11 @@ const Index = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${crawling ? "animate-spin" : ""}`} />
-              {crawling ? "검색중..." : "새로고침"}
+              {crawling ? "수집중..." : "새로고침"}
             </button>
-            <MonthSelector currentMonth={currentMonth} onChange={setCurrentMonth} />
+            <span className="text-sm font-semibold text-foreground">
+              {currentYear}년 {monthNames[currentMonth]}
+            </span>
             <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <Clock className="w-3.5 h-3.5" />
               매일 00:00 갱신
@@ -116,7 +117,6 @@ const Index = () => {
           </div>
         )}
 
-        {/* Two-column: News + Sidebar */}
         <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
             {isLoading ? (
