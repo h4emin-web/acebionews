@@ -1,1 +1,7 @@
 project_id = "wrouiakualcrnkfzhvst"
+
+[functions.crawl-news]
+verify_jwt = false
+
+[functions.crawl-regulatory]
+verify_jwt = false

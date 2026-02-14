@@ -1,7 +1,7 @@
 import { Newspaper, Pill, Globe, MapPin } from "lucide-react";
-import type { NewsItem } from "@/data/mockNews";
+import type { NewsArticle } from "@/hooks/useNewsData";
 
-type Props = { news: NewsItem[]; totalKeywords: number };
+type Props = { news: NewsArticle[]; totalKeywords: number };
 
 export const StatsBar = ({ news, totalKeywords }: Props) => {
   const domestic = news.filter((n) => n.region === "국내").length;
