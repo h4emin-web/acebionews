@@ -1,6 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+function normalizeDate(dateStr: string): string {
+  if (!dateStr) return new Date().toISOString().split("T")[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+  return new Date().toISOString().split("T")[0];
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -148,7 +156,7 @@ Return at most 5 most relevant articles.`,
         source: source.name,
         region: source.region,
         country: source.country,
-        date: article.date || new Date().toISOString().split("T")[0],
+        date: normalizeDate(article.date),
         url: article.url || source.url,
         api_keywords: article.apiKeywords,
         category: article.category || "",
