@@ -68,7 +68,7 @@ function NoticeList({ notices, onKeywordClick }: { notices: RegulatoryNotice[]; 
                 <button
                   key={api}
                   onClick={() => onKeywordClick(api)}
-                  className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-muted text-muted-foreground hover:text-primary hover:bg-primary/8 transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-primary/8 text-primary hover:bg-primary/15 transition-colors cursor-pointer border border-primary/10"
                 >
                   {api}
                 </button>
