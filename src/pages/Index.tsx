@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Pill, Clock, RefreshCw, Search } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
@@ -9,14 +9,16 @@ import { MonthSelector } from "@/components/MonthSelector";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Index = () => {
   const [search, setSearch] = useState("");
   const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 1));
   const [crawling, setCrawling] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: newsArticles = [], isLoading: newsLoading, refetch: refetchNews } = useNewsArticles(
+  const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(
     currentMonth.getFullYear(),
     currentMonth.getMonth()
   );
@@ -49,7 +51,11 @@ const Index = () => {
         description: `뉴스 ${newsRes.data?.count || 0}건, 공지 ${regRes.data?.count || 0}건 수집`,
       });
 
-      refetchNews();
+      // Invalidate all queries so data appears immediately
+      queryClient.invalidateQueries({ queryKey: ["news-articles"] });
+      queryClient.invalidateQueries({ queryKey: ["search-news"] });
+      queryClient.invalidateQueries({ queryKey: ["all-api-keywords"] });
+      queryClient.invalidateQueries({ queryKey: ["regulatory-notices"] });
     } catch (err) {
       console.error("Crawl error:", err);
       toast({
