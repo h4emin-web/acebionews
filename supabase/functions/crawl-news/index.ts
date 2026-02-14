@@ -2,11 +2,19 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 function normalizeDate(dateStr: string): string {
-  if (!dateStr) return new Date().toISOString().split("T")[0];
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-  const d = new Date(dateStr);
-  if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
-  return new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0];
+  if (!dateStr) return today;
+  let result = today;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    result = dateStr;
+  } else {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      result = d.toISOString().split("T")[0];
+    }
+  }
+  // Never return a future date
+  return result > today ? today : result;
 }
 
 const corsHeaders = {
@@ -29,8 +37,8 @@ const NEWS_SOURCES = [
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN" },
   { url: "https://www.expresspharma.in", name: "Express Pharma", region: "해외", country: "IN" },
   // 중국
-  { url: "https://www.pharmacircle.com", name: "PharmaCircle", region: "해외", country: "CN" },
-  { url: "https://www.drugdiscoverytrends.com", name: "Drug Discovery Trends", region: "해외", country: "CN" },
+  { url: "https://www.chinapharmaceuticals.com", name: "China Pharmaceuticals", region: "해외", country: "CN" },
+  { url: "https://www.pharmiweb.com/search/?q=china+pharmaceutical", name: "PharmiWeb China", region: "해외", country: "CN" },
   // 일본
   { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP" },
 ];
