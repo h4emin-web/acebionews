@@ -7,17 +7,20 @@ import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
 import { FdaNdaSection } from "@/components/FdaNdaSection";
 import { FdaClinicalSection } from "@/components/FdaClinicalSection";
+import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { NewsItem } from "@/data/mockNews";
 
 const Index = () => {
   const [search, setSearch] = useState("");
   const [crawling, setCrawling] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -58,6 +61,10 @@ const Index = () => {
     setMonthPickerOpen(false);
   };
 
+  const handleNewsClick = (news: NewsItem) => {
+    setSelectedNews(prev => prev?.id === news.id ? null : news);
+  };
+
   const handleCrawl = async () => {
     setCrawling(true);
     try {
@@ -90,10 +97,23 @@ const Index = () => {
     }
   };
 
+  const toNewsItem = (news: typeof displayNews[number]): NewsItem => ({
+    id: news.id,
+    title: news.title,
+    summary: news.summary,
+    source: news.source,
+    region: news.region as "국내" | "해외",
+    country: news.country,
+    date: news.date,
+    url: news.url,
+    apiKeywords: news.api_keywords,
+    category: news.category,
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-md">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
               <Pill className="w-5 h-5 text-primary" />
@@ -152,7 +172,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="container max-w-6xl mx-auto px-4 py-6 space-y-5">
+      <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
         <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
         <StatsBar news={displayNews} totalKeywords={allKeywords.length} />
 
@@ -164,7 +184,7 @@ const Index = () => {
           </div>
         )}
 
-        <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+        <div className={`grid gap-5 ${selectedNews ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-[1fr_340px]"}`}>
           <div className="space-y-4">
             {isLoading ? (
               <div className="text-center py-16 card-elevated rounded-lg">
@@ -172,25 +192,24 @@ const Index = () => {
                 <p className="text-muted-foreground text-sm">검색중...</p>
               </div>
             ) : displayNews.length > 0 ? (
-              displayNews.map((news, i) => (
-                <NewsCard
-                  key={news.id}
-                  news={{
-                    id: news.id,
-                    title: news.title,
-                    summary: news.summary,
-                    source: news.source,
-                    region: news.region as "국내" | "해외",
-                    country: news.country,
-                    date: news.date,
-                    url: news.url,
-                    apiKeywords: news.api_keywords,
-                    category: news.category,
-                  }}
-                  index={i}
-                  onKeywordClick={handleKeywordClick}
-                />
-              ))
+              displayNews.map((news, i) => {
+                const item = toNewsItem(news);
+                return (
+                  <div
+                    key={news.id}
+                    onClick={() => handleNewsClick(item)}
+                    className={`cursor-pointer rounded-lg transition-all ${
+                      selectedNews?.id === news.id ? "ring-2 ring-primary" : ""
+                    }`}
+                  >
+                    <NewsCard
+                      news={item}
+                      index={i}
+                      onKeywordClick={handleKeywordClick}
+                    />
+                  </div>
+                );
+              })
             ) : (
               <div className="text-center py-16 card-elevated rounded-lg">
                 <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
@@ -206,10 +225,16 @@ const Index = () => {
           </div>
 
           <aside className="space-y-4">
-            <MfdsSection onKeywordClick={handleKeywordClick} />
-            <FdaSection onKeywordClick={handleKeywordClick} />
-            <FdaNdaSection onKeywordClick={handleKeywordClick} />
-            <FdaClinicalSection onKeywordClick={handleKeywordClick} />
+            {selectedNews ? (
+              <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} />
+            ) : (
+              <>
+                <MfdsSection onKeywordClick={handleKeywordClick} />
+                <FdaSection onKeywordClick={handleKeywordClick} />
+                <FdaNdaSection onKeywordClick={handleKeywordClick} />
+                <FdaClinicalSection onKeywordClick={handleKeywordClick} />
+              </>
+            )}
           </aside>
         </div>
       </main>
