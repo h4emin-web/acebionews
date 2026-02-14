@@ -19,6 +19,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [crawling, setCrawling] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const { toast } = useToast();
@@ -43,7 +44,12 @@ const Index = () => {
     });
   }
 
-  const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth);
+  // Generate days in the selected month (up to today if current month)
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const isCurrentMonth = currentYear === now.getFullYear() && currentMonth === now.getMonth();
+  const maxDay = isCurrentMonth ? now.getDate() : daysInMonth;
+
+  const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
 
@@ -58,6 +64,7 @@ const Index = () => {
 
   const handleMonthSelect = (year: number, month: number) => {
     setSelectedDate(new Date(year, month, 1));
+    setSelectedDay(null);
     setMonthPickerOpen(false);
   };
 
@@ -173,6 +180,33 @@ const Index = () => {
       </header>
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
+        {/* Day picker row */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+          <button
+            onClick={() => setSelectedDay(null)}
+            className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              selectedDay === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            전체
+          </button>
+          {Array.from({ length: maxDay }, (_, i) => i + 1).map((day) => (
+            <button
+              key={day}
+              onClick={() => setSelectedDay(day)}
+              className={`shrink-0 w-8 h-8 rounded-md text-xs font-medium transition-colors ${
+                selectedDay === day
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+
         <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
         <StatsBar news={displayNews} totalKeywords={allKeywords.length} />
 

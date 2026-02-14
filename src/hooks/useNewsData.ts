@@ -24,14 +24,26 @@ export type RegulatoryNotice = {
   related_apis: string[];
 };
 
-export function useNewsArticles(year: number, month: number) {
-  const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-  const endMonth = month + 2 > 12 ? 1 : month + 2;
-  const endYear = month + 2 > 12 ? year + 1 : year;
-  const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+export function useNewsArticles(year: number, month: number, day?: number | null) {
+  // If a specific day is selected, show only that day
+  // Otherwise show the whole month
+  const startDate = day
+    ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  
+  const endDate = day
+    ? (() => {
+        const nextDay = new Date(year, month, day + 1);
+        return `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`;
+      })()
+    : (() => {
+        const endMonth = month + 2 > 12 ? 1 : month + 2;
+        const endYear = month + 2 > 12 ? year + 1 : year;
+        return `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+      })();
 
   return useQuery({
-    queryKey: ["news-articles", year, month],
+    queryKey: ["news-articles", year, month, day],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("news_articles")
