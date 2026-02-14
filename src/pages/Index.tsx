@@ -5,6 +5,8 @@ import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
+import { FdaNdaSection } from "@/components/FdaNdaSection";
+import { FdaClinicalSection } from "@/components/FdaClinicalSection";
 import { MonthSelector } from "@/components/MonthSelector";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
@@ -159,6 +161,8 @@ const Index = () => {
           <aside className="space-y-4">
             <MfdsSection onKeywordClick={handleKeywordClick} />
             <FdaSection onKeywordClick={handleKeywordClick} />
+            <FdaNdaSection onKeywordClick={handleKeywordClick} />
+            <FdaClinicalSection onKeywordClick={handleKeywordClick} />
           </aside>
         </div>
       </main>
