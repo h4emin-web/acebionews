@@ -101,6 +101,7 @@ For each valid article:
 2. Write a concise 2-3 sentence summary in Korean
 3. Extract API keywords in format: "한글명 (English Name)" - use the precise active ingredient name
 4. Categorize the news
+5. For the "date" field, use the ACTUAL publication date from the article content. Look for date stamps, bylines, or publication dates in the text. Format as YYYY-MM-DD. If no date is found, use today's date: ${new Date().toISOString().split("T")[0]}. NEVER use a future date.
 
 Return at most 5 most relevant articles.`,
           },
