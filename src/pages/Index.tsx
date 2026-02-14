@@ -5,8 +5,8 @@ import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
-import { FdaNdaSection } from "@/components/FdaNdaSection";
-import { FdaClinicalSection } from "@/components/FdaClinicalSection";
+import { PatentExpirySection } from "@/components/PatentExpirySection";
+import { TopDrugsPatentSection } from "@/components/TopDrugsPatentSection";
 import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
@@ -265,8 +265,8 @@ const Index = () => {
               <>
                 <MfdsSection onKeywordClick={handleKeywordClick} />
                 <FdaSection onKeywordClick={handleKeywordClick} />
-                <FdaNdaSection onKeywordClick={handleKeywordClick} />
-                <FdaClinicalSection onKeywordClick={handleKeywordClick} />
+                <PatentExpirySection onKeywordClick={handleKeywordClick} />
+                <TopDrugsPatentSection onKeywordClick={handleKeywordClick} />
               </>
             )}
           </aside>
