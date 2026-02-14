@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.crawl-regulatory]
 verify_jwt = false
+
+[functions.analyze-news]
+verify_jwt = false
