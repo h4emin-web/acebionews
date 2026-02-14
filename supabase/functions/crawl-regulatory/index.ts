@@ -73,13 +73,22 @@ serve(async (req) => {
             messages: [
               {
                 role: "system",
-                content: `You extract regulatory notices related to pharmaceuticals and APIs (원료의약품).
-For each notice:
-1. Translate title to Korean if needed
-2. Extract related API/원료의약품 names as keywords in format: "한글명 (English Name)" e.g. "메트포르민 (Metformin)"
-3. Classify type as one of: ${sourceTypeMap[regSource.source]}
+                content: `You extract regulatory notices related to Active Pharmaceutical Ingredients (APIs/원료의약품).
 
-Return at most 8 most recent/relevant notices.`,
+CRITICAL RULES for related API extraction:
+- ONLY extract actual chemical/pharmaceutical ingredient names (원료의약품명) that are manufactured and supplied as raw materials for drug production
+- Examples of VALID API keywords: 메트포르민 (Metformin), 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine), 이부프로펜 (Ibuprofen)
+- Examples of INVALID keywords: 조제 약물, compounded drugs, biologics, 백신, vaccine, GLP-1, exosome, 추출물, 톡신, general drug categories
+- Do NOT include: drug categories, formulation types, biological products, natural extracts, mechanism names, receptor names
+- Keywords MUST be in format: "한글명 (English Name)" e.g. "메트포르민 (Metformin)"
+- If a notice does not mention any specific API ingredient name, set relatedApis to an empty array []
+- Only include notices that have at least one valid API keyword
+
+For each valid notice:
+1. Translate title to Korean if needed
+2. Classify type as one of: ${sourceTypeMap[regSource.source]}
+
+Return at most 8 most recent/relevant notices. If no relevant API notices found, return empty array.`,
               },
               {
                 role: "user",
@@ -134,13 +143,16 @@ Return at most 8 most recent/relevant notices.`,
         const notices = parsed.notices || [];
 
         for (const notice of notices) {
+          // Skip notices without valid API keywords
+          if (!notice.relatedApis || notice.relatedApis.length === 0) continue;
+          
           results.push({
             title: notice.title,
             date: notice.date || new Date().toISOString().split("T")[0],
             type: notice.type,
             source: regSource.source,
             url: notice.url || regSource.url,
-            related_apis: notice.relatedApis || [],
+            related_apis: notice.relatedApis,
           });
         }
 
