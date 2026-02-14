@@ -132,7 +132,7 @@ const Index = () => {
               <p className="text-[11px] text-muted-foreground">원료의약품 뉴스 인텔리전스</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleCrawl}
               disabled={crawling}
@@ -171,7 +171,33 @@ const Index = () => {
               </PopoverContent>
             </Popover>
 
-            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-1 overflow-x-auto max-w-[280px] scrollbar-thin">
+              <button
+                onClick={() => setSelectedDay(null)}
+                className={`shrink-0 px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                  selectedDay === null
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                전체
+              </button>
+              {Array.from({ length: maxDay }, (_, i) => i + 1).map((day) => (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`shrink-0 w-6 h-6 rounded text-[11px] font-medium transition-colors ${
+                    selectedDay === day
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground shrink-0">
               <Clock className="w-3.5 h-3.5" />
               {todayStr} 기준
             </div>
@@ -180,33 +206,6 @@ const Index = () => {
       </header>
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
-        {/* Day picker row */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-          <button
-            onClick={() => setSelectedDay(null)}
-            className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              selectedDay === null
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-accent"
-            }`}
-          >
-            전체
-          </button>
-          {Array.from({ length: maxDay }, (_, i) => i + 1).map((day) => (
-            <button
-              key={day}
-              onClick={() => setSelectedDay(day)}
-              className={`shrink-0 w-8 h-8 rounded-md text-xs font-medium transition-colors ${
-                selectedDay === day
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              {day}
-            </button>
-          ))}
-        </div>
-
         <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
         <StatsBar news={displayNews} totalKeywords={allKeywords.length} />
 

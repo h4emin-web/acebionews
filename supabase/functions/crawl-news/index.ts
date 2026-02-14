@@ -14,7 +14,13 @@ function normalizeDate(dateStr: string): string {
     }
   }
   // Never return a future date
-  return result > today ? today : result;
+  if (result > today) return today;
+  // Never return a date older than 14 days (likely wrong extraction)
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const minDate = twoWeeksAgo.toISOString().split("T")[0];
+  if (result < minDate) return today;
+  return result;
 }
 
 const corsHeaders = {
@@ -86,35 +92,37 @@ async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: st
             role: "system",
             content: `You are a pharmaceutical news analyst specializing in Active Pharmaceutical Ingredients (APIs/원료의약품).
 
-## MOST CRITICAL RULE — READ THE ARTICLE CAREFULLY
-- You MUST extract ONLY the active ingredient names that are **EXPLICITLY written** in the article text.
-- DO NOT guess, infer, or hallucinate ingredient names. If the article says "카바콜(carbachol)" then the keyword is "카바콜 (Carbachol)".
-- If the article says "브리모니딘 주석산염(brimonidine tartrate)" then the keyword is "브리모니딘 주석산염 (Brimonidine Tartrate)".
-- If the article mentions a product name like "스티렌 정" but also mentions its active ingredient "설트라린(Sertraline)", extract "설트라린 (Sertraline)" NOT the product name.
-- When a plant-derived product is mentioned (e.g. 스티렌 정 = 쑥추출물), you MUST find the actual active compound name mentioned in the article (e.g. 유파티린/Eupatilin). If no specific compound is named, set apiKeywords to [].
+## ABSOLUTE RULE #1 — ONLY EXTRACT CHEMICAL COMPOUND NAMES
+- apiKeywords MUST contain ONLY the INN (International Nonproprietary Name) or chemical compound names.
+- The keyword MUST be a specific molecule with a defined chemical structure.
+- If you cannot find its CAS number or molecular formula, it is NOT a valid keyword.
+
+## ABSOLUTE RULE #2 — MUST BE EXPLICITLY WRITTEN IN THE ARTICLE
+- The ingredient name MUST appear literally in the article text.
+- DO NOT guess or infer ingredients from brand names or therapeutic categories.
+- If an article only mentions a brand name without its active ingredient name, set apiKeywords to [].
 
 ## Keyword format
-- Format: "한글명 (English Name)"
-- Examples: 카바콜 (Carbachol), 브리모니딘 주석산염 (Brimonidine Tartrate), 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine)
+- Format: "한글명 (English Name)" — e.g. 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine)
 
-## INVALID keywords — NEVER use these types:
-- Brand/product names: 유베지, 스티렌 정, 듀피젠트, 키트루다
-- Plant names: 쑥, 에키네시아, 은행엽
-- Generic categories: 엑소좀, mRNA, GLP-1, 보툴리눔 톡신, 백신, 천연물, 생약, siRNA
-- Mechanism/receptor names: GFRA1 수용체 작용제
+## INVALID keywords — NEVER use:
+- Brand names: 키트루다, 듀피젠트, 유베지, 스티렌 정, 위고비, 엔허투, 임핀지
+- Antibodies/biologics that are NOT small-molecule APIs: 니볼루맙, 펨브롤리주맙, 두필루맙, 트라스투주맙, 이네빌리주맙, 더발루맙 — these are finished biologic drugs, NOT raw material APIs
+- Plant/herbal names: 쑥, 은행엽, 은행엽건조엑스
+- Categories/platforms: 엑소좀, mRNA, GLP-1, siRNA, 백신, 보툴리눔 톡신, 천연물
+- Receptor/mechanism names: GFRA1 수용체 작용제
 
-## Article extraction rules
-- If no specific chemical ingredient name is explicitly written in the article, set apiKeywords to []
-- Only include articles that have at least one valid API keyword
+## VALID keyword examples (small-molecule chemical compounds):
+- 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine), 메트포르민 (Metformin)
+- 아토르바스타틴 (Atorvastatin), 카보테그라비르 (Cabotegravir), 에피네프린 (Epinephrine)
 
-For each valid article:
-1. Translate title and summary to Korean
-2. Write a concise 2-sentence summary in Korean  
-3. Extract API keywords — ONLY ingredients explicitly named in the text
-4. Categorize the news
-5. For "date": use the ACTUAL publication date from the article. Format YYYY-MM-DD. Today is ${new Date().toISOString().split("T")[0]}. NEVER use a future date.
+## Date rule
+- Use the article's ACTUAL publication date. Format: YYYY-MM-DD.
+- Today is ${new Date().toISOString().split("T")[0]}. NEVER use future dates or dates older than 2 weeks.
 
-Return at most 5 most relevant articles.`,
+## Output rules
+- Return at most 5 articles. Only include articles with at least one VALID apiKeyword.
+- Translate title and summary to Korean. Write a concise 2-sentence summary.`,
           },
           {
             role: "user",
