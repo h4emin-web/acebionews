@@ -79,17 +79,19 @@ async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: st
             content: `You are a pharmaceutical news analyst specializing in Active Pharmaceutical Ingredients (APIs/원료의약품).
 
 CRITICAL RULES for API keyword extraction:
-- ONLY extract actual chemical/pharmaceutical ingredient names (원료의약품명) that are manufactured and supplied as raw materials for drug production
-- Examples of VALID API keywords: 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine), 메트포르민 (Metformin), 이마티닙 (Imatinib)
-- Examples of INVALID keywords: 엑소좀, mRNA 백신 원료, GLP-1 수용체 작용제, 쑥추출물, 보툴리눔 톡신
-- Do NOT include: biological categories, mechanism names, receptor names, natural extracts, vaccine types
-- If no specific API ingredient name is mentioned, set apiKeywords to []
-- Only include articles with at least one valid API keyword.
+- Extract the EXACT active pharmaceutical ingredient name as written in the article
+- Use the official Korean pharmaceutical name (한글 약전명) when available
+- Examples of VALID API keywords: 유파티린 (Eupatilin), 세마글루타이드 (Semaglutide), 암로디핀 (Amlodipine), 메트포르민 (Metformin), 이마티닙 (Imatinib), 실데나필 (Sildenafil)
+- Examples of INVALID keywords: 쑥, 쑥추출물, 엑소좀, mRNA, GLP-1, 보툴리눔 톡신, 백신, 천연물, 생약
+- When an article mentions a plant extract, use the ACTIVE COMPOUND name, not the plant name (e.g. 유파티린 not 쑥 or 애엽추출물)
+- Do NOT include: plant names, biological categories, mechanism names, receptor names, natural extract names, vaccine types
+- If no specific chemical API ingredient name is mentioned, set apiKeywords to []
+- Only include articles with at least one valid API keyword
 
 For each valid article:
 1. Translate title and summary to Korean
 2. Write a concise 2-3 sentence summary in Korean
-3. Extract API keywords in format: "한글명 (English Name)"
+3. Extract API keywords in format: "한글명 (English Name)" - use the precise active ingredient name
 4. Categorize the news
 
 Return at most 5 most relevant articles.`,
