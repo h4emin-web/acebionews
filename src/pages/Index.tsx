@@ -4,7 +4,6 @@ import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
-import { UsDmfSection } from "@/components/UsDmfSection";
 import { FdaSection } from "@/components/FdaSection";
 import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
@@ -34,8 +33,8 @@ const Index = () => {
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
 
-  const allNews = (search ? searchResults : newsArticles)
-    .filter((n) => n.api_keywords && n.api_keywords.length > 0);
+  const allNews = (search ? searchResults : newsArticles).
+  filter((n) => n.api_keywords && n.api_keywords.length > 0);
   const displayNews = allNews.filter((n) => regionFilter === "all" || n.region === regionFilter);
   const isLoading = search ? searchLoading : newsLoading;
 
@@ -45,23 +44,23 @@ const Index = () => {
 
 
   const handleNewsClick = (news: NewsItem) => {
-    setSelectedNews(prev => prev?.id === news.id ? null : news);
+    setSelectedNews((prev) => prev?.id === news.id ? null : news);
   };
 
   const handleCrawl = async () => {
     setCrawling(true);
     try {
       const [newsRes, regRes] = await Promise.all([
-        supabase.functions.invoke("crawl-news"),
-        supabase.functions.invoke("crawl-regulatory"),
-      ]);
+      supabase.functions.invoke("crawl-news"),
+      supabase.functions.invoke("crawl-regulatory")]
+      );
 
       if (newsRes.error) throw newsRes.error;
       if (regRes.error) throw regRes.error;
 
       toast({
         title: "수집 완료",
-        description: `뉴스 ${newsRes.data?.count || 0}건, 공지 ${regRes.data?.count || 0}건 수집`,
+        description: `뉴스 ${newsRes.data?.count || 0}건, 공지 ${regRes.data?.count || 0}건 수집`
       });
 
       queryClient.invalidateQueries({ queryKey: ["news-articles"] });
@@ -73,7 +72,7 @@ const Index = () => {
       toast({
         title: "오류",
         description: err instanceof Error ? err.message : "데이터 수집 중 오류가 발생했습니다",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setCrawling(false);
@@ -90,7 +89,7 @@ const Index = () => {
     date: news.date,
     url: news.url,
     apiKeywords: news.api_keywords,
-    category: news.category,
+    category: news.category
   });
 
   return (
@@ -103,7 +102,7 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground tracking-tight">
-                API <span className="text-gradient">NewsWatch</span>
+                API <span className="text-gradient">AceBio News</span>
               </h1>
               <p className="text-[11px] text-muted-foreground">원료의약품 뉴스 인텔리전스</p>
             </div>
@@ -112,8 +111,8 @@ const Index = () => {
             <button
               onClick={handleCrawl}
               disabled={crawling}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-background text-foreground border border-border hover:bg-muted disabled:opacity-50 transition-colors shadow-sm"
-            >
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-background text-foreground border border-border hover:bg-muted disabled:opacity-50 transition-colors shadow-sm">
+
               <RefreshCw className={`w-3.5 h-3.5 ${crawling ? "animate-spin" : ""}`} />
               {crawling ? "수집중..." : "새로고침"}
             </button>
@@ -121,11 +120,11 @@ const Index = () => {
             <button
               onClick={() => setTodayOnly(!todayOnly)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
-                todayOnly
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-foreground border-border hover:bg-muted"
-              }`}
-            >
+              todayOnly ?
+              "bg-primary text-primary-foreground border-primary" :
+              "bg-background text-foreground border-border hover:bg-muted"}`
+              }>
+
               <CalendarDays className="w-3.5 h-3.5" />
               오늘 뉴스
             </button>
@@ -144,69 +143,68 @@ const Index = () => {
         <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
         <StatsBar news={allNews} totalKeywords={allKeywords.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
 
-        {search && (
-          <div className="flex items-center gap-2 text-sm">
+        {search &&
+        <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">검색:</span>
             <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono text-xs font-medium">{search}</span>
             <span className="text-muted-foreground text-xs">— 최근 6개월 {displayNews.length}건</span>
           </div>
-        )}
+        }
 
         <div className={`grid gap-5 ${selectedNews ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-[1fr_340px]"}`}>
           <div className="space-y-4">
-            {isLoading ? (
-              <div className="text-center py-16 card-elevated rounded-lg">
+            {isLoading ?
+            <div className="text-center py-16 card-elevated rounded-lg">
                 <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
                 <p className="text-muted-foreground text-sm">검색중...</p>
-              </div>
-            ) : displayNews.length > 0 ? (
-              displayNews.map((news, i) => {
-                const item = toNewsItem(news);
-                return (
-                  <div
-                    key={news.id}
-                    onClick={() => handleNewsClick(item)}
-                    className={`cursor-pointer rounded-lg transition-all ${
-                      selectedNews?.id === news.id ? "ring-2 ring-primary" : ""
-                    }`}
-                  >
+              </div> :
+            displayNews.length > 0 ?
+            displayNews.map((news, i) => {
+              const item = toNewsItem(news);
+              return (
+                <div
+                  key={news.id}
+                  onClick={() => handleNewsClick(item)}
+                  className={`cursor-pointer rounded-lg transition-all ${
+                  selectedNews?.id === news.id ? "ring-2 ring-primary" : ""}`
+                  }>
+
                     <NewsCard
-                      news={item}
-                      index={i}
-                      onKeywordClick={handleKeywordClick}
-                    />
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-center py-16 card-elevated rounded-lg">
+                    news={item}
+                    index={i}
+                    onKeywordClick={handleKeywordClick} />
+
+                  </div>);
+
+            }) :
+
+            <div className="text-center py-16 card-elevated rounded-lg">
                 <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
                 <p className="text-muted-foreground text-sm">
-                  {search
-                    ? "해당 원료의약품 관련 뉴스가 없습니다"
-                    : newsArticles.length === 0
-                    ? "아직 수집된 뉴스가 없습니다. '새로고침' 버튼을 클릭해주세요."
-                    : "검색 결과가 없습니다"}
+                  {search ?
+                "해당 원료의약품 관련 뉴스가 없습니다" :
+                newsArticles.length === 0 ?
+                "아직 수집된 뉴스가 없습니다. '새로고침' 버튼을 클릭해주세요." :
+                "검색 결과가 없습니다"}
                 </p>
               </div>
-            )}
+            }
           </div>
 
           <aside className="space-y-4">
-            {selectedNews ? (
-              <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} />
-            ) : (
-              <>
-                <UsDmfSection onKeywordClick={handleKeywordClick} />
+            {selectedNews ?
+            <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} /> :
+
+            <>
                 <MfdsSection onKeywordClick={handleKeywordClick} />
                 <FdaSection onKeywordClick={handleKeywordClick} />
               </>
-            )}
+            }
           </aside>
         </div>
       </main>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Index;
