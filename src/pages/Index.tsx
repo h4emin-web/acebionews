@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pill, Clock, RefreshCw, Search, CalendarDays, Globe, Flag } from "lucide-react";
+import { Pill, Clock, RefreshCw, Search, CalendarDays, Globe, Flag, FlaskConical } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
@@ -7,6 +7,7 @@ import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
 import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
+import { NcePatentModal } from "@/components/NcePatentModal";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ const Index = () => {
   const [todayOnly, setTodayOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외">("all");
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  const [nceModalOpen, setNceModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -141,7 +143,16 @@ const Index = () => {
       </header>
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
-        <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
+        <div className="flex items-center gap-3">
+          <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
+          <button
+            onClick={() => setNceModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap shrink-0"
+          >
+            <FlaskConical className="w-4 h-4" />
+            물질 특허 만료 NCE
+          </button>
+        </div>
         <StatsBar news={allNews} totalKeywords={allKeywords.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
 
         {search &&
@@ -205,6 +216,14 @@ const Index = () => {
           </aside>
         </div>
       </main>
+      <NcePatentModal
+        open={nceModalOpen}
+        onClose={() => setNceModalOpen(false)}
+        onKeywordClick={(kw) => {
+          setSearch(kw);
+          setNceModalOpen(false);
+        }}
+      />
     </div>);
 
 };
