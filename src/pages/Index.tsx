@@ -4,6 +4,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
+import { UsDmfSection } from "@/components/UsDmfSection";
 import { FdaSection } from "@/components/FdaSection";
 import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
@@ -196,6 +197,7 @@ const Index = () => {
               <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} />
             ) : (
               <>
+                <UsDmfSection onKeywordClick={handleKeywordClick} />
                 <MfdsSection onKeywordClick={handleKeywordClick} />
                 <FdaSection onKeywordClick={handleKeywordClick} />
               </>
