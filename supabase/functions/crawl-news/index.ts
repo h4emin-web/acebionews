@@ -49,7 +49,7 @@ const NEWS_SOURCES = [
   { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP" },
 ];
 
-async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: string, LOVABLE_API_KEY: string) {
+async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: string, GOOGLE_GEMINI_API_KEY: string) {
   try {
     console.log(`Crawling ${source.name}: ${source.url}`);
     const scrapeResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
@@ -79,14 +79,14 @@ async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: st
       return [];
     }
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "gemini-2.5-flash",
         messages: [
           {
             role: "system",
@@ -205,8 +205,8 @@ serve(async (req) => {
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -218,7 +218,7 @@ serve(async (req) => {
     for (let i = 0; i < NEWS_SOURCES.length; i += batchSize) {
       const batch = NEWS_SOURCES.slice(i, i + batchSize);
       const batchResults = await Promise.all(
-        batch.map((s) => crawlSource(s, FIRECRAWL_API_KEY, LOVABLE_API_KEY))
+        batch.map((s) => crawlSource(s, FIRECRAWL_API_KEY, GOOGLE_GEMINI_API_KEY))
       );
       allResults.push(...batchResults.flat());
     }
