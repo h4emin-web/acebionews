@@ -98,18 +98,18 @@ export function useExternalNewsSearch(keyword: string) {
   });
 }
 
-// Drug info from 의약품안전나라
+// Ingredient profile via AI
 export function useDrugInfo(keyword: string) {
   return useQuery({
     queryKey: ["drug-info", keyword],
     enabled: !!keyword,
-    staleTime: 10 * 60 * 1000, // 10 min cache
+    staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("search-drug-info", {
         body: { keyword },
       });
       if (error) throw error;
-      return data || { products: [], dmfRecords: [], productUrl: "", dmfUrl: "" };
+      return data?.profile || null;
     },
   });
 }

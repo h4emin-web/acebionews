@@ -252,11 +252,9 @@ const Index = () => {
             ) : isSearching ? (
               <SearchResultsPanel
                 keyword={search}
-                products={drugInfo?.products || []}
-                dmfRecords={drugInfo?.dmfRecords || []}
-                drugInfoLoading={drugInfoLoading}
-                productUrl={drugInfo?.productUrl}
-                dmfUrl={drugInfo?.dmfUrl}
+                profile={drugInfo}
+                loading={drugInfoLoading}
+                onRelatedClick={handleKeywordClick}
               />
             ) : (
               <>
