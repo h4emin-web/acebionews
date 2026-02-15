@@ -6,24 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// RSS feed sources — no Firecrawl needed
+// RSS feed sources
 const RSS_SOURCES = [
-  // 국내
-  { rss: "https://www.yakup.com/news/rss/", name: "약업신문", region: "국내", country: "KR" },
-  { rss: "https://www.pharmnews.com/rss/allArticle.xml", name: "팜뉴스", region: "국내", country: "KR" },
-  { rss: "https://www.dailypharm.com/rss/allArticle.xml", name: "데일리팜", region: "국내", country: "KR" },
-  // 미국
   { rss: "https://www.fiercepharma.com/rss/xml", name: "FiercePharma", region: "해외", country: "US" },
-  // 유럽
   { rss: "https://www.pharmaceutical-technology.com/feed/", name: "Pharma Technology", region: "해외", country: "EU" },
-  // 인도
   { rss: "https://www.expresspharma.in/feed/", name: "Express Pharma", region: "해외", country: "IN" },
 ];
 
-// Fallback: direct HTML fetch for sites without RSS
+// HTML sources — 약업신문 & 데일리팜 + fallback overseas
 const HTML_SOURCES = [
-  { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN" },
-  { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP" },
+  { url: "https://www.yakup.com/news/index.html?cat=12", name: "약업신문", region: "국내", country: "KR", parser: "yakup" },
+  { url: "https://www.dailypharm.com/", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
+  { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
+  { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP", parser: "generic" },
 ];
 
 function normalizeDate(dateStr: string): string {
@@ -53,23 +48,18 @@ function stripHtml(text: string): string {
 // Parse RSS XML into articles
 function parseRss(xml: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const items: Array<{ title: string; summary: string; url: string; date: string }> = [];
-
-  // Match <item> or <entry> blocks
   const itemRegex = /<item[\s>]([\s\S]*?)<\/item>|<entry[\s>]([\s\S]*?)<\/entry>/gi;
   let match;
   while ((match = itemRegex.exec(xml)) !== null && items.length < 15) {
     const block = match[1] || match[2] || "";
-
     const titleM = block.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     const descM = block.match(/<description[^>]*>([\s\S]*?)<\/description>|<summary[^>]*>([\s\S]*?)<\/summary>|<content[^>]*>([\s\S]*?)<\/content>/i);
     const linkM = block.match(/<link[^>]*>([\s\S]*?)<\/link>|<link[^>]*href="([^"]*?)"/i);
     const dateM = block.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>|<published[^>]*>([\s\S]*?)<\/published>|<dc:date[^>]*>([\s\S]*?)<\/dc:date>|<updated[^>]*>([\s\S]*?)<\/updated>/i);
-
     const title = stripHtml(stripCdata(titleM?.[1] || ""));
     const summary = stripHtml(stripCdata(descM?.[1] || descM?.[2] || descM?.[3] || "")).slice(0, 300);
     const url = stripCdata(linkM?.[1] || linkM?.[2] || "").trim();
     const date = stripCdata(dateM?.[1] || dateM?.[2] || dateM?.[3] || dateM?.[4] || "");
-
     if (title) {
       items.push({ title, summary, url, date: normalizeDate(date) });
     }
@@ -99,34 +89,92 @@ async function fetchRss(source: typeof RSS_SOURCES[0]): Promise<Array<{ title: s
   }
 }
 
-// Fetch HTML fallback — extract article-like links
+// Parse 약업신문 HTML
+function parseYakup(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  
+  // Split by <li> tags and find article items
+  const liBlocks = html.split(/<li>/gi);
+  for (const block of liBlocks) {
+    if (articles.length >= 15) break;
+    
+    // Find link with mode=view
+    const linkMatch = block.match(/href="([^"]*mode=view[^"]*)"/i);
+    if (!linkMatch) continue;
+    
+    const url = linkMatch[1].replace(/&amp;/g, "&");
+    const fullUrl = url.startsWith("http") ? url : `https://www.yakup.com${url}`;
+    
+    // Extract title from title_con > span
+    const titleMatch = block.match(/class="title_con">\s*<span>\s*([\s\S]*?)\s*<\/span>/i);
+    if (!titleMatch) continue;
+    const title = stripHtml(titleMatch[1]).trim();
+    
+    // Extract summary from text_con > span
+    const summaryMatch = block.match(/class="text_con">\s*<span>\s*([\s\S]*?)\s*<\/span>/i);
+    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    
+    // Extract date
+    const dateMatch = block.match(/class="date">\s*([\d.]+)\s*<\/span>/i);
+    const dateStr = dateMatch ? dateMatch[1].replace(/\./g, "-") : "";
+    
+    if (title.length > 5) {
+      articles.push({ title, summary, url: fullUrl, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
+// Parse 데일리팜 HTML
+function parseDailypharm(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  // Match news items: <a href="https://www.dailypharm.com/user/news/XXXXX"> ... <div class="nc_cont ...">TITLE</div>
+  const itemRegex = /<a\s+href="(https:\/\/www\.dailypharm\.com\/user\/news\/\d+)"[^>]*>[\s\S]*?<div\s+class="nc_cont[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/div>/gi;
+  let m;
+  while ((m = itemRegex.exec(html)) !== null && articles.length < 15) {
+    const url = m[1];
+    const title = stripHtml(m[2]).trim();
+    if (title.length > 5 && !articles.some(a => a.title === title)) {
+      articles.push({ title, summary: "", url, date: normalizeDate("") });
+    }
+  }
+  return articles;
+}
+
+// Fetch HTML and parse based on parser type
 async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
     console.log(`Fetching HTML: ${source.name}`);
     const resp = await fetch(source.url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; NewsCrawler/1.0)" },
-      signal: AbortSignal.timeout(10000),
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+      signal: AbortSignal.timeout(15000),
     });
-    if (!resp.ok) return [];
+    if (!resp.ok) {
+      console.error(`HTML fetch failed for ${source.name}: ${resp.status}`);
+      return [];
+    }
     const html = await resp.text();
 
-    // Extract headlines from common patterns
-    const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-    const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-    let m;
-    while ((m = linkRegex.exec(html)) !== null && articles.length < 10) {
-      const href = m[1];
-      const text = stripHtml(m[2]).trim();
-      if (text.length > 20 && text.length < 200 && !href.includes("javascript:")) {
-        const fullUrl = href.startsWith("http") ? href : `${source.url}${href.startsWith("/") ? "" : "/"}${href}`;
-        articles.push({
-          title: text,
-          summary: "",
-          url: fullUrl,
-          date: normalizeDate(""),
-        });
+    let articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+
+    if (source.parser === "yakup") {
+      articles = parseYakup(html);
+    } else if (source.parser === "dailypharm") {
+      articles = parseDailypharm(html);
+    } else {
+      // Generic fallback
+      const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
+      let lm;
+      while ((lm = linkRegex.exec(html)) !== null && articles.length < 10) {
+        const href = lm[1];
+        const text = stripHtml(lm[2]).trim();
+        if (text.length > 20 && text.length < 200 && !href.includes("javascript:")) {
+          const fullUrl = href.startsWith("http") ? href : `${source.url}${href.startsWith("/") ? "" : "/"}${href}`;
+          articles.push({ title: text, summary: "", url: fullUrl, date: normalizeDate("") });
+        }
       }
     }
+
     console.log(`Extracted ${articles.length} articles from ${source.name} HTML`);
     return articles;
   } catch (err) {
@@ -135,14 +183,14 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
   }
 }
 
-// Use Gemini API to extract API keywords from article titles/summaries
-async function extractKeywords(
+// Use Gemini API to extract keywords AND translate/summarize foreign articles
+async function extractKeywordsAndTranslate(
   articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>,
   GOOGLE_GEMINI_API_KEY: string
 ): Promise<any[]> {
   if (articles.length === 0) return [];
 
-  const articleList = articles.map((a, i) => `[${i}] ${a.title} | ${a.summary}`).join("\n");
+  const articleList = articles.map((a, i) => `[${i}] [${a.region}] ${a.title} | ${a.summary}`).join("\n");
 
   try {
     const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -158,30 +206,26 @@ async function extractKeywords(
             role: "system",
             content: `You are a pharmaceutical news analyst specializing in Active Pharmaceutical Ingredients (APIs/원료의약품).
 
-## CRITICAL RULE — KEYWORDS MUST BE FROM THE ARTICLE TEXT
+## TASK 1: KEYWORD EXTRACTION
 - apiKeywords MUST contain ingredient/compound names that are EXPLICITLY written in the article title or summary.
 - DO NOT guess, infer, or hallucinate ingredient names that are NOT in the text.
 - If an article only mentions a brand name without its active ingredient, set apiKeywords to [].
+- Valid keywords: small-molecule compounds, biologics, any INN or chemical name explicitly stated.
+- Keyword format: "한글명 (English Name)"
+- INVALID: Brand/product names only, generic categories (엑소좀, mRNA, GLP-1, siRNA, 백신), mechanism names.
 
-## Valid keywords
-- Small-molecule compounds: 세마글루타이드, 암로디핀, 메트포르민
-- Biologics: 니볼루맙, 두필루맙, 트라스투주맙
-- Any INN or chemical name explicitly stated
+## TASK 2: TRANSLATION & SUMMARY (for 해외 articles ONLY)
+- For articles marked [해외], translate title and summary into Korean.
+- Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, focusing on business impact for API industry).
+- For articles marked [국내], set translated_title and translated_summary to null.
 
-## Keyword format: "한글명 (English Name)"
-
-## INVALID keywords:
-- Brand/product names only
-- Generic categories: 엑소좀, mRNA, GLP-1, siRNA, 백신
-- Mechanism names
-
-## Output: Return JSON array where each item has index, apiKeywords, category.
+## Output: JSON array where each item has index, apiKeywords, category, translated_title, translated_summary.
 - Only include articles with at least 1 valid keyword.
 - category: 규제/시장/공급망/R&D/임상/허가`,
           },
           {
             role: "user",
-            content: `Extract API keywords from these pharmaceutical news articles:\n\n${articleList}`,
+            content: `Extract API keywords and translate foreign articles:\n\n${articleList}`,
           },
         ],
         tools: [
@@ -189,7 +233,7 @@ async function extractKeywords(
             type: "function",
             function: {
               name: "extract_keywords",
-              description: "Extract API keywords from news articles",
+              description: "Extract API keywords and translate foreign news articles",
               parameters: {
                 type: "object",
                 properties: {
@@ -201,6 +245,8 @@ async function extractKeywords(
                         index: { type: "number" },
                         apiKeywords: { type: "array", items: { type: "string" } },
                         category: { type: "string" },
+                        translated_title: { type: "string", description: "Korean translated title for foreign articles, null for domestic" },
+                        translated_summary: { type: "string", description: "Korean translated 2-sentence summary for foreign articles, null for domestic" },
                       },
                       required: ["index", "apiKeywords", "category"],
                       additionalProperties: false,
@@ -233,11 +279,23 @@ async function extractKeywords(
       if (!r.apiKeywords || r.apiKeywords.length === 0) continue;
       const article = articles[r.index];
       if (!article) continue;
+
+      // For foreign articles, use translated title/summary
+      const isForeign = article.region === "해외";
+      const finalTitle = (isForeign && r.translated_title) ? r.translated_title : article.title;
+      const finalSummary = (isForeign && r.translated_summary) ? r.translated_summary : article.summary;
+
       results.push({
-        ...article,
+        title: finalTitle,
+        summary: finalSummary,
+        source: article.source,
+        region: article.region,
+        country: article.country,
+        url: article.url,
+        date: article.date,
         api_keywords: r.apiKeywords,
         category: r.category || "",
-        original_language: article.region === "국내" ? "ko" : "en",
+        original_language: isForeign ? "en" : "ko",
       });
     }
 
@@ -259,7 +317,7 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1. Fetch all RSS feeds in parallel (FREE — no Firecrawl)
+    // 1. Fetch all sources in parallel
     const rssPromises = RSS_SOURCES.map((s) => fetchRss(s).then((articles) =>
       articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country }))
     ));
@@ -270,12 +328,12 @@ serve(async (req) => {
     const allFetched = (await Promise.all([...rssPromises, ...htmlPromises])).flat();
     console.log(`Total fetched articles: ${allFetched.length}`);
 
-    // 2. Extract keywords using Gemini (2 large batches to minimize API calls)
+    // 2. Extract keywords + translate foreign articles using Gemini
     const batchSize = 30;
     const allResults: any[] = [];
     for (let i = 0; i < allFetched.length; i += batchSize) {
       const batch = allFetched.slice(i, i + batchSize);
-      const results = await extractKeywords(batch, GOOGLE_GEMINI_API_KEY);
+      const results = await extractKeywordsAndTranslate(batch, GOOGLE_GEMINI_API_KEY);
       allResults.push(...results);
       if (i + batchSize < allFetched.length) {
         await new Promise((r) => setTimeout(r, 3000));
