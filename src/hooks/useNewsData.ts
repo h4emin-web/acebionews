@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 
 export type NewsArticle = {
   id: string;
@@ -58,7 +59,7 @@ export function useNewsArticles(year: number, month: number, day?: number | null
   });
 }
 
-// Search: get last 6 months of news matching a keyword
+// Search: get last 6 months of news matching a keyword (DB)
 export function useSearchNews(keyword: string) {
   return useQuery({
     queryKey: ["search-news", keyword],
@@ -77,6 +78,38 @@ export function useSearchNews(keyword: string) {
 
       if (error) throw error;
       return (data || []) as NewsArticle[];
+    },
+  });
+}
+
+// External news search via Firecrawl
+export function useExternalNewsSearch(keyword: string) {
+  return useQuery({
+    queryKey: ["external-news", keyword],
+    enabled: !!keyword,
+    staleTime: 5 * 60 * 1000, // 5 min cache
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("search-external", {
+        body: { keyword },
+      });
+      if (error) throw error;
+      return data?.results || [];
+    },
+  });
+}
+
+// Drug info from 의약품안전나라
+export function useDrugInfo(keyword: string) {
+  return useQuery({
+    queryKey: ["drug-info", keyword],
+    enabled: !!keyword,
+    staleTime: 10 * 60 * 1000, // 10 min cache
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("search-drug-info", {
+        body: { keyword },
+      });
+      if (error) throw error;
+      return data || { products: [], dmfRecords: [], productUrl: "", dmfUrl: "" };
     },
   });
 }
