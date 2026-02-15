@@ -223,16 +223,16 @@ serve(async (req) => {
       allResults.push(...batchResults.flat());
     }
 
-    // Clean up old articles (older than 6 months)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    const cutoffDate = sixMonthsAgo.toISOString().split("T")[0];
+    // Clean up old articles (older than 7 days)
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 7);
+    const cutoffStr = cutoffDate.toISOString().split("T")[0];
     const { count: deletedCount } = await supabase
       .from("news_articles")
       .delete({ count: "exact" })
-      .lt("date", cutoffDate);
+      .lt("date", cutoffStr);
     if (deletedCount && deletedCount > 0) {
-      console.log(`Cleaned up ${deletedCount} articles older than 6 months`);
+      console.log(`Cleaned up ${deletedCount} articles older than 7 days`);
     }
 
     if (allResults.length > 0) {
