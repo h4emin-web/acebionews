@@ -38,65 +38,28 @@ serve(async (req) => {
     const drugList = items.map((d) => `- ${d.product_name} (${d.api_name}) by ${d.company}`).join("\n");
 
     const aiResp = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content: `You are a pharmaceutical industry expert. Analyze drugs and provide indication, market size, and business recommendation for API (Active Pharmaceutical Ingredient) importers/manufacturers. Return data using the enrich_drugs tool.`,
-            },
-            {
-              role: "user",
-              content: `다음 NCE 의약품들에 대해 각각 분석해주세요:
+          contents: [{
+            parts: [{
+              text: `You are a pharmaceutical industry expert. 다음 NCE 의약품들에 대해 각각 분석해서 JSON 배열로 반환해주세요.
 
 ${drugList}
 
 각 의약품에 대해:
+- product_name: 입력된 품명 그대로 (대문자 유지)
 - indication: 주요 적응증 (한글, 간결하게 15자 이내)
-- market_size: 글로벌 연 매출 추정 (예: "$20B", "$500M", "$50M" 등)
-- recommendation: 원료의약품 사업 추천도 1~5 (시장 크기, 제네릭 진입 용이성, 수요 전망 기반. 5=매우추천)
+- market_size: 글로벌 연 매출 추정 (예: "$20B", "$500M", "$50M")
+- recommendation: 원료의약품 사업 추천도 1~5 (시장 크기, 제네릭 진입 용이성, 수요 전망 기반)
 
-product_name을 key로 사용하세요.`,
-            },
-          ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "enrich_drugs",
-                description: "Enrich drug data with indication, market size, and recommendation",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    drugs: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          product_name: { type: "string" },
-                          indication: { type: "string" },
-                          market_size: { type: "string" },
-                          recommendation: { type: "integer" },
-                        },
-                        required: ["product_name", "indication", "market_size", "recommendation"],
-                        additionalProperties: false,
-                      },
-                    },
-                  },
-                  required: ["drugs"],
-                  additionalProperties: false,
-                },
-              },
-            },
-          ],
-          tool_choice: { type: "function", function: { name: "enrich_drugs" } },
+JSON 배열만 반환하세요:
+[{"product_name":"DRUG","indication":"적응증","market_size":"$1B","recommendation":3}]`,
+            }],
+          }],
+          generationConfig: { responseMimeType: "application/json" },
         }),
       }
     );
@@ -108,25 +71,33 @@ product_name을 key로 사용하세요.`,
     }
 
     const aiData = await aiResp.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in AI response");
+    const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("AI response preview:", content.slice(0, 300));
 
-    const parsed = JSON.parse(toolCall.function.arguments);
-    const drugs = parsed.drugs || [];
+    // Extract JSON array from response
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error("No JSON array in AI response: " + content.slice(0, 200));
+
+    const drugs = JSON.parse(jsonMatch[0]);
+    console.log(`Parsed ${drugs.length} drugs from AI`);
 
     let updated = 0;
     for (const drug of drugs) {
-      const match = items.find((i) => i.product_name === drug.product_name);
+      const drugName = (drug.product_name || "").split("(")[0].trim().toLowerCase();
+      const match = items.find((i) => i.product_name.toLowerCase() === drugName);
       if (match) {
         const { error: updateErr } = await supabase
           .from("nce_patent_expiry")
           .update({
             indication: drug.indication,
             market_size: drug.market_size,
-            recommendation: Math.min(5, Math.max(1, drug.recommendation)),
+            recommendation: Math.min(5, Math.max(1, drug.recommendation || 1)),
           })
           .eq("id", match.id);
         if (!updateErr) updated++;
+        else console.error("Update error for", match.product_name, updateErr);
+      } else {
+        console.log("No match for:", drug.product_name);
       }
     }
 
