@@ -35,17 +35,17 @@ async function parseWithAI(markdown: string, keyword: string, type: string, apiK
 
   const prompt = type === "products"
     ? `다음은 의약품안전나라에서 "${keyword}" 원료를 검색한 결과입니다. 
-등록된 의약품 제품 목록을 추출해 JSON 배열로 반환하세요.
+등록된 의약품 제품 목록을 모두 추출해 JSON 배열로 반환하세요.
 각 항목: {"name": "제품명", "company": "업체명", "type": "전문/일반", "form": "제형"}
-최대 20개까지만. JSON 배열만 반환하세요.
+개수 제한 없이 모두 추출하세요. JSON 배열만 반환하세요.
 
-${markdown.slice(0, 6000)}`
+${markdown.slice(0, 15000)}`
     : `다음은 의약품안전나라 DMF 페이지에서 "${keyword}" 성분을 검색한 결과입니다.
-DMF 등록 정보를 추출해 JSON 배열로 반환하세요.
-각 항목: {"dmf_no": "DMF번호", "company": "업체명", "country": "국가", "status": "상태"}
-최대 20개까지만. JSON 배열만 반환하세요.
+DMF 등록 정보를 모두 추출해 JSON 배열로 반환하세요.
+각 항목: {"company": "업체명(등록자)", "manufacturer": "제조소명", "country": "국가"}
+개수 제한 없이 모두 추출하세요. JSON 배열만 반환하세요.
 
-${markdown.slice(0, 6000)}`;
+${markdown.slice(0, 15000)}`;
 
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) return null;
