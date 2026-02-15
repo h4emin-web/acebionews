@@ -165,7 +165,7 @@ const Index = () => {
             물질 특허 만료 NCE
           </button>
         </div>
-        <StatsBar news={allNews} totalKeywords={allKeywords.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
+        {!search && <StatsBar news={allNews} totalKeywords={allKeywords.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />}
 
         {search && (
           <>
