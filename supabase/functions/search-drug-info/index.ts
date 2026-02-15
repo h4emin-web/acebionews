@@ -67,7 +67,26 @@ serve(async (req) => {
       jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     }
 
-    const profile = JSON.parse(jsonStr);
+    // Try to extract JSON object even if surrounded by text
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn("AI did not return valid JSON for:", keyword, "Response:", content.substring(0, 200));
+      return new Response(
+        JSON.stringify({ success: true, profile: null }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let profile;
+    try {
+      profile = JSON.parse(jsonMatch[0]);
+    } catch {
+      console.warn("JSON parse failed for:", keyword);
+      return new Response(
+        JSON.stringify({ success: true, profile: null }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
       JSON.stringify({ success: true, profile }),
