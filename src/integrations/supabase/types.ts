@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      nce_patent_expiry: {
+        Row: {
+          api_name: string
+          company: string | null
+          created_at: string
+          expiry_date: string
+          id: string
+          indication: string | null
+          market_size: string | null
+          product_name: string
+          recommendation: number | null
+          updated_at: string
+        }
+        Insert: {
+          api_name: string
+          company?: string | null
+          created_at?: string
+          expiry_date: string
+          id?: string
+          indication?: string | null
+          market_size?: string | null
+          product_name: string
+          recommendation?: number | null
+          updated_at?: string
+        }
+        Update: {
+          api_name?: string
+          company?: string | null
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          indication?: string | null
+          market_size?: string | null
+          product_name?: string
+          recommendation?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       news_articles: {
         Row: {
           api_keywords: string[]
