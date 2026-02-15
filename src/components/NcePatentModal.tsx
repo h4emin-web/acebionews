@@ -67,9 +67,11 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
 
   const fetchData = async () => {
     setLoading(true);
+    const today = new Date().toISOString().split("T")[0];
     const { data: patents, error } = await supabase
       .from("nce_patent_expiry")
       .select("*")
+      .gte("expiry_date", today)
       .order("expiry_date", { ascending: true });
     if (error) {
       console.error("Fetch NCE error:", error);
@@ -209,10 +211,7 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">#</span>
                   </th>
                   <th className="px-3 py-3 text-left">
-                    <SortButton label="품명" sortKeyVal="product_name" />
-                  </th>
-                  <th className="px-3 py-3 text-left">
-                    <SortButton label="원료명" sortKeyVal="api_name" />
+                    <SortButton label="품명 / 원료명" sortKeyVal="product_name" />
                   </th>
                   <th className="px-3 py-3 text-left">
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">제조사</span>
@@ -241,21 +240,11 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
                     <tr key={item.id} className="hover:bg-muted/40 transition-colors whitespace-nowrap">
                       <td className="px-3 py-2.5 text-[11px] text-muted-foreground font-mono">{i + 1}</td>
                       <td className="px-3 py-2.5">
-                        <span className="text-xs font-semibold text-foreground">{item.product_name}</span>
+                        <span className="text-xs font-semibold text-foreground block">{item.product_name}</span>
+                        <span className="text-[11px] font-mono text-muted-foreground">{item.api_name}</span>
                       </td>
                       <td className="px-3 py-2.5">
-                        <button
-                          onClick={() => {
-                            onKeywordClick?.(item.api_name);
-                            onClose();
-                          }}
-                          className="text-xs font-mono text-primary hover:underline cursor-pointer text-left"
-                        >
-                          {item.api_name}
-                        </button>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span className="text-[11px] text-muted-foreground truncate block max-w-[150px]" title={item.company || ""}>
+                        <span className="text-[11px] text-muted-foreground truncate block max-w-[100px]" title={item.company || ""}>
                           {item.company || "-"}
                         </span>
                       </td>
