@@ -150,23 +150,55 @@ function parseDmfHtml(html: string): any[] {
   }
 
   const tbody = tbodyMatch[1];
-  // Remove nested tables to simplify parsing and avoid CPU-heavy regex
-  const cleanTbody = tbody.replace(/<table[\s\S]*?<\/table>/gi, "");
+
+  // Replace nested tables with their text content, deduplicating repeated entries
+  const flatTbody = tbody.replace(/<table[\s\S]*?<\/table>/gi, (match) => {
+    // Extract each row's text from the nested table
+    const rowTexts: string[] = [];
+    const nestedRowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let nr;
+    while ((nr = nestedRowRegex.exec(match)) !== null) {
+      const text = stripHtml(nr[1]).trim();
+      if (text && !rowTexts.includes(text)) rowTexts.push(text);
+    }
+    return rowTexts.join(", ");
+  });
 
   const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
   let rowMatch;
 
-  while ((rowMatch = rowRegex.exec(cleanTbody)) !== null) {
+  while ((rowMatch = rowRegex.exec(flatTbody)) !== null) {
     const cells = extractCells(rowMatch[1]);
     const cleaned = cells.map(removeLabel).filter(c => c.length > 0);
-    // Structure: [번호, 대상의약품, 등록번호, 성분명, 신청인, 최초등록일자, ...]
-    // Optional trailing: 최종변경일자, 연차보고년도, 취소/취하구분, 취소/취하일자
-    if (cleaned.length >= 5 && /^\d+$/.test(cleaned[0])) {
+
+    if (records.length === 0) {
+      console.log(`First row cells (${cleaned.length}):`, JSON.stringify(cleaned.slice(0, 12)));
+    }
+
+    // Structure: [번호, 대상의약품, 등록번호, 성분명, 신청인, 제조소명, 날짜들..., 상태]
+    if (cleaned.length >= 6 && /^\d+$/.test(cleaned[0])) {
       const status = cleaned.find(c => c === "정상" || c === "취하" || c === "취소") || "정상";
+      const dateIdx = cleaned.findIndex((c, idx) => idx >= 6 && /^\d{4}[.\-\/]\d{2}[.\-\/]\d{2}/.test(c));
+      const registrationDate = dateIdx >= 0 ? cleaned[dateIdx] : "";
+
+      // Deduplicate manufacturer name (e.g. "Bayer AGBayer AGBayer AG" → "Bayer AG")
+      let mfr = cleaned[5] || "";
+      if (mfr.length > 3) {
+        // Try to find repeated substring
+        for (let len = 3; len <= mfr.length / 2; len++) {
+          const sub = mfr.slice(0, len);
+          if (mfr === sub.repeat(mfr.length / sub.length)) {
+            mfr = sub;
+            break;
+          }
+        }
+      }
+
       records.push({
         ingredientName: cleaned[3] || "",
         applicant: cleaned[4] || "",
-        registrationDate: cleaned[5] || "",
+        manufacturer: mfr,
+        registrationDate,
         status,
       });
     }
