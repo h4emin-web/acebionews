@@ -9,6 +9,7 @@ import { UsDmfSection } from "@/components/UsDmfSection";
 import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
+import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -251,6 +252,12 @@ const Index = () => {
           <aside className="space-y-4">
             {selectedNews ? (
               <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} />
+            ) : isSearching ? (
+              <SearchSidebarPanel
+                keyword={search}
+                profile={drugInfo}
+                loading={drugInfoLoading}
+              />
             ) : (
               <>
                 <UsDmfSection onKeywordClick={handleKeywordClick} />

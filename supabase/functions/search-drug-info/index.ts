@@ -25,19 +25,27 @@ serve(async (req) => {
   "nameKo": "한글명",
   "nameEn": "English Name",
   "cas": "CAS 번호 (모르면 null)",
-  "category": "약효 분류 (예: 비스테로이드성 항응고제, 선택적 미네랄코르티코이드 수용체 길항제 등)",
+  "category": "약효 분류",
   "mechanism": "작용기전을 1~2문장으로 간결하게",
   "indications": ["적응증1", "적응증2", "적응증3"],
   "dosageForms": ["제형1", "제형2"],
   "sideEffects": ["주요 부작용1", "부작용2", "부작용3"],
   "originatorCompany": "오리지네이터 제약사명",
   "originatorBrand": "오리지네이터 제품 브랜드명",
-  "patentStatus": "특허 상태 간단 설명 (예: 주요 특허 2025년 만료 예정)",
+  "patentStatus": "특허 상태 간단 설명",
   "marketTrend": "시장 동향을 2~3문장으로",
-  "relatedApis": ["관련/경쟁 API 1", "관련/경쟁 API 2", "관련/경쟁 API 3"]
+  "relatedApis": ["관련/경쟁 API 1", "관련/경쟁 API 2", "관련/경쟁 API 3"],
+  "domesticProducts": [
+    {"name": "제품명", "company": "제조사", "dosageForm": "제형", "strength": "함량"}
+  ],
+  "dmfRecords": [
+    {"company": "회사명", "country": "국가", "dmfNumber": "DMF 번호 (모르면 null)"}
+  ]
 }
 
 중요 규칙:
+- domesticProducts: 한국 식약처(MFDS)에 등록된 해당 원료 함유 의약품을 최대 10개. 실제 허가된 제품만 기재.
+- dmfRecords: US FDA DMF에 등록된 해당 원료의 제조사를 최대 10개. 실제 등록된 회사만 기재.
 - 정확한 정보만 제공하세요. 모르는 항목은 null 또는 빈 배열로.
 - JSON만 출력하세요.`;
 
