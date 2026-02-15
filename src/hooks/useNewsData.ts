@@ -114,6 +114,38 @@ export function useDrugInfo(keyword: string) {
   });
 }
 
+// MFDS domestic products (real data)
+export function useMfdsProducts(keyword: string) {
+  return useQuery({
+    queryKey: ["mfds-products", keyword],
+    enabled: !!keyword,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("scrape-mfds", {
+        body: { keyword, type: "products" },
+      });
+      if (error) throw error;
+      return data?.domesticProducts || [];
+    },
+  });
+}
+
+// MFDS DMF records (real data)
+export function useMfdsDmf(keyword: string) {
+  return useQuery({
+    queryKey: ["mfds-dmf", keyword],
+    enabled: !!keyword,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("scrape-mfds", {
+        body: { keyword, type: "dmf" },
+      });
+      if (error) throw error;
+      return data?.dmfRecords || [];
+    },
+  });
+}
+
 export function useRegulatoryNotices(source: string) {
   return useQuery({
     queryKey: ["regulatory-notices", source],
