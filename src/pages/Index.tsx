@@ -10,7 +10,7 @@ import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
-import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo } from "@/hooks/useNewsData";
+import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo, useMfdsProducts, useMfdsDmf } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,6 +47,8 @@ const Index = () => {
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
   const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(debouncedSearch);
   const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
+  const { data: mfdsProducts = [], isLoading: mfdsProductsLoading } = useMfdsProducts(debouncedSearch);
+  const { data: mfdsDmf = [], isLoading: mfdsDmfLoading } = useMfdsDmf(debouncedSearch);
 
   const allNews = (search ? searchResults : newsArticles).
   filter((n) => n.api_keywords && n.api_keywords.length > 0);
@@ -255,8 +257,10 @@ const Index = () => {
             ) : isSearching ? (
               <SearchSidebarPanel
                 keyword={search}
-                profile={drugInfo}
-                loading={drugInfoLoading}
+                products={mfdsProducts}
+                productsLoading={mfdsProductsLoading}
+                dmfRecords={mfdsDmf}
+                dmfLoading={mfdsDmfLoading}
               />
             ) : (
               <>

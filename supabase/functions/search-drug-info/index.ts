@@ -34,18 +34,10 @@ serve(async (req) => {
   "originatorBrand": "오리지네이터 제품 브랜드명",
   "patentStatus": "특허 상태 간단 설명",
   "marketTrend": "시장 동향을 2~3문장으로",
-  "relatedApis": ["관련/경쟁 API 1", "관련/경쟁 API 2", "관련/경쟁 API 3"],
-  "domesticProducts": [
-    {"name": "제품명", "company": "제조사", "dosageForm": "제형", "strength": "함량"}
-  ],
-  "dmfRecords": [
-    {"ingredientName": "성분명", "applicant": "신청인", "manufacturer": "제조소명", "manufacturerAddress": "제조소소재지", "country": "제조국가"}
-  ]
+  "relatedApis": ["관련/경쟁 API 1", "관련/경쟁 API 2", "관련/경쟁 API 3"]
 }
 
 중요 규칙:
-- domesticProducts: 한국 식약처(MFDS)에 등록된 해당 원료 함유 의약품을 최대 10개. 실제 허가된 제품만 기재.
-- dmfRecords: 한국 식약처 의약품안전나라(nedrug.mfds.go.kr)의 원료의약품등록(DMF) 공고에 등록된 해당 원료 DMF 정보. 실제 등록된 것만 기재. 최대 10개.
 - 정확한 정보만 제공하세요. 모르는 항목은 null 또는 빈 배열로.
 - JSON만 출력하세요.`;
 
