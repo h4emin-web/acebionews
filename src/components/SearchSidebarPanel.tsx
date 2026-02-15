@@ -76,26 +76,17 @@ export const SearchSidebarPanel = ({ keyword, products, productsLoading, dmfReco
                   <div className="flex flex-col gap-0.5 mt-1">
                     {d.applicant && (
                       <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Building2 className="w-3 h-3" />
-                        신청인: {d.applicant}
-                      </span>
-                    )}
-                    {d.manufacturer && (
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                         <FlaskConical className="w-3 h-3" />
-                        제조소: {d.manufacturer}
+                        제조소: {d.applicant}
                       </span>
                     )}
-                    {d.country && (
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {d.country}
+                    {d.registrationDate && (
+                      <span className="text-[10px] text-muted-foreground">
+                        허가일자: {d.registrationDate}
                       </span>
                     )}
-                    {d.registrationNo && (
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        등록번호: {d.registrationNo}
-                      </span>
+                    {d.status && d.status !== "정상" && (
+                      <Badge variant="destructive" className="text-[9px] w-fit">{d.status}</Badge>
                     )}
                   </div>
                 </div>
