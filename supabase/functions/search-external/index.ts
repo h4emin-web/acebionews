@@ -36,7 +36,10 @@ serve(async (req) => {
     if (!searchResp.ok) {
       const t = await searchResp.text();
       console.error("Firecrawl search error:", searchResp.status, t);
-      throw new Error(`Search failed: ${searchResp.status}`);
+      // Return empty results instead of crashing on transient errors
+      return new Response(JSON.stringify({ success: true, results: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const searchData = await searchResp.json();
