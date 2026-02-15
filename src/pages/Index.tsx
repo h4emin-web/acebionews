@@ -5,6 +5,7 @@ import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
+import { UsDmfSection } from "@/components/UsDmfSection";
 import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
@@ -196,6 +197,7 @@ const Index = () => {
             <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} /> :
 
             <>
+                <UsDmfSection onKeywordClick={handleKeywordClick} />
                 <MfdsSection onKeywordClick={handleKeywordClick} />
                 <FdaSection onKeywordClick={handleKeywordClick} />
               </>
