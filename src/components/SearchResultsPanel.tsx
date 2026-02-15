@@ -68,7 +68,7 @@ export const SearchResultsPanel = ({ keyword, profile, loading, onRelatedClick }
           {/* 적응증 */}
           <Section icon={<Target className="w-3.5 h-3.5 text-primary" />} title="적응증">
             <div className="flex flex-wrap gap-1.5">
-              {profile.indications.map((ind, i) => (
+              {(profile.indications || []).map((ind, i) => (
                 <Badge key={i} variant="outline" className="text-[10px] font-normal">{ind}</Badge>
               ))}
             </div>
