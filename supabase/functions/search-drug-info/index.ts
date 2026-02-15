@@ -17,7 +17,7 @@ async function scrapeWithFirecrawl(url: string, apiKey: string): Promise<string>
       url,
       formats: ["markdown"],
       onlyMainContent: true,
-      timeout: 20000,
+      waitFor: 3000,
     }),
   });
 
@@ -30,7 +30,7 @@ async function scrapeWithFirecrawl(url: string, apiKey: string): Promise<string>
   return data.data?.markdown || data.markdown || "";
 }
 
-async function parseWithAI(markdown: string, keyword: string, type: string, apiKey: string) {
+async function parseWithAI(markdown: string, keyword: string, type: string) {
   if (!markdown || markdown.length < 50) return null;
 
   const prompt = type === "products"
@@ -40,10 +40,13 @@ async function parseWithAI(markdown: string, keyword: string, type: string, apiK
 개수 제한 없이 모두 추출하세요. JSON 배열만 반환하세요.
 
 ${markdown.slice(0, 15000)}`
-    : `다음은 의약품안전나라 DMF 페이지에서 "${keyword}" 성분을 검색한 결과입니다.
-DMF 등록 정보를 모두 추출해 JSON 배열로 반환하세요.
-각 항목: {"company": "업체명(등록자)", "manufacturer": "제조소명", "country": "국가"}
-개수 제한 없이 모두 추출하세요. JSON 배열만 반환하세요.
+    : `다음은 의약품안전나라 DMF(원료의약품등록) 등록현황 페이지에서 "${keyword}" 성분으로 검색한 결과입니다.
+
+주의: 이 페이지의 데이터에서 "${keyword}" 성분과 관련된 DMF 등록 정보만 추출하세요.
+성분명 필드에 "${keyword}"가 포함된 행만 추출하세요. 관련없는 다른 성분의 DMF 정보는 제외하세요.
+
+각 항목을 JSON 배열로 반환: {"company": "신청인(업체명)", "manufacturer": "제조소명(영문 그대로)", "country": "제조국가"}
+JSON 배열만 반환하세요. 관련 항목이 없으면 빈 배열 []을 반환하세요.
 
 ${markdown.slice(0, 15000)}`;
 
@@ -88,13 +91,14 @@ serve(async (req) => {
 
     console.log(`Searching drug info for: ${keyword}`);
 
-    // Extract just the Korean or English name from "한글명 (English Name)" format
     const cleanKeyword = keyword.replace(/\s*\(.*\)\s*$/, "").trim();
     const englishMatch = keyword.match(/\(([^)]+)\)/);
     const searchTerm = englishMatch ? englishMatch[1] : cleanKeyword;
 
-    // Scrape both pages in parallel
+    // Product search URL - uses ingrName parameter for ingredient name search
     const productUrl = `https://nedrug.mfds.go.kr/searchDrug?searchYn=true&page=1&searchDivision=detail&itemName=&entpName=&ingrName=${encodeURIComponent(searchTerm)}&itemSeq=&materialName=&mtralSe=&ediCode=&typeName=`;
+    
+    // DMF search URL - uses sIngredient for ingredient search  
     const dmfUrl = `https://nedrug.mfds.go.kr/pbp/CCBAC03?searchYn=true&page=1&searchDivision=detail&sIngredient=${encodeURIComponent(searchTerm)}`;
 
     const [productMarkdown, dmfMarkdown] = await Promise.all([
@@ -104,10 +108,9 @@ serve(async (req) => {
 
     console.log(`Scraped products: ${productMarkdown.length} chars, DMF: ${dmfMarkdown.length} chars`);
 
-    // Parse both results with AI in parallel
     const [products, dmfRecords] = await Promise.all([
-      parseWithAI(productMarkdown, searchTerm, "products", FIRECRAWL_API_KEY),
-      parseWithAI(dmfMarkdown, searchTerm, "dmf", FIRECRAWL_API_KEY),
+      parseWithAI(productMarkdown, searchTerm, "products"),
+      parseWithAI(dmfMarkdown, searchTerm, "dmf"),
     ]);
 
     return new Response(
