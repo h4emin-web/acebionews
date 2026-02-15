@@ -39,49 +39,31 @@ const HEADERS = {
   "Accept-Language": "ko-KR,ko;q=0.9",
 };
 
-// Flatten nested tables, then extract cell values from outer <td> tags
-function extractOuterCells(rowHtml: string): string[] {
-  // Step 1: Replace ALL nested tables with their text content
-  // Handle multi-row nested tables by collecting all inner td text
-  let flattened = rowHtml;
-  // Keep replacing nested tables until none remain
-  while (/<td[^>]*>[\s\S]*?<table/i.test(flattened)) {
-    flattened = flattened.replace(
-      /(<td[^>]*>[\s\S]*?)<table[^>]*><tbody[^>]*>([\s\S]*?)<\/tbody><\/table>/gi,
-      (match, before, tableContent) => {
-        // Extract all inner td text values
-        const innerTexts: string[] = [];
-        const innerTdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-        let m;
-        while ((m = innerTdRegex.exec(tableContent)) !== null) {
-          const text = m[1].replace(/<[^>]*>/g, "").trim();
-          if (text) innerTexts.push(text);
-        }
-        return before + innerTexts.join("; ");
-      }
-    );
-  }
-  
-  // Step 2: Now extract outer td cells
+// Strip HTML and remove leading Korean labels like "신청인 ", "등록번호 " etc.
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function removeLabel(text: string): string {
+  // Remove common DMF table labels that get merged with values
+  return text
+    .replace(/^(대상의약품|등록번호|성분명|신청인|제조소명|발급일자|업소명|제조소소재지|제조국가|최초등록일자|최종변경일자|최종연차보고년도|취소\/취하구분|취소\/취하일자|문서번호|연계심사문서번호)\s*/g, "")
+    .trim();
+}
+
+// Extract cells from a row - simple approach, no nested table handling
+function extractCells(rowHtml: string): string[] {
   const cells: string[] = [];
   const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-  let cellMatch;
-  while ((cellMatch = cellRegex.exec(flattened)) !== null) {
-    // Remove s-th labels and remaining HTML
-    let val = cellMatch[1]
-      .replace(/<span\s+class="s-th">[^<]*<\/span>/gi, "")
-      .replace(/<[^>]*>/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    cells.push(val);
+  let m;
+  while ((m = cellRegex.exec(rowHtml)) !== null) {
+    cells.push(stripHtml(m[1]));
   }
   return cells;
 }
 
-// Drug search: GET https://nedrug.mfds.go.kr/searchDrug?ingrName1=셀레늄
 async function scrapeProducts(keyword: string) {
   const isEnglish = /^[a-zA-Z\s\-]+$/.test(keyword.trim());
-  
   const params = new URLSearchParams();
   if (isEnglish) {
     params.set("ingrEngName", keyword);
@@ -89,7 +71,7 @@ async function scrapeProducts(keyword: string) {
     params.set("ingrName1", keyword);
   }
   params.set("indutyClassCode", "A0");
-  
+
   const url = `https://nedrug.mfds.go.kr/searchDrug?${params.toString()}`;
   console.log(`Fetching products: ${url}`);
 
@@ -105,19 +87,20 @@ async function scrapeProducts(keyword: string) {
 
 function parseProductsHtml(html: string): any[] {
   const products: any[] = [];
-  
+
+  // Only grab the first tbody to reduce processing
   const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
   if (!tbodyMatch) return [];
-  
+
   const tbody = tbodyMatch[1];
+  // Remove all nested tables first to prevent regex issues
+  const cleanTbody = tbody.replace(/<table[\s\S]*?<\/table>/gi, "");
+
   const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
   let rowMatch;
-  
-  while ((rowMatch = rowRegex.exec(tbody)) !== null) {
-    const cells = extractOuterCells(rowMatch[1]);
-    
-    // Product table: 순번(0), 제품명(1), 제품영문명(2), 업체명(3), 업체영문명(4), 
-    // 품목기준코드(5), 허가번호(6), 허가일(7), 품목구분(8), 취소/취하(9)
+
+  while ((rowMatch = rowRegex.exec(cleanTbody)) !== null) {
+    const cells = extractCells(rowMatch[1]);
     if (cells.length >= 8 && /^\d+$/.test(cells[0])) {
       products.push({
         name: cells[1] || "",
@@ -129,17 +112,17 @@ function parseProductsHtml(html: string): any[] {
         category: cells[8] || "",
       });
     }
+    if (products.length >= 10) break;
   }
-  
+
   console.log(`Parsed ${products.length} products`);
-  return products.slice(0, 10);
+  return products;
 }
 
-// DMF: GET https://nedrug.mfds.go.kr/pbp/CCBAC03/getList?searchIngrKorName=셀레늄
 async function scrapeDmf(keyword: string) {
   const params = new URLSearchParams();
   params.set("searchIngrKorName", keyword);
-  
+
   const url = `https://nedrug.mfds.go.kr/pbp/CCBAC03/getList?${params.toString()}`;
   console.log(`Fetching DMF: ${url}`);
 
@@ -155,43 +138,47 @@ async function scrapeDmf(keyword: string) {
 
 function parseDmfHtml(html: string): any[] {
   const records: any[] = [];
-  
-  // Find total count
+
   const countMatch = html.match(/총\s*([\d,]+)건/);
   const totalCount = countMatch ? countMatch[1] : "0";
   console.log(`DMF total count: ${totalCount}`);
-  
+
   const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
   if (!tbodyMatch) {
     console.log("No tbody found in DMF HTML");
     return [];
   }
-  
+
   const tbody = tbodyMatch[1];
+  // Remove nested tables to simplify parsing and avoid CPU-heavy regex
+  const cleanTbody = tbody.replace(/<table[\s\S]*?<\/table>/gi, "");
+
   const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
   let rowMatch;
-  
-  while ((rowMatch = rowRegex.exec(tbody)) !== null) {
-    const cells = extractOuterCells(rowMatch[1]);
-    
-    // DMF columns: 순번(0), 대상의약품(1), 등록번호(2), 성분명(3), 신청인(4),
-    // 제조소명(5), 제조소소재지(6), 제조국가(7), 최초등록일자(8),
-    // 최종변경일자(9), 최종연차보고년도(10), 취소/취하구분(11), 취소/취하일자(12), 문서번호(13), 연계심사문서번호(14)
-    if (cells.length >= 8 && /^\d+$/.test(cells[0])) {
-      records.push({
-        targetDrug: cells[1] || "",
-        registrationNo: cells[2] || "",
-        ingredientName: cells[3] || "",
-        applicant: cells[4] || "",
-        manufacturer: cells[5] || "",
-        manufacturerAddress: cells[6] || "",
-        country: cells[7] || "",
-        registrationDate: cells[8] || "",
-        status: cells[11] || "",
-      });
+
+  while ((rowMatch = rowRegex.exec(cleanTbody)) !== null) {
+    const cells = extractCells(rowMatch[1]);
+    if (cells.length >= 2) {
+      // The nested table structure means cells contain labels merged with values
+      // Apply removeLabel to clean them up
+      const cleaned = cells.map(removeLabel).filter(c => c.length > 0);
+      if (cleaned.length >= 1 && /^\d+$/.test(cleaned[0])) {
+        records.push({
+          targetDrug: cleaned[1] || "",
+          registrationNo: cleaned[2] || "",
+          ingredientName: cleaned[3] || "",
+          applicant: cleaned[4] || "",
+          manufacturer: cleaned[5] || "",
+          manufacturerAddress: cleaned[6] || "",
+          country: cleaned[7] || "",
+          registrationDate: cleaned[8] || "",
+          status: cleaned.length > 11 ? cleaned[11] || "" : "",
+        });
+      }
     }
+    if (records.length >= 10) break;
   }
-  
+
   console.log(`Parsed ${records.length} DMF records`);
-  return records.slice(0, 10);
+  return records;
 }
