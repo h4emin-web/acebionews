@@ -8,7 +8,8 @@ import { FdaSection } from "@/components/FdaSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
 import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { NcePatentModal } from "@/components/NcePatentModal";
-import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
+import { SearchResultsPanel } from "@/components/SearchResultsPanel";
+import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -35,11 +36,14 @@ const Index = () => {
   const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
+  const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(search);
+  const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(search);
 
   const allNews = (search ? searchResults : newsArticles).
   filter((n) => n.api_keywords && n.api_keywords.length > 0);
   const displayNews = allNews.filter((n) => regionFilter === "all" || n.region === regionFilter);
   const isLoading = search ? searchLoading : newsLoading;
+  const isSearching = !!search;
 
   const handleKeywordClick = (kw: string) => {
     setSearch(kw);
@@ -204,15 +208,26 @@ const Index = () => {
           </div>
 
           <aside className="space-y-4">
-            {selectedNews ?
-            <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} /> :
-
-            <>
+            {selectedNews ? (
+              <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} />
+            ) : isSearching ? (
+              <SearchResultsPanel
+                keyword={search}
+                externalNews={externalNews}
+                newsLoading={externalNewsLoading}
+                products={drugInfo?.products || []}
+                dmfRecords={drugInfo?.dmfRecords || []}
+                drugInfoLoading={drugInfoLoading}
+                productUrl={drugInfo?.productUrl}
+                dmfUrl={drugInfo?.dmfUrl}
+              />
+            ) : (
+              <>
                 <UsDmfSection onKeywordClick={handleKeywordClick} />
                 <MfdsSection onKeywordClick={handleKeywordClick} />
                 <FdaSection onKeywordClick={handleKeywordClick} />
               </>
-            }
+            )}
           </aside>
         </div>
       </main>
