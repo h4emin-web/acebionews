@@ -1,0 +1,1 @@
+ALTER TABLE public.nce_patent_expiry ADD COLUMN api_name_ko TEXT;

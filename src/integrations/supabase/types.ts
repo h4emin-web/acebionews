@@ -17,6 +17,7 @@ export type Database = {
       nce_patent_expiry: {
         Row: {
           api_name: string
+          api_name_ko: string | null
           company: string | null
           created_at: string
           expiry_date: string
@@ -29,6 +30,7 @@ export type Database = {
         }
         Insert: {
           api_name: string
+          api_name_ko?: string | null
           company?: string | null
           created_at?: string
           expiry_date: string
@@ -41,6 +43,7 @@ export type Database = {
         }
         Update: {
           api_name?: string
+          api_name_ko?: string | null
           company?: string | null
           created_at?: string
           expiry_date?: string
