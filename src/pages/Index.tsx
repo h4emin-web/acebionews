@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pill, Clock, RefreshCw, Search, CalendarDays, Globe, Flag, FlaskConical } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
@@ -25,6 +25,14 @@ const Index = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Debounce search for external API calls (Korean IME sends many partial chars)
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    if (!search) { setDebouncedSearch(""); return; }
+    const timer = setTimeout(() => setDebouncedSearch(search), 600);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const now = new Date();
   const todayStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
 
@@ -36,8 +44,8 @@ const Index = () => {
   const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
-  const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(search);
-  const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(search);
+  const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(debouncedSearch);
+  const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
 
   const allNews = (search ? searchResults : newsArticles).
   filter((n) => n.api_keywords && n.api_keywords.length > 0);
