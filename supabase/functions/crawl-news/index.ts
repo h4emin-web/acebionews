@@ -135,24 +135,24 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
   }
 }
 
-// Use Lovable AI (FREE) to extract API keywords from article titles/summaries
+// Use Gemini API to extract API keywords from article titles/summaries
 async function extractKeywords(
   articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>,
-  LOVABLE_API_KEY: string
-): Promise<typeof articles & { api_keywords: string[]; category: string }[]> {
+  GOOGLE_GEMINI_API_KEY: string
+): Promise<any[]> {
   if (articles.length === 0) return [];
 
   const articleList = articles.map((a, i) => `[${i}] ${a.title} | ${a.summary}`).join("\n");
 
   try {
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         messages: [
           {
             role: "system",
@@ -218,9 +218,7 @@ async function extractKeywords(
     });
 
     if (!aiResp.ok) {
-      const status = aiResp.status;
-      console.error(`Lovable AI error: ${status}`);
-      if (status === 429) console.error("Rate limited — will retry next cycle");
+      console.error(`Gemini API error: ${aiResp.status}`);
       return [];
     }
 
@@ -254,14 +252,14 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1. Fetch all RSS feeds in parallel
+    // 1. Fetch all RSS feeds in parallel (FREE — no Firecrawl)
     const rssPromises = RSS_SOURCES.map((s) => fetchRss(s).then((articles) =>
       articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country }))
     ));
@@ -272,16 +270,15 @@ serve(async (req) => {
     const allFetched = (await Promise.all([...rssPromises, ...htmlPromises])).flat();
     console.log(`Total fetched articles: ${allFetched.length}`);
 
-    // 2. Extract keywords using Lovable AI (FREE — no Gemini/Firecrawl costs)
-    // Process in batches of 15 to stay within token limits
-    const batchSize = 15;
+    // 2. Extract keywords using Gemini (2 large batches to minimize API calls)
+    const batchSize = 30;
     const allResults: any[] = [];
     for (let i = 0; i < allFetched.length; i += batchSize) {
       const batch = allFetched.slice(i, i + batchSize);
-      const results = await extractKeywords(batch, LOVABLE_API_KEY);
+      const results = await extractKeywords(batch, GOOGLE_GEMINI_API_KEY);
       allResults.push(...results);
       if (i + batchSize < allFetched.length) {
-        await new Promise((r) => setTimeout(r, 1000)); // rate limit buffer
+        await new Promise((r) => setTimeout(r, 3000));
       }
     }
 
