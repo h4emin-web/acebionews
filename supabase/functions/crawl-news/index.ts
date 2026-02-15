@@ -86,7 +86,7 @@ async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: st
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-pro",
         messages: [
           {
             role: "system",
