@@ -167,12 +167,20 @@ const Index = () => {
         </div>
         <StatsBar news={allNews} totalKeywords={allKeywords.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
 
-        {search &&
-        <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">검색:</span>
-            <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono text-xs font-medium">{search}</span>
-          </div>
-        }
+        {search && (
+          <>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">검색:</span>
+              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono text-xs font-medium">{search}</span>
+            </div>
+            <SearchResultsPanel
+              keyword={search}
+              profile={drugInfo}
+              loading={drugInfoLoading}
+              onRelatedClick={handleKeywordClick}
+            />
+          </>
+        )}
 
         <div className={`grid gap-5 ${selectedNews ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-[1fr_340px]"}`}>
           <div className="space-y-4">
@@ -249,13 +257,6 @@ const Index = () => {
           <aside className="space-y-4">
             {selectedNews ? (
               <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} />
-            ) : isSearching ? (
-              <SearchResultsPanel
-                keyword={search}
-                profile={drugInfo}
-                loading={drugInfoLoading}
-                onRelatedClick={handleKeywordClick}
-              />
             ) : (
               <>
                 <UsDmfSection onKeywordClick={handleKeywordClick} />
