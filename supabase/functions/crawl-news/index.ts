@@ -21,20 +21,9 @@ const HTML_SOURCES = [
   { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP", parser: "generic" },
 ];
 
-function normalizeDate(dateStr: string): string {
-  const today = new Date().toISOString().split("T")[0];
-  if (!dateStr) return today;
-  let result = today;
-  const d = new Date(dateStr);
-  if (!isNaN(d.getTime())) {
-    result = d.toISOString().split("T")[0];
-  }
-  if (result > today) return today;
-  const twoWeeksAgo = new Date();
-  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-  const minDate = twoWeeksAgo.toISOString().split("T")[0];
-  if (result < minDate) return today;
-  return result;
+function normalizeDate(_dateStr?: string): string {
+  // Always use today's date (KST) as the crawl date
+  return new Date().toISOString().split("T")[0];
 }
 
 function stripCdata(text: string): string {
