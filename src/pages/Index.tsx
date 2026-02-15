@@ -33,9 +33,9 @@ const Index = () => {
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
 
-  const displayNews = (search ? searchResults : newsArticles)
-    .filter((n) => n.api_keywords && n.api_keywords.length > 0)
-    .filter((n) => regionFilter === "all" || n.region === regionFilter);
+  const allNews = (search ? searchResults : newsArticles)
+    .filter((n) => n.api_keywords && n.api_keywords.length > 0);
+  const displayNews = allNews.filter((n) => regionFilter === "all" || n.region === regionFilter);
   const isLoading = search ? searchLoading : newsLoading;
 
   const handleKeywordClick = (kw: string) => {
@@ -129,19 +129,7 @@ const Index = () => {
               오늘 뉴스
             </button>
 
-            {(["all", "국내", "해외"] as const).map((r) => (
-              <button
-                key={r}
-                onClick={() => setRegionFilter(r)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
-                  regionFilter === r
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-foreground border-border hover:bg-muted"
-                }`}
-              >
-                {r === "all" ? "전체" : r === "국내" ? "🇰🇷 국내" : "🌍 해외"}
-              </button>
-            ))}
+
 
             <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground shrink-0">
               <Clock className="w-3.5 h-3.5" />
@@ -153,7 +141,7 @@ const Index = () => {
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
         <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
-        <StatsBar news={displayNews} totalKeywords={allKeywords.length} />
+        <StatsBar news={allNews} totalKeywords={allKeywords.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />
 
         {search && (
           <div className="flex items-center gap-2 text-sm">
