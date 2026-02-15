@@ -14,22 +14,23 @@ serve(async (req) => {
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY is not configured");
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-pro",
-        messages: [
-          {
-            role: "system",
-            content: `당신은 원료의약품(API) 산업 전문 분석가입니다. 반드시 유효한 JSON만 출력하세요.`,
-          },
-          {
-            role: "user",
-            content: `아래 뉴스를 분석하여 JSON으로 응답하세요.
+    const makeRequest = async () => {
+      return await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gemini-2.5-pro",
+          messages: [
+            {
+              role: "system",
+              content: `당신은 원료의약품(API) 산업 전문 분석가입니다. 반드시 유효한 JSON만 출력하세요.`,
+            },
+            {
+              role: "user",
+              content: `아래 뉴스를 분석하여 JSON으로 응답하세요.
 
 제목: ${title}
 요약: ${summary}
@@ -56,20 +57,29 @@ serve(async (req) => {
 - name은 반드시 "한글명 (English Name)" 형식
 - businessImplication은 2줄 이내로 간결하게
 - JSON만 출력하세요`,
-          },
-        ],
-      }),
-    });
+            },
+          ],
+        }),
+      });
+    };
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      response = await makeRequest();
+      if (response.ok || response.status !== 429) break;
+      console.log(`Rate limited, retrying in ${(attempt + 1) * 2}s...`);
+      await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
+    }
+
+    if (!response || !response.ok) {
+      if (response?.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      const t = await response?.text();
+      console.error("AI gateway error:", response?.status, t);
       throw new Error("AI gateway error");
     }
 
