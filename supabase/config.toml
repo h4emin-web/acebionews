@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.seed-nce-patents]
 verify_jwt = false
+
+[functions.enrich-nce-patents]
+verify_jwt = false

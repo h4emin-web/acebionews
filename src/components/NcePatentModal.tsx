@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, Download, Star, Search, Loader2, ArrowUpDown, AlertTriangle } from "lucide-react";
+import { X, Star, Search, Loader2, ArrowUpDown, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,7 +59,7 @@ type Props = {
 export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
   const [data, setData] = useState<NcePatent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [seeding, setSeeding] = useState(false);
+  const [enriching, setEnriching] = useState(false);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("expiry_date");
   const [sortAsc, setSortAsc] = useState(true);
@@ -83,18 +83,18 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
     if (open) fetchData();
   }, [open]);
 
-  const handleSeed = async () => {
-    setSeeding(true);
+  const handleEnrich = async () => {
+    setEnriching(true);
     try {
-      const { data: result, error } = await supabase.functions.invoke("seed-nce-patents");
+      const { data: result, error } = await supabase.functions.invoke("enrich-nce-patents");
       if (error) throw error;
-      toast({ title: "데이터 생성 완료", description: `${result?.count || 0}건의 NCE 특허 데이터가 생성되었습니다.` });
+      toast({ title: "AI 분석 완료", description: `${result?.count || 0}건 분석 완료` });
       await fetchData();
     } catch (e) {
-      console.error("Seed error:", e);
-      toast({ title: "오류", description: "데이터 생성 중 오류가 발생했습니다.", variant: "destructive" });
+      console.error("Enrich error:", e);
+      toast({ title: "오류", description: "AI 분석 중 오류가 발생했습니다.", variant: "destructive" });
     } finally {
-      setSeeding(false);
+      setEnriching(false);
     }
   };
 
@@ -106,6 +106,8 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
       setSortAsc(key === "expiry_date");
     }
   };
+
+  const unenrichedCount = data.filter((d) => !d.indication).length;
 
   const filtered = useMemo(() => {
     let items = data;
@@ -170,19 +172,22 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
                 className="w-full pl-9 pr-4 py-2 rounded-lg bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
-            {data.length === 0 && !loading && (
+            {unenrichedCount > 0 && (
               <button
-                onClick={handleSeed}
-                disabled={seeding}
-                className="px-4 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
+                onClick={handleEnrich}
+                disabled={enriching}
+                className="px-4 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2 whitespace-nowrap"
               >
-                {seeding ? (
+                {enriching ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    AI 데이터 생성중...
+                    AI 분석중...
                   </>
                 ) : (
-                  "AI로 데이터 생성"
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    AI 분석 ({unenrichedCount}건)
+                  </>
                 )}
               </button>
             )}
@@ -196,41 +201,35 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
               <p className="text-sm text-muted-foreground">데이터 로딩 중...</p>
             </div>
-          ) : data.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <AlertTriangle className="w-8 h-8 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">NCE 특허 데이터가 없습니다.</p>
-              <p className="text-xs text-muted-foreground">"AI로 데이터 생성" 버튼을 클릭하여 데이터를 생성하세요.</p>
-            </div>
           ) : (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  <th className="px-4 py-3 text-left w-8">
+                  <th className="px-3 py-3 text-left w-8">
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">#</span>
                   </th>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-3 text-left">
                     <SortButton label="품명" sortKeyVal="product_name" />
                   </th>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-3 text-left">
                     <SortButton label="원료명" sortKeyVal="api_name" />
                   </th>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-3 text-left">
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">제조사</span>
                   </th>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-3 text-left">
                     <SortButton label="만료일" sortKeyVal="expiry_date" />
                   </th>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-3 text-left">
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">남은기간</span>
                   </th>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-3 text-left">
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">적응증</span>
                   </th>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-3 text-left">
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">시장규모</span>
                   </th>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 py-3 text-left">
                     <SortButton label="추천도" sortKeyVal="recommendation" />
                   </th>
                 </tr>
@@ -239,15 +238,12 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
                 {filtered.map((item, i) => {
                   const remaining = getTimeRemaining(item.expiry_date);
                   return (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-muted/40 transition-colors group"
-                    >
-                      <td className="px-4 py-3 text-xs text-muted-foreground font-mono">{i + 1}</td>
-                      <td className="px-4 py-3">
+                    <tr key={item.id} className="hover:bg-muted/40 transition-colors">
+                      <td className="px-3 py-2.5 text-[11px] text-muted-foreground font-mono">{i + 1}</td>
+                      <td className="px-3 py-2.5">
                         <span className="text-xs font-semibold text-foreground">{item.product_name}</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <button
                           onClick={() => {
                             onKeywordClick?.(item.api_name);
@@ -258,29 +254,29 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
                           {item.api_name}
                         </button>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="text-[11px] text-muted-foreground">{item.company || "-"}</span>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[11px] text-muted-foreground truncate block max-w-[150px]" title={item.company || ""}>
+                          {item.company || "-"}
+                        </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${getUrgencyColor(item.expiry_date)}`}>
                           {item.expiry_date}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2.5">
                         <span className={`text-[11px] font-medium ${remaining.urgent ? "text-red-500" : "text-muted-foreground"}`}>
                           {remaining.text}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="text-[11px] text-foreground max-w-[200px] truncate block" title={item.indication || ""}>
-                          {item.indication || "-"}
-                        </span>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[11px] text-foreground">{item.indication || <span className="text-muted-foreground/50">-</span>}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="text-[11px] font-medium text-foreground">{item.market_size || "-"}</span>
+                      <td className="px-3 py-2.5">
+                        <span className="text-[11px] font-medium text-foreground">{item.market_size || <span className="text-muted-foreground/50">-</span>}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <StarRating value={item.recommendation || 0} />
+                      <td className="px-3 py-2.5">
+                        {item.recommendation ? <StarRating value={item.recommendation} /> : <span className="text-[11px] text-muted-foreground/50">-</span>}
                       </td>
                     </tr>
                   );
