@@ -60,10 +60,10 @@ export const SearchResultsPanel = ({ keyword, profile, loading, onRelatedClick }
         </div>
       </div>
 
-      {/* Grid Layout 수정: lg 이상에서 4열 고정 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border">
-        {/* 첫 번째 열: 작용기전 + 시장 동향 (함께 묶어서 세로 배치) */}
-        <div className="flex flex-col divide-y divide-border">
+      {/* Grid Layout: 세로 구분선(divide-x)만 남기고 가로선은 제거 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 md:divide-x divide-border">
+        {/* 첫 번째 열: 작용기전 + 시장 동향 (가로선 divide-y 삭제) */}
+        <div className="flex flex-col">
           <Section icon={<Beaker className="w-3.5 h-3.5 text-primary" />} title="작용기전">
             <p className="text-[11px] text-muted-foreground leading-relaxed">{profile.mechanism}</p>
           </Section>
@@ -75,8 +75,8 @@ export const SearchResultsPanel = ({ keyword, profile, loading, onRelatedClick }
           )}
         </div>
 
-        {/* 두 번째 열: 적응증 + 관련 API */}
-        <div className="flex flex-col divide-y divide-border">
+        {/* 두 번째 열: 적응증 + 관련 API (가로선 divide-y 삭제) */}
+        <div className="flex flex-col">
           <Section icon={<Target className="w-3.5 h-3.5 text-primary" />} title="적응증">
             <div className="flex flex-wrap gap-1">
               {(profile.indications || []).map((ind, i) => (
