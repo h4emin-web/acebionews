@@ -76,8 +76,14 @@ export const SearchSidebarPanel = ({ keyword, products, productsLoading, dmfReco
                   <div className="flex flex-col gap-0.5 mt-1">
                     {d.applicant && (
                       <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        신청인: {d.applicant}
+                      </span>
+                    )}
+                    {d.manufacturer && (
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                         <FlaskConical className="w-3 h-3" />
-                        제조소: {d.applicant}
+                        제조소: {d.manufacturer}
                       </span>
                     )}
                     {d.registrationDate && (
