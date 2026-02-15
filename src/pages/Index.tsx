@@ -102,9 +102,9 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground tracking-tight">
-                API <span className="text-gradient">AceBio News</span>
+                API <span className="text-gradient">News</span>
               </h1>
-              <p className="text-[11px] text-muted-foreground">원료의약품 뉴스 인텔리전스</p>
+              <p className="text-[11px] text-muted-foreground">원료의약품 뉴스</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
