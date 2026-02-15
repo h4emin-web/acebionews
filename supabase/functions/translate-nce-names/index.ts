@@ -19,12 +19,11 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get items without Korean name
     const { data: items, error } = await supabase
       .from("nce_patent_expiry")
       .select("id, api_name")
       .is("api_name_ko", null)
-      .limit(50);
+      .limit(25);
 
     if (error) throw error;
     if (!items || items.length === 0) {
