@@ -158,23 +158,17 @@ function parseDmfHtml(html: string): any[] {
 
   while ((rowMatch = rowRegex.exec(cleanTbody)) !== null) {
     const cells = extractCells(rowMatch[1]);
-    if (cells.length >= 2) {
-      // The nested table structure means cells contain labels merged with values
-      // Apply removeLabel to clean them up
-      const cleaned = cells.map(removeLabel).filter(c => c.length > 0);
-      if (cleaned.length >= 1 && /^\d+$/.test(cleaned[0])) {
-        records.push({
-          targetDrug: cleaned[1] || "",
-          registrationNo: cleaned[2] || "",
-          ingredientName: cleaned[3] || "",
-          applicant: cleaned[4] || "",
-          manufacturer: cleaned[5] || "",
-          manufacturerAddress: cleaned[6] || "",
-          country: cleaned[7] || "",
-          registrationDate: cleaned[8] || "",
-          status: cleaned.length > 11 ? cleaned[11] || "" : "",
-        });
-      }
+    const cleaned = cells.map(removeLabel).filter(c => c.length > 0);
+    // Structure: [번호, 대상의약품, 등록번호, 성분명, 신청인, 최초등록일자, ...]
+    // Optional trailing: 최종변경일자, 연차보고년도, 취소/취하구분, 취소/취하일자
+    if (cleaned.length >= 5 && /^\d+$/.test(cleaned[0])) {
+      const status = cleaned.find(c => c === "정상" || c === "취하" || c === "취소") || "정상";
+      records.push({
+        ingredientName: cleaned[3] || "",
+        applicant: cleaned[4] || "",
+        registrationDate: cleaned[5] || "",
+        status,
+      });
     }
     if (records.length >= 10) break;
   }
