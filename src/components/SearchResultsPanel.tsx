@@ -37,9 +37,6 @@ export const SearchResultsPanel = ({
         <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
           <FileText className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">국내 등록 제품</h3>
-          <span className="text-[11px] text-muted-foreground ml-auto">
-            {drugInfoLoading ? "조회중..." : `${products.length}건`}
-          </span>
           {productUrl && (
             <a href={productUrl} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors" />
@@ -82,9 +79,6 @@ export const SearchResultsPanel = ({
         <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
           <Building2 className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">DMF 등록 현황</h3>
-          <span className="text-[11px] text-muted-foreground ml-auto">
-            {drugInfoLoading ? "조회중..." : `${dmfRecords.length}건`}
-          </span>
           {dmfUrl && (
             <a href={dmfUrl} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors" />

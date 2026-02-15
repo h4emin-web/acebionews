@@ -18,7 +18,7 @@ serve(async (req) => {
 
     console.log(`Searching external news for: ${keyword}`);
 
-    // Search for recent pharma news using Firecrawl
+    // Simple keyword-only query for better results
     const searchResp = await fetch("https://api.firecrawl.dev/v1/search", {
       method: "POST",
       headers: {
@@ -26,29 +26,31 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query: `${keyword} 의약품 원료 pharmaceutical API ingredient`,
-        limit: 15,
-        lang: "ko",
-        tbs: "qdr:m", // last month
+        query: `"${keyword}" 원료의약품`,
+        limit: 20,
       }),
     });
 
     if (!searchResp.ok) {
       const t = await searchResp.text();
       console.error("Firecrawl search error:", searchResp.status, t);
-      // Return empty results instead of crashing on transient errors
       return new Response(JSON.stringify({ success: true, results: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const searchData = await searchResp.json();
-    const results = (searchData.data || []).map((item: any) => ({
-      title: item.title || "",
-      description: item.description || "",
-      url: item.url || "",
-      source: new URL(item.url || "https://unknown.com").hostname.replace("www.", ""),
-    }));
+    const results = (searchData.data || [])
+      .filter((item: any) => item.url && item.title)
+      .map((item: any) => ({
+        title: item.title || "",
+        description: item.description || "",
+        url: item.url || "",
+        source: (() => {
+          try { return new URL(item.url).hostname.replace("www.", ""); }
+          catch { return "unknown"; }
+        })(),
+      }));
 
     console.log(`Found ${results.length} external news results`);
 
