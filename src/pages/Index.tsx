@@ -1,49 +1,31 @@
 import { useState } from "react";
-import { Pill, Clock, RefreshCw, Search, CalendarDays } from "lucide-react";
+import { Pill, Clock, RefreshCw, Search, CalendarDays, Globe, Flag } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
-import { PatentExpirySection } from "@/components/PatentExpirySection";
-import { TopDrugsPatentSection } from "@/components/TopDrugsPatentSection";
 import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { useNewsArticles, useAllApiKeywords, useSearchNews } from "@/hooks/useNewsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { NewsItem } from "@/data/mockNews";
 
 const Index = () => {
   const [search, setSearch] = useState("");
   const [crawling, setCrawling] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [todayOnly, setTodayOnly] = useState(false);
-  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외">("all");
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const currentYear = selectedDate.getFullYear();
-  const currentMonth = selectedDate.getMonth();
-
-  const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
-
   const now = new Date();
   const todayStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
 
-  // Generate last 12 months for picker
-  const monthOptions: { year: number; month: number; label: string }[] = [];
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    monthOptions.push({
-      year: d.getFullYear(),
-      month: d.getMonth(),
-      label: `${d.getFullYear()}년 ${monthNames[d.getMonth()]}`,
-    });
-  }
-
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
   const todayDay = now.getDate();
   const selectedDay = todayOnly ? todayDay : null;
 
@@ -51,20 +33,15 @@ const Index = () => {
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
 
-  const displayNews = (search ? searchResults : newsArticles).filter(
-    (n) => n.api_keywords && n.api_keywords.length > 0
-  );
+  const displayNews = (search ? searchResults : newsArticles)
+    .filter((n) => n.api_keywords && n.api_keywords.length > 0)
+    .filter((n) => regionFilter === "all" || n.region === regionFilter);
   const isLoading = search ? searchLoading : newsLoading;
 
   const handleKeywordClick = (kw: string) => {
     setSearch(kw);
   };
 
-  const handleMonthSelect = (year: number, month: number) => {
-    setSelectedDate(new Date(year, month, 1));
-    setTodayOnly(false);
-    setMonthPickerOpen(false);
-  };
 
   const handleNewsClick = (news: NewsItem) => {
     setSelectedNews(prev => prev?.id === news.id ? null : news);
@@ -140,35 +117,6 @@ const Index = () => {
               {crawling ? "수집중..." : "새로고침"}
             </button>
 
-            <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-foreground border border-border hover:bg-muted transition-colors shadow-sm">
-                  <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
-                  {currentYear}년 {monthNames[currentMonth]}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-2" align="end">
-                <div className="space-y-0.5">
-                  {monthOptions.map((opt) => {
-                    const isSelected = opt.year === currentYear && opt.month === currentMonth;
-                    return (
-                      <button
-                        key={`${opt.year}-${opt.month}`}
-                        onClick={() => handleMonthSelect(opt.year, opt.month)}
-                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${
-                          isSelected
-                            ? "bg-primary text-primary-foreground font-semibold"
-                            : "hover:bg-muted text-foreground"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </PopoverContent>
-            </Popover>
-
             <button
               onClick={() => setTodayOnly(!todayOnly)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
@@ -180,6 +128,20 @@ const Index = () => {
               <CalendarDays className="w-3.5 h-3.5" />
               오늘 뉴스
             </button>
+
+            {(["all", "국내", "해외"] as const).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRegionFilter(r)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
+                  regionFilter === r
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {r === "all" ? "전체" : r === "국내" ? "🇰🇷 국내" : "🌍 해외"}
+              </button>
+            ))}
 
             <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground shrink-0">
               <Clock className="w-3.5 h-3.5" />
@@ -248,8 +210,6 @@ const Index = () => {
               <>
                 <MfdsSection onKeywordClick={handleKeywordClick} />
                 <FdaSection onKeywordClick={handleKeywordClick} />
-                <PatentExpirySection onKeywordClick={handleKeywordClick} />
-                <TopDrugsPatentSection onKeywordClick={handleKeywordClick} />
               </>
             )}
           </aside>
