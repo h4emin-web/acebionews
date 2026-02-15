@@ -11,26 +11,12 @@ serve(async (req) => {
 
   try {
     const { title, summary, keywords } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY is not configured");
 
-    const makeRequest = async () => {
-      return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content: `당신은 원료의약품(API) 산업 전문 분석가입니다. 반드시 유효한 JSON만 출력하세요.`,
-            },
-            {
-              role: "user",
-              content: `아래 뉴스를 분석하여 JSON으로 응답하세요.
+    const prompt = `당신은 원료의약품(API) 산업 전문 분석가입니다. 반드시 유효한 JSON만 출력하세요.
+
+아래 뉴스를 분석하여 JSON으로 응답하세요.
 
 제목: ${title}
 요약: ${summary}
@@ -56,11 +42,19 @@ serve(async (req) => {
 - 예: 리바록사반 기사라면 아픽사반, 에독사반, 다비가트란 등 경쟁 항응고제도 포함
 - name은 반드시 "한글명 (English Name)" 형식
 - businessImplication은 2줄 이내로 간결하게
-- JSON만 출력하세요`,
-            },
-          ],
-        }),
-      });
+- JSON만 출력하세요`;
+
+    const makeRequest = async () => {
+      return await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+          }),
+        }
+      );
     };
 
     let response: Response | null = null;
@@ -79,12 +73,12 @@ serve(async (req) => {
         });
       }
       const t = await response?.text();
-      console.error("AI gateway error:", response?.status, t);
-      throw new Error("AI gateway error");
+      console.error("Gemini API error:", response?.status, t);
+      throw new Error("Gemini API error");
     }
 
     const aiData = await response.json();
-    const content = aiData.choices?.[0]?.message?.content || "";
+    const content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     let jsonStr = content.trim();
     if (jsonStr.startsWith("```")) {
