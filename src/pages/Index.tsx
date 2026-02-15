@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pill, Clock, RefreshCw, Search, CalendarDays, Globe, Flag, FlaskConical } from "lucide-react";
+import { Pill, Clock, Search, CalendarDays, Globe, Flag, FlaskConical } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
@@ -11,20 +11,14 @@ import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo, useMfdsProducts, useMfdsDmf } from "@/hooks/useNewsData";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
 import type { NewsItem } from "@/data/mockNews";
 
 const Index = () => {
   const [search, setSearch] = useState("");
-  const [crawling, setCrawling] = useState(false);
   const [todayOnly, setTodayOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외">("all");
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [nceModalOpen, setNceModalOpen] = useState(false);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Debounce search for external API calls (Korean IME sends many partial chars)
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -65,37 +59,6 @@ const Index = () => {
     setSelectedNews((prev) => prev?.id === news.id ? null : news);
   };
 
-  const handleCrawl = async () => {
-    setCrawling(true);
-    try {
-      const [newsRes, regRes] = await Promise.all([
-      supabase.functions.invoke("crawl-news"),
-      supabase.functions.invoke("crawl-regulatory")]
-      );
-
-      if (newsRes.error) throw newsRes.error;
-      if (regRes.error) throw regRes.error;
-
-      toast({
-        title: "수집 완료",
-        description: `뉴스 ${newsRes.data?.count || 0}건, 공지 ${regRes.data?.count || 0}건 수집`
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["news-articles"] });
-      queryClient.invalidateQueries({ queryKey: ["search-news"] });
-      queryClient.invalidateQueries({ queryKey: ["all-api-keywords"] });
-      queryClient.invalidateQueries({ queryKey: ["regulatory-notices"] });
-    } catch (err) {
-      console.error("Crawl error:", err);
-      toast({
-        title: "오류",
-        description: err instanceof Error ? err.message : "데이터 수집 중 오류가 발생했습니다",
-        variant: "destructive"
-      });
-    } finally {
-      setCrawling(false);
-    }
-  };
 
   const toNewsItem = (news: typeof displayNews[number]): NewsItem => ({
     id: news.id,
@@ -126,14 +89,6 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleCrawl}
-              disabled={crawling}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-background text-foreground border border-border hover:bg-muted disabled:opacity-50 transition-colors shadow-sm">
-
-              <RefreshCw className={`w-3.5 h-3.5 ${crawling ? "animate-spin" : ""}`} />
-              {crawling ? "수집중..." : "새로고침"}
-            </button>
 
             <button
               onClick={() => setTodayOnly(!todayOnly)}
@@ -245,7 +200,7 @@ const Index = () => {
                   <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
                   <p className="text-muted-foreground text-sm">
                     {newsArticles.length === 0
-                      ? "아직 수집된 뉴스가 없습니다. '새로고침' 버튼을 클릭해주세요."
+                      ? "아직 수집된 뉴스가 없습니다. 매일 자정에 자동 업데이트됩니다."
                       : "검색 결과가 없습니다"}
                   </p>
                 </div>
