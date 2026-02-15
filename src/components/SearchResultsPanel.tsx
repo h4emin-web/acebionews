@@ -58,13 +58,24 @@ export const SearchResultsPanel = ({ keyword, profile, loading, onRelatedClick }
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 divide-x divide-border">
-          {/* 작용기전 */}
+      {/* Grid Layout 수정: lg 이상에서 4열 고정 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border">
+        
+        {/* 첫 번째 열: 작용기전 + 시장 동향 (함께 묶어서 세로 배치) */}
+        <div className="flex flex-col divide-y divide-border">
           <Section icon={<Beaker className="w-3.5 h-3.5 text-primary" />} title="작용기전">
             <p className="text-[11px] text-muted-foreground leading-relaxed">{profile.mechanism}</p>
           </Section>
+          
+          {profile.marketTrend && (
+            <Section icon={<TrendingUp className="w-3.5 h-3.5 text-primary" />} title="시장 동향">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{profile.marketTrend}</p>
+            </Section>
+          )}
+        </div>
 
-          {/* 적응증 */}
+        {/* 두 번째 열: 적응증 + 관련 API */}
+        <div className="flex flex-col divide-y divide-border">
           <Section icon={<Target className="w-3.5 h-3.5 text-primary" />} title="적응증">
             <div className="flex flex-wrap gap-1">
               {(profile.indications || []).map((ind, i) => (
@@ -73,35 +84,6 @@ export const SearchResultsPanel = ({ keyword, profile, loading, onRelatedClick }
             </div>
           </Section>
 
-          {/* 부작용 */}
-          {(profile.sideEffects?.length ?? 0) > 0 && (
-            <Section icon={<AlertTriangle className="w-3.5 h-3.5 text-destructive" />} title="주요 부작용">
-              <div className="flex flex-wrap gap-1">
-                {profile.sideEffects.map((s, i) => (
-                  <span key={i} className="text-[10px] text-muted-foreground bg-destructive/5 px-2 py-0.5 rounded">{s}</span>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* 오리지네이터 */}
-          {profile.originatorCompany && (
-            <Section icon={<Building2 className="w-3.5 h-3.5 text-primary" />} title="오리지네이터">
-              <p className="text-[11px] text-foreground font-medium">{profile.originatorCompany}</p>
-              {profile.originatorBrand && (
-                <p className="text-[10px] text-muted-foreground">브랜드: {profile.originatorBrand}</p>
-              )}
-            </Section>
-          )}
-
-          {/* 시장 동향 */}
-          {profile.marketTrend && (
-            <Section icon={<TrendingUp className="w-3.5 h-3.5 text-primary" />} title="시장 동향">
-              <p className="text-[11px] text-muted-foreground leading-relaxed">{profile.marketTrend}</p>
-            </Section>
-          )}
-
-          {/* 관련 API */}
           {(profile.relatedApis?.length ?? 0) > 0 && (
             <Section icon={<Link2 className="w-3.5 h-3.5 text-primary" />} title="관련/경쟁 API">
               <div className="flex flex-wrap gap-1">
@@ -118,12 +100,38 @@ export const SearchResultsPanel = ({ keyword, profile, loading, onRelatedClick }
             </Section>
           )}
         </div>
+
+        {/* 세 번째 열: 주요 부작용 */}
+        <div className="flex flex-col">
+          {(profile.sideEffects?.length ?? 0) > 0 && (
+            <Section icon={<AlertTriangle className="w-3.5 h-3.5 text-destructive" />} title="주요 부작용">
+              <div className="flex flex-wrap gap-1">
+                {profile.sideEffects.map((s, i) => (
+                  <span key={i} className="text-[10px] text-muted-foreground bg-destructive/5 px-2 py-0.5 rounded">{s}</span>
+                ))}
+              </div>
+            </Section>
+          )}
+        </div>
+
+        {/* 네 번째 열: 오리지네이터 */}
+        <div className="flex flex-col">
+          {profile.originatorCompany && (
+            <Section icon={<Building2 className="w-3.5 h-3.5 text-primary" />} title="오리지네이터">
+              <p className="text-[11px] text-foreground font-medium">{profile.originatorCompany}</p>
+              {profile.originatorBrand && (
+                <p className="text-[10px] text-muted-foreground">브랜드: {profile.originatorBrand}</p>
+              )}
+            </Section>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
 const Section = ({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) => (
-  <div className="px-4 py-3 space-y-1.5">
+  <div className="px-4 py-3 space-y-1.5 h-full">
     <div className="flex items-center gap-1.5">
       {icon}
       <span className="text-[11px] font-semibold text-foreground">{title}</span>
