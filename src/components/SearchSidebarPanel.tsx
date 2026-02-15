@@ -1,4 +1,4 @@
-import { Loader2, Pill, Building2, Flag, FlaskConical } from "lucide-react";
+import { Loader2, Pill, Building2, Flag, FlaskConical, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { IngredientProfile } from "@/components/SearchResultsPanel";
 
@@ -38,7 +38,6 @@ export const SearchSidebarPanel = ({ keyword, profile, loading }: Props) => {
           <div className="flex items-center gap-2">
             <Pill className="w-4 h-4 text-primary" />
             <h3 className="text-xs font-bold text-foreground">국내 등록 제품</h3>
-            <Badge variant="secondary" className="text-[10px] ml-auto">{domesticProducts.length}건</Badge>
           </div>
         </div>
         <div className="max-h-[300px] overflow-y-auto">
@@ -70,13 +69,12 @@ export const SearchSidebarPanel = ({ keyword, profile, loading }: Props) => {
         </div>
       </div>
 
-      {/* US DMF 등록 현황 */}
+      {/* 국내 DMF 등록 현황 */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-border bg-primary/5">
           <div className="flex items-center gap-2">
             <Flag className="w-4 h-4 text-primary" />
-            <h3 className="text-xs font-bold text-foreground">US DMF 등록 현황</h3>
-            <Badge variant="secondary" className="text-[10px] ml-auto">{dmfRecords.length}건</Badge>
+            <h3 className="text-xs font-bold text-foreground">원료의약품등록(DMF) 공고</h3>
           </div>
         </div>
         <div className="max-h-[300px] overflow-y-auto">
@@ -84,14 +82,25 @@ export const SearchSidebarPanel = ({ keyword, profile, loading }: Props) => {
             <div className="divide-y divide-border">
               {dmfRecords.map((d: any, i: number) => (
                 <div key={i} className="px-4 py-2.5">
-                  <p className="text-[12px] font-medium text-foreground">{d.company}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Flag className="w-3 h-3" />
-                      {d.country}
-                    </span>
-                    {d.dmfNumber && (
-                      <span className="text-[10px] text-muted-foreground font-mono">{d.dmfNumber}</span>
+                  <p className="text-[12px] font-medium text-foreground">{d.ingredientName || d.company}</p>
+                  <div className="flex flex-col gap-0.5 mt-1">
+                    {d.applicant && (
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        신청인: {d.applicant}
+                      </span>
+                    )}
+                    {d.manufacturer && (
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <FlaskConical className="w-3 h-3" />
+                        제조소: {d.manufacturer}
+                      </span>
+                    )}
+                    {d.country && (
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {d.country}
+                      </span>
                     )}
                   </div>
                 </div>

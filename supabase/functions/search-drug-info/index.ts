@@ -39,13 +39,13 @@ serve(async (req) => {
     {"name": "제품명", "company": "제조사", "dosageForm": "제형", "strength": "함량"}
   ],
   "dmfRecords": [
-    {"company": "회사명", "country": "국가", "dmfNumber": "DMF 번호 (모르면 null)"}
+    {"ingredientName": "성분명", "applicant": "신청인", "manufacturer": "제조소명", "manufacturerAddress": "제조소소재지", "country": "제조국가"}
   ]
 }
 
 중요 규칙:
 - domesticProducts: 한국 식약처(MFDS)에 등록된 해당 원료 함유 의약품을 최대 10개. 실제 허가된 제품만 기재.
-- dmfRecords: US FDA DMF에 등록된 해당 원료의 제조사를 최대 10개. 실제 등록된 회사만 기재.
+- dmfRecords: 한국 식약처 의약품안전나라(nedrug.mfds.go.kr)의 원료의약품등록(DMF) 공고에 등록된 해당 원료 DMF 정보. 실제 등록된 것만 기재. 최대 10개.
 - 정확한 정보만 제공하세요. 모르는 항목은 null 또는 빈 배열로.
 - JSON만 출력하세요.`;
 
