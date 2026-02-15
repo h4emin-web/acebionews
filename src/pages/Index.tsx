@@ -159,7 +159,9 @@ const Index = () => {
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
         <div className="flex items-center gap-3">
-          <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
+          <div className="flex-1 min-w-0">
+            <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
+          </div>
           <button
             onClick={() => setNceModalOpen(true)}
             className="flex items-center gap-1.5 px-4 py-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap shrink-0"
