@@ -176,42 +176,74 @@ const Index = () => {
 
         <div className={`grid gap-5 ${selectedNews ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-[1fr_340px]"}`}>
           <div className="space-y-4">
-            {isLoading ?
-            <div className="text-center py-16 card-elevated rounded-lg">
-                <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
-                <p className="text-muted-foreground text-sm">검색중...</p>
-              </div> :
-            displayNews.length > 0 ?
-            displayNews.map((news, i) => {
-              const item = toNewsItem(news);
-              return (
-                <div
-                  key={news.id}
-                  onClick={() => handleNewsClick(item)}
-                  className={`cursor-pointer rounded-lg transition-all ${
-                  selectedNews?.id === news.id ? "ring-2 ring-primary" : ""}`
-                  }>
-
-                    <NewsCard
-                    news={item}
-                    index={i}
-                    onKeywordClick={handleKeywordClick} />
-
-                  </div>);
-
-            }) :
-
-            <div className="text-center py-16 card-elevated rounded-lg">
-                <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-                <p className="text-muted-foreground text-sm">
-                  {search ?
-                "해당 원료의약품 관련 뉴스가 없습니다" :
-                newsArticles.length === 0 ?
-                "아직 수집된 뉴스가 없습니다. '새로고침' 버튼을 클릭해주세요." :
-                "검색 결과가 없습니다"}
-                </p>
-              </div>
-            }
+            {isSearching ? (
+              /* When searching: show external news in main area */
+              externalNewsLoading ? (
+                <div className="text-center py-16 card-elevated rounded-lg">
+                  <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
+                  <p className="text-muted-foreground text-sm">관련 뉴스 검색중...</p>
+                </div>
+              ) : externalNews.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Globe className="w-4 h-4" />
+                    <span>관련 뉴스 {externalNews.length}건</span>
+                  </div>
+                  {externalNews.map((news: any, i: number) => (
+                    <a
+                      key={i}
+                      href={news.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-card border border-border rounded-lg p-4 hover:bg-muted/40 transition-colors"
+                    >
+                      <h3 className="text-sm font-medium text-foreground line-clamp-2">{news.title}</h3>
+                      {news.description && (
+                        <p className="text-xs text-muted-foreground mt-1.5 line-clamp-3">{news.description}</p>
+                      )}
+                      <span className="text-[11px] text-muted-foreground/70 mt-2 block">{news.source}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 card-elevated rounded-lg">
+                  <Globe className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
+                  <p className="text-muted-foreground text-sm">관련 뉴스가 없습니다</p>
+                </div>
+              )
+            ) : (
+              /* When not searching: show DB news */
+              isLoading ? (
+                <div className="text-center py-16 card-elevated rounded-lg">
+                  <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
+                  <p className="text-muted-foreground text-sm">검색중...</p>
+                </div>
+              ) : displayNews.length > 0 ? (
+                displayNews.map((news, i) => {
+                  const item = toNewsItem(news);
+                  return (
+                    <div
+                      key={news.id}
+                      onClick={() => handleNewsClick(item)}
+                      className={`cursor-pointer rounded-lg transition-all ${
+                        selectedNews?.id === news.id ? "ring-2 ring-primary" : ""
+                      }`}
+                    >
+                      <NewsCard news={item} index={i} onKeywordClick={handleKeywordClick} />
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-16 card-elevated rounded-lg">
+                  <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
+                  <p className="text-muted-foreground text-sm">
+                    {newsArticles.length === 0
+                      ? "아직 수집된 뉴스가 없습니다. '새로고침' 버튼을 클릭해주세요."
+                      : "검색 결과가 없습니다"}
+                  </p>
+                </div>
+              )
+            )}
           </div>
 
           <aside className="space-y-4">
@@ -220,8 +252,6 @@ const Index = () => {
             ) : isSearching ? (
               <SearchResultsPanel
                 keyword={search}
-                externalNews={externalNews}
-                newsLoading={externalNewsLoading}
                 products={drugInfo?.products || []}
                 dmfRecords={drugInfo?.dmfRecords || []}
                 drugInfoLoading={drugInfoLoading}
