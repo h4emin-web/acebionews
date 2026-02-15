@@ -238,7 +238,7 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
                 {filtered.map((item, i) => {
                   const remaining = getTimeRemaining(item.expiry_date);
                   return (
-                    <tr key={item.id} className="hover:bg-muted/40 transition-colors">
+                    <tr key={item.id} className="hover:bg-muted/40 transition-colors whitespace-nowrap">
                       <td className="px-3 py-2.5 text-[11px] text-muted-foreground font-mono">{i + 1}</td>
                       <td className="px-3 py-2.5">
                         <span className="text-xs font-semibold text-foreground">{item.product_name}</span>
@@ -260,8 +260,8 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
                         </span>
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${getUrgencyColor(item.expiry_date)}`}>
-                          {item.expiry_date}
+                       <span className={`text-[11px] font-medium px-2 py-0.5 rounded whitespace-nowrap ${getUrgencyColor(item.expiry_date)}`}>
+                          {item.expiry_date.slice(2).replace(/-/g, '-')}
                         </span>
                       </td>
                       <td className="px-3 py-2.5">
