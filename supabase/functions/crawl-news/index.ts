@@ -86,7 +86,7 @@ async function crawlSource(source: typeof NEWS_SOURCES[0], FIRECRAWL_API_KEY: st
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-pro",
+        model: "gemini-2.5-flash",
         messages: [
           {
             role: "system",
@@ -212,8 +212,8 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Crawl all sources in parallel (batches of 4)
-    const batchSize = 4;
+    // Crawl all sources in parallel (batches of 2 with delay to avoid rate limits)
+    const batchSize = 2;
     const allResults: any[] = [];
     for (let i = 0; i < NEWS_SOURCES.length; i += batchSize) {
       const batch = NEWS_SOURCES.slice(i, i + batchSize);
@@ -221,6 +221,10 @@ serve(async (req) => {
         batch.map((s) => crawlSource(s, FIRECRAWL_API_KEY, GOOGLE_GEMINI_API_KEY))
       );
       allResults.push(...batchResults.flat());
+      // Wait 2 seconds between batches to avoid Gemini rate limits
+      if (i + batchSize < NEWS_SOURCES.length) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     }
 
     // Clean up old articles (older than 7 days)
