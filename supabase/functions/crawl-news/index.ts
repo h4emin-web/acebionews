@@ -276,7 +276,7 @@ async function extractKeywordsAndTranslate(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-flash-lite",
         messages: [
           {
             role: "system",
@@ -339,97 +339,11 @@ async function extractKeywordsAndTranslate(
       }),
     });
 
-    if (aiResp.status === 429) {
-      console.warn("Gemini API rate limited, retrying after 10s...");
-      await new Promise((r) => setTimeout(r, 10000));
-      const retryResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gemini-2.5-flash",
-          messages: [
-            { role: "system", content: `You are a pharmaceutical news analyst specializing in Active Pharmaceutical Ingredients (APIs/원료의약품).
-
-## TASK 1: KEYWORD EXTRACTION
-- apiKeywords MUST contain ingredient/compound names that are EXPLICITLY written in the article title or summary.
-- DO NOT guess, infer, or hallucinate ingredient names that are NOT in the text.
-- If an article only mentions a brand name without its active ingredient, set apiKeywords to [].
-- Valid keywords: small-molecule compounds, biologics, any INN or chemical name explicitly stated.
-- Keyword format: "한글명 (English Name)"
-- INVALID: Brand/product names only, generic categories (엑소좀, mRNA, GLP-1, siRNA, 백신), mechanism names.
-
-## TASK 2: TRANSLATION & SUMMARY (for 해외 articles ONLY)
-- For articles marked [해외], translate title and summary into Korean.
-- Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, focusing on business impact for API industry).
-- For articles marked [국내], set translated_title and translated_summary to null.
-
-## Output: JSON array where each item has index, apiKeywords, category, translated_title, translated_summary.
-- Only include articles with at least 1 valid keyword.
-- category: 규제/시장/공급망/R&D/임상/허가` },
-            { role: "user", content: `Extract API keywords and translate foreign articles:\n\n${articleList}` },
-          ],
-          tools: [{
-            type: "function",
-            function: {
-              name: "extract_keywords",
-              description: "Extract API keywords and translate foreign news articles",
-              parameters: {
-                type: "object",
-                properties: {
-                  results: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        index: { type: "number" },
-                        apiKeywords: { type: "array", items: { type: "string" } },
-                        category: { type: "string" },
-                        translated_title: { type: "string" },
-                        translated_summary: { type: "string" },
-                      },
-                      required: ["index", "apiKeywords", "category"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["results"],
-                additionalProperties: false,
-              },
-            },
-          }],
-          tool_choice: { type: "function", function: { name: "extract_keywords" } },
-        }),
-      });
-      if (!retryResp.ok) {
-        console.error(`Gemini API retry failed: ${retryResp.status}`);
-        return [];
-      }
-      const retryData = await retryResp.json();
-      const retryToolCall = retryData.choices?.[0]?.message?.tool_calls?.[0];
-      if (!retryToolCall) return [];
-      const retryParsed = JSON.parse(retryToolCall.function.arguments);
-      const retryResults: any[] = [];
-      for (const r of retryParsed.results || []) {
-        if (!r.apiKeywords || r.apiKeywords.length === 0) continue;
-        const article = articles[r.index];
-        if (!article) continue;
-        const isForeign = article.region === "해외";
-        retryResults.push({
-          title: (isForeign && r.translated_title) ? r.translated_title : article.title,
-          summary: (isForeign && r.translated_summary) ? r.translated_summary : article.summary,
-          source: article.source, region: article.region, country: article.country,
-          url: article.url, date: article.date, api_keywords: r.apiKeywords,
-          category: r.category || "", original_language: isForeign ? "en" : "ko",
-        });
-      }
-      return retryResults;
-    }
-
     if (!aiResp.ok) {
       console.error(`Gemini API error: ${aiResp.status}`);
+      if (aiResp.status === 429) {
+        console.warn("Rate limited - skipping this batch");
+      }
       return [];
     }
 

@@ -56,7 +56,7 @@ export const IndustryReportsSection = () => {
                 href={report.pdf_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 p-2 rounded-md bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                className="shrink-0 p-2 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                 title="PDF 다운로드"
               >
                 <Download className="w-4 h-4" />
