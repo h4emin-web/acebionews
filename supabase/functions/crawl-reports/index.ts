@@ -79,9 +79,12 @@ async function scrapeReportDetail(url: string): Promise<string> {
     const buffer = await resp.arrayBuffer();
     const html = new TextDecoder("euc-kr").decode(buffer);
 
-    // Extract the report body - typically inside <div class="view_cnt"> or <td class="view_cnt">
-    const bodyMatch = html.match(/class="view_cnt"[^>]*>([\s\S]*?)(?:<\/div>|<\/td>)/i);
-    if (!bodyMatch) return "";
+    // Extract content from <td class="view_cnt">...</td>
+    const bodyMatch = html.match(/class="view_cnt"[^>]*>([\s\S]*?)<\/td>/i);
+    if (!bodyMatch) {
+      console.log("No view_cnt found in detail page");
+      return "";
+    }
 
     let text = bodyMatch[1];
     // Convert <br> and block tags to newlines
