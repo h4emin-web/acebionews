@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { FileText, ChevronDown, Download } from "lucide-react";
 import { useIndustryReports } from "@/hooks/useNewsData";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 export const IndustryReportsSection = () => {
   const { data: reports = [], isLoading } = useIndustryReports();
@@ -57,15 +55,45 @@ export const IndustryReportsSection = () => {
             {isOpen && (
               <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
                 {report.summary ? (
-                  <div className="text-[13px] text-muted-foreground leading-relaxed
-                    [&_p]:my-1.5 [&_ul]:my-1 [&_ol]:my-1
-                    [&_li]:my-0.5 [&_li]:text-muted-foreground
-                    [&_strong]:text-foreground/80 [&_strong]:font-medium
-                    [&_h2]:text-foreground/90 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1
-                    [&_h3]:text-foreground/90 [&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {report.summary}
-                    </ReactMarkdown>
+                  <div className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {report.summary.split('\n').map((line, idx) => {
+                      const trimmed = line.trim();
+                      // Style [핵심 요약], [주요 내용] headers
+                      if (/^\[.+\]$/.test(trimmed)) {
+                        return (
+                          <p key={idx} className="text-foreground/90 text-[13px] font-semibold mt-3 mb-1 first:mt-0">
+                            {trimmed}
+                          </p>
+                        );
+                      }
+                      // Style **bold** headers (fallback for old format)
+                      if (/^\*\*.+\*\*$/.test(trimmed)) {
+                        return (
+                          <p key={idx} className="text-foreground/90 text-[13px] font-semibold mt-3 mb-1 first:mt-0">
+                            {trimmed.replace(/\*\*/g, '')}
+                          </p>
+                        );
+                      }
+                      // Style ## headers (fallback for old format)
+                      if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+                        return (
+                          <p key={idx} className="text-foreground/90 text-[13px] font-semibold mt-3 mb-1 first:mt-0">
+                            {trimmed.replace(/^#+\s*/, '')}
+                          </p>
+                        );
+                      }
+                      // Bullet points
+                      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+                        return (
+                          <p key={idx} className="pl-3 my-0.5">
+                            <span className="text-muted-foreground/60 mr-1">•</span>
+                            {trimmed.replace(/^[-*•]\s*/, '').replace(/\*\*(.+?)\*\*/g, '$1')}
+                          </p>
+                        );
+                      }
+                      if (!trimmed) return <br key={idx} />;
+                      return <p key={idx} className="my-1">{trimmed.replace(/\*\*(.+?)\*\*/g, '$1')}</p>;
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">요약 정보가 없습니다.</p>

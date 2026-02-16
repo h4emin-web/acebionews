@@ -112,15 +112,20 @@ async function summarizeContent(title: string, content: string): Promise<string 
   if (!GEMINI_KEY) return content.slice(0, 500); // fallback: just truncate
 
   try {
-    const prompt = `다음은 증권사 제약 산업분석 리포트입니다. 핵심 내용을 정리해주세요.
+    const prompt = `다음은 증권사 제약 산업분석 리포트입니다. 아래 형식 그대로 정리해주세요.
+
+출력 형식 (반드시 이 형식을 따르세요):
+[핵심 요약]
+리포트의 주요 결론을 2-3줄로 작성
+
+[주요 내용]
+- 핵심 이슈/종목/수치를 불릿포인트로 정리
+- 데이터는 정확히 유지
 
 규칙:
-- 마크다운 형식으로 작성
-- [핵심 요약] 섹션: 리포트의 주요 결론을 2-3줄로
-- [주요 내용] 섹션: 불릿포인트로 핵심 이슈/종목/수치 정리
-- 투자 의견, 추천 종목, 목표 주가 등은 절대 포함하지 마세요
-- 전체 400자 이내로 간결하게
-- 원문의 핵심 데이터(수치, 종목명, 가격 등)는 정확히 유지
+- 위 형식의 대괄호 헤더를 반드시 사용 (## 이나 ** 사용 금지)
+- 투자 의견, 추천 종목, 목표 주가, 투자 포인트 등은 절대 포함하지 마세요
+- 전체 400자 이내
 - 존댓말(~입니다, ~됩니다) 사용
 
 제목: ${title}
@@ -171,7 +176,7 @@ serve(async (req) => {
       const { data: noSummary } = await supabase
         .from("industry_reports")
         .select("id, title, report_url, summary")
-        .not("summary", "like", "## %")
+        .not("summary", "like", "%[핵심 요약]%")
         .order("date", { ascending: false })
         .limit(8);
 
