@@ -294,7 +294,7 @@ async function extractKeywordsAndTranslate(
 - For articles marked [해외], translate title and summary into Korean.
   - Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, key facts only).
 - For articles marked [국내], set translated_title to null.
-  - Provide translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약 (사실만 기술, 비즈니스 조언/시사점 불필요).
+  - Provide translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
 ## Output: JSON array where each item has index, apiKeywords, category, translated_title, translated_summary.
 - Only include articles with at least 1 valid keyword.
@@ -408,7 +408,14 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(200);
 
-      const needsSummary = (articles || []).filter((a: any) => a.summary && (a.summary.length > 150 || a.summary.includes("API 수입") || a.summary.includes("원료의약품")));
+      const needsSummary = (articles || []).filter((a: any) => {
+        if (!a.summary) return false;
+        if (a.summary.length > 150) return true;
+        if (a.summary.includes("API 수입") || a.summary.includes("원료의약품")) return true;
+        // Check for non-honorific endings
+        if (/이다\.|했다\.|된다\.|보인다\.|한다\.|있다\.|없다\.|됐다\.|났다\.|왔다\.|겠다\.|진다\./.test(a.summary)) return true;
+        return false;
+      });
       console.log(`Found ${needsSummary.length} domestic articles needing summary`);
 
       let updated = 0;
@@ -429,7 +436,7 @@ serve(async (req) => {
               messages: [
                 {
                   role: "system",
-                  content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어 2문장 이내로 간결하게 요약하세요. 비즈니스 조언이나 시사점은 넣지 말고, 기사 사실만 요약하세요.`,
+                  content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어 2문장 이내로 간결하게 요약하세요. 비즈니스 조언이나 시사점은 넣지 말고, 기사 사실만 요약하세요. 반드시 존댓말(~입니다, ~됩니다, ~했습니다)을 사용하세요. "~이다", "~했다" 같은 반말은 절대 사용하지 마세요.`,
                 },
                 { role: "user", content: `Summarize these articles:\n\n${articleList}` },
               ],

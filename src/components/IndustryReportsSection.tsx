@@ -41,7 +41,7 @@ export const IndustryReportsSection = () => {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-foreground line-clamp-2">{report.title}</h3>
+                  <h3 className="text-sm font-medium text-foreground leading-snug">{report.title}</h3>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[11px] font-medium text-primary/80 bg-primary/5 px-1.5 py-0.5 rounded">
                       {report.broker}
@@ -50,20 +50,19 @@ export const IndustryReportsSection = () => {
                     <span className="text-[11px] text-muted-foreground/60">조회 {report.views}</span>
                   </div>
                 </div>
-                <ChevronDown className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform mt-0.5 ${isOpen ? "rotate-180" : ""}`} />
               </div>
             </button>
 
             {isOpen && (
               <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
                 {report.summary ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none
-                    prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
-                    prose-p:text-foreground/80 prose-p:leading-relaxed prose-p:my-1
-                    prose-li:text-foreground/80 prose-li:my-0.5
-                    prose-strong:text-foreground prose-strong:font-semibold
-                    prose-ul:my-1.5 prose-ol:my-1.5
-                    text-sm">
+                  <div className="text-[13px] text-muted-foreground leading-relaxed
+                    [&_p]:my-1.5 [&_ul]:my-1 [&_ol]:my-1
+                    [&_li]:my-0.5 [&_li]:text-muted-foreground
+                    [&_strong]:text-foreground/80 [&_strong]:font-medium
+                    [&_h2]:text-foreground/90 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1
+                    [&_h3]:text-foreground/90 [&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {report.summary}
                     </ReactMarkdown>
