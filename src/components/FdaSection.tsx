@@ -4,10 +4,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useState } from "react";
 
 const typeColors: Record<string, string> = {
-  Safety: "bg-destructive/10 text-destructive",
+  "Safety Alert": "bg-destructive/10 text-destructive",
+  "Statement": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  "Drug Recall": "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  "Warning": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   Guidance: "region-badge-domestic",
   Approval: "region-badge-mfds",
-  Warning: "region-badge-overseas"
 };
 
 type Props = {
