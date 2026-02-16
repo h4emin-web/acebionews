@@ -6,7 +6,7 @@ import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
-import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
+
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
@@ -18,7 +18,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [todayOnly, setTodayOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트">("all");
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  
   const [nceModalOpen, setNceModalOpen] = useState(false);
 
   // Debounce search for external API calls (Korean IME sends many partial chars)
@@ -57,9 +57,6 @@ const Index = () => {
   };
 
 
-  const handleNewsClick = (news: NewsItem) => {
-    setSelectedNews((prev) => prev?.id === news.id ? null : news);
-  };
 
 
   const toNewsItem = (news: typeof displayNews[number]): NewsItem => ({
@@ -138,7 +135,7 @@ const Index = () => {
             />
         )}
 
-        <div className={`grid gap-5 ${selectedNews ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-[1fr_340px]"}`}>
+        <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
             {regionFilter === "리포트" ? (
               <IndustryReportsSection />
@@ -188,15 +185,7 @@ const Index = () => {
                 displayNews.map((news, i) => {
                   const item = toNewsItem(news);
                   return (
-                    <div
-                      key={news.id}
-                      onClick={() => handleNewsClick(item)}
-                      className={`cursor-pointer rounded-lg transition-all ${
-                        selectedNews?.id === news.id ? "ring-2 ring-primary" : ""
-                      }`}
-                    >
-                      <NewsCard news={item} index={i} onKeywordClick={handleKeywordClick} />
-                    </div>
+                    <NewsCard key={news.id} news={item} index={i} onKeywordClick={handleKeywordClick} />
                   );
                 })
               ) : (
@@ -213,9 +202,7 @@ const Index = () => {
           </div>
 
           <aside className="space-y-4">
-            {selectedNews ? (
-              <NewsAnalysisPanel news={selectedNews} onClose={() => setSelectedNews(null)} />
-            ) : isSearching ? (
+            {isSearching ? (
               <SearchSidebarPanel
                 keyword={search}
                 products={mfdsProducts}
