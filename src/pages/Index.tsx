@@ -16,6 +16,10 @@ import type { NewsItem } from "@/data/mockNews";
 
 const Index = () => {
   const [search, setSearch] = useState("");
+  const handleSearchChange = (v: string) => {
+    setSearch(v);
+    if (v && regionFilter === "리포트") setRegionFilter("all");
+  };
   const [todayOnly, setTodayOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트">("all");
   
@@ -54,6 +58,7 @@ const Index = () => {
 
   const handleKeywordClick = (kw: string) => {
     setSearch(kw);
+    setRegionFilter("all");
   };
 
 
@@ -114,7 +119,7 @@ const Index = () => {
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
         <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <SearchBar value={search} onChange={setSearch} suggestions={allKeywords} />
+            <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
           </div>
           <button
             onClick={() => setNceModalOpen(true)}
