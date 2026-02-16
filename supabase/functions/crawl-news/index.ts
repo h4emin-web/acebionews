@@ -20,8 +20,8 @@ const HTML_SOURCES = [
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
   { url: "https://www.hitnews.co.kr/news/articleList.html?sc_sub_section_code=S2N16&view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
+  { url: "https://answers.ten-navi.com/pharmanews/", name: "AnswersNews", region: "해외", country: "JP", parser: "answersnews" },
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
-  { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP", parser: "generic" },
 ];
 
 function normalizeDate(dateStr?: string): string {
@@ -211,6 +211,27 @@ function parseKpanews(html: string): Array<{ title: string; summary: string; url
   return articles;
 }
 
+// Parse AnswersNews (answers.ten-navi.com) HTML
+function parseAnswersNews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const articleRegex = /<article>([\s\S]*?)<\/article>/gi;
+  let m;
+  while ((m = articleRegex.exec(html)) !== null && articles.length < 15) {
+    const block = m[1];
+    const linkMatch = block.match(/<a\s+href="([^"]*)"[^>]*>/i);
+    const titleMatch = block.match(/<h2 class="ttl">([\s\S]*?)<\/h2>/i);
+    const dateMatch = block.match(/<time[^>]*datetime="([^"]*)"[^>]*>/i);
+    if (!linkMatch || !titleMatch) continue;
+    const url = linkMatch[1].trim();
+    const title = stripHtml(titleMatch[1]).trim();
+    const dateStr = dateMatch ? dateMatch[1] : "";
+    if (title.length > 5) {
+      articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
 // Fetch HTML and parse based on parser type
 async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
@@ -237,6 +258,8 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
       articles = parseHitnews(html);
     } else if (source.parser === "kpanews") {
       articles = parseKpanews(html);
+    } else if (source.parser === "answersnews") {
+      articles = parseAnswersNews(html);
     } else {
       // Generic fallback
       const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
@@ -291,7 +314,7 @@ async function extractKeywordsAndTranslate(
 - INVALID: Brand/product names only, generic categories (엑소좀, mRNA, GLP-1, siRNA, 백신), mechanism names.
 
 ## TASK 2: TRANSLATION & SUMMARY
-- For articles marked [해외], translate title and summary into Korean.
+- For articles marked [해외], translate title and summary into Korean. Articles may be in English or Japanese.
   - Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, key facts only).
 - For articles marked [국내], set translated_title to null.
   - Provide translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
@@ -375,7 +398,7 @@ async function extractKeywordsAndTranslate(
         date: article.date,
         api_keywords: r.apiKeywords,
         category: r.category || "",
-        original_language: isForeign ? "en" : "ko",
+        original_language: isForeign ? (article.country === "JP" ? "ja" : "en") : "ko",
       });
     }
 
