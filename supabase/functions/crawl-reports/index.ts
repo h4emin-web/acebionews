@@ -55,7 +55,7 @@ function parseReportsPage(html: string): Array<{
     const pdfUrl = pdfMatch ? pdfMatch[1].trim() : null;
     const dateStr = tds[4].replace(/<[^>]*>/g, "").trim();
     const views = tds.length > 5 ? parseInt(tds[5].replace(/<[^>]*>/g, "").trim()) || 0 : 0;
-    const fullReportUrl = reportUrl.startsWith("http") ? reportUrl : `https://finance.naver.com${reportUrl.startsWith("/") ? "" : "/"}${reportUrl}`;
+    const fullReportUrl = reportUrl.startsWith("http") ? reportUrl : `https://finance.naver.com/research/${reportUrl.replace(/^\//, "")}`;
     if (title.length > 2) {
       reports.push({ title, broker, date: parseDate(dateStr), report_url: fullReportUrl, pdf_url: pdfUrl, views });
     }
