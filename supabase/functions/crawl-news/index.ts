@@ -20,7 +20,7 @@ const HTML_SOURCES = [
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
   { url: "https://www.hitnews.co.kr/news/articleList.html?sc_sub_section_code=S2N16&view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
-  { url: "https://answers.ten-navi.com/pharmanews/", name: "AnswersNews", region: "해외", country: "JP", parser: "answersnews" },
+  { url: "https://iyakunews.com/news-new", name: "医薬ニュース", region: "해외", country: "JP", parser: "iyakunews" },
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
 ];
 
@@ -211,22 +211,37 @@ function parseKpanews(html: string): Array<{ title: string; summary: string; url
   return articles;
 }
 
-// Parse AnswersNews (answers.ten-navi.com) HTML
-function parseAnswersNews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+// Parse 医薬ニュース (iyakunews.com) HTML
+function parseIyakuNews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  const articleRegex = /<article>([\s\S]*?)<\/article>/gi;
-  let m;
-  while ((m = articleRegex.exec(html)) !== null && articles.length < 15) {
-    const block = m[1];
-    const linkMatch = block.match(/<a\s+href="([^"]*)"[^>]*>/i);
-    const titleMatch = block.match(/<h2 class="ttl">([\s\S]*?)<\/h2>/i);
-    const dateMatch = block.match(/<time[^>]*datetime="([^"]*)"[^>]*>/i);
-    if (!linkMatch || !titleMatch) continue;
-    const url = linkMatch[1].trim();
-    const title = stripHtml(titleMatch[1]).trim();
-    const dateStr = dateMatch ? dateMatch[1] : "";
-    if (title.length > 5) {
-      articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+  // Split by rss-site-item divs
+  const parts = html.split(/class=['"]rss-site-item['"]/gi);
+  
+  for (let i = 1; i < parts.length && articles.length < 20; i++) {
+    const block = parts[i];
+    const urlMatch = block.match(/href=['"]([^'"]*)['"]/i);
+    if (!urlMatch) continue;
+    const url = urlMatch[1].replace(/&amp;/g, "&").trim();
+    // Extract title text between <p class='title'> and </p>
+    const pMatch = block.match(/class=['"]title['"][^>]*>([\s\S]*?)<\/p>/i);
+    if (!pMatch) continue;
+    let titleRaw = pMatch[1]
+      .replace(/<span[^>]*>.*?<\/span>/gi, "") // remove NEW! badge
+      .replace(/&lt;b&gt;/g, "").replace(/&lt;\/b&gt;/g, "") // remove escaped <b> tags
+      .replace(/<[^>]*>/g, "") // strip remaining HTML
+      .replace(/&amp;/g, "&").replace(/&quot;/g, '"')
+      .trim();
+    // Extract date: [YYYY/MM/DD HH:MM]
+    const dateMatch = titleRaw.match(/\[(\d{4})\/(\d{2})\/(\d{2})\s+\d{2}:\d{2}\]/);
+    let dateStr = "";
+    if (dateMatch) {
+      dateStr = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
+      titleRaw = titleRaw.replace(/\s*\[\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
+    }
+    // Remove trailing source: " - ソース名" or "　[…]"
+    titleRaw = titleRaw.replace(/\s*[ー－—]\s+[^\[]+$/, "").replace(/　$/, "").trim();
+    if (titleRaw.length > 5) {
+      articles.push({ title: titleRaw, summary: "", url, date: normalizeDate(dateStr) });
     }
   }
   return articles;
@@ -259,7 +274,9 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
     } else if (source.parser === "kpanews") {
       articles = parseKpanews(html);
     } else if (source.parser === "answersnews") {
-      articles = parseAnswersNews(html);
+      articles = parseIyakuNews(html);
+    } else if (source.parser === "iyakunews") {
+      articles = parseIyakuNews(html);
     } else {
       // Generic fallback
       const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
