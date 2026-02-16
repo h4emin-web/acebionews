@@ -1,6 +1,6 @@
 import { ExternalLink, Globe, MapPin } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
-import { countryFlags } from "@/data/mockNews";
+import { countryFlagCodes } from "@/data/mockNews";
 
 type Props = {
   news: NewsItem;
@@ -9,7 +9,7 @@ type Props = {
 };
 
 export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
-  const flag = countryFlags[news.country] || "🌍";
+  const flagCode = countryFlagCodes[news.country] || null;
 
   return (
     <article
@@ -24,7 +24,9 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
             }`}
           >
             {news.region === "국내" ? <MapPin className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-            {flag} {news.region}
+            {flagCode ? (
+              <img src={`https://flagcdn.com/16x12/${flagCode}.png`} alt={news.country} className="w-4 h-3 inline-block" />
+            ) : "🌍"} {news.region}
           </span>
           <span className="text-[11px] text-muted-foreground">{news.source}</span>
         </div>

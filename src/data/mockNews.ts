@@ -270,6 +270,16 @@ export const countryFlags: Record<string, string> = {
   JP: "🇯🇵",
 };
 
+// ISO 3166-1 alpha-2 codes for flag CDN (lowercase)
+export const countryFlagCodes: Record<string, string> = {
+  KR: "kr",
+  US: "us",
+  CN: "cn",
+  IN: "in",
+  EU: "eu",
+  JP: "jp",
+};
+
 export const countryNames: Record<string, string> = {
   KR: "한국",
   US: "미국",
