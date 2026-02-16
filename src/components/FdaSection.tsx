@@ -51,12 +51,12 @@ export const FdaSection = ({ onKeywordClick }: Props) => {
                 <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors leading-snug mb-1.5">
                   {n.title}
                 </p>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 justify-start">
                   {n.related_apis.map((api) =>
               <button
                 key={api}
                 onClick={() => onKeywordClick(api)}
-                className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-primary/8 text-primary hover:bg-primary/15 transition-colors cursor-pointer border border-primary/10">
+                className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-primary/8 text-primary hover:bg-primary/15 transition-colors cursor-pointer border border-primary/10 text-left">
 
                       {api}
                     </button>
