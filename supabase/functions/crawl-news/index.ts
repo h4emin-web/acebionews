@@ -292,9 +292,9 @@ async function extractKeywordsAndTranslate(
 
 ## TASK 2: TRANSLATION & SUMMARY
 - For articles marked [해외], translate title and summary into Korean.
-  - Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, focusing on business impact for API industry).
+  - Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, key facts only).
 - For articles marked [국내], set translated_title to null.
-  - Provide translated_summary: 기사 내용을 원료의약품 수입업체 관점에서 2문장 이내로 요약 (비즈니스 시사점 포함).
+  - Provide translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약 (사실만 기술, 비즈니스 조언/시사점 불필요).
 
 ## Output: JSON array where each item has index, apiKeywords, category, translated_title, translated_summary.
 - Only include articles with at least 1 valid keyword.
@@ -408,7 +408,7 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(200);
 
-      const needsSummary = (articles || []).filter((a: any) => a.summary && a.summary.length > 150);
+      const needsSummary = (articles || []).filter((a: any) => a.summary && (a.summary.length > 150 || a.summary.includes("API 수입") || a.summary.includes("원료의약품")));
       console.log(`Found ${needsSummary.length} domestic articles needing summary`);
 
       let updated = 0;
@@ -429,7 +429,7 @@ serve(async (req) => {
               messages: [
                 {
                   role: "system",
-                  content: `You are a pharmaceutical news analyst. Summarize each article in 2 sentences in Korean, focusing on business impact for API (원료의약품) importers. Return JSON array with index and summary fields.`,
+                  content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어 2문장 이내로 간결하게 요약하세요. 비즈니스 조언이나 시사점은 넣지 말고, 기사 사실만 요약하세요.`,
                 },
                 { role: "user", content: `Summarize these articles:\n\n${articleList}` },
               ],
