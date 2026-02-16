@@ -108,7 +108,7 @@ async function scrapeReportDetail(url: string): Promise<string> {
 async function summarizeContent(title: string, content: string): Promise<string | null> {
   if (!content || content.length < 30) return null;
   
-  const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
+  const GEMINI_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
   if (!GEMINI_KEY) return content.slice(0, 500); // fallback: just truncate
 
   try {

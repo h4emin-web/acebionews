@@ -290,10 +290,11 @@ async function extractKeywordsAndTranslate(
 - Keyword format: "한글명 (English Name)"
 - INVALID: Brand/product names only, generic categories (엑소좀, mRNA, GLP-1, siRNA, 백신), mechanism names.
 
-## TASK 2: TRANSLATION & SUMMARY (for 해외 articles ONLY)
+## TASK 2: TRANSLATION & SUMMARY
 - For articles marked [해외], translate title and summary into Korean.
-- Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, focusing on business impact for API industry).
-- For articles marked [국내], set translated_title and translated_summary to null.
+  - Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, focusing on business impact for API industry).
+- For articles marked [국내], set translated_title to null.
+  - Provide translated_summary: 기사 내용을 원료의약품 수입업체 관점에서 2문장 이내로 요약 (비즈니스 시사점 포함).
 
 ## Output: JSON array where each item has index, apiKeywords, category, translated_title, translated_summary.
 - Only include articles with at least 1 valid keyword.
@@ -359,10 +360,10 @@ async function extractKeywordsAndTranslate(
       const article = articles[r.index];
       if (!article) continue;
 
-      // For foreign articles, use translated title/summary
+      // For foreign articles, use translated title/summary; for domestic, use AI summary if available
       const isForeign = article.region === "해외";
       const finalTitle = (isForeign && r.translated_title) ? r.translated_title : article.title;
-      const finalSummary = (isForeign && r.translated_summary) ? r.translated_summary : article.summary;
+      const finalSummary = r.translated_summary ? r.translated_summary : article.summary;
 
       results.push({
         title: finalTitle,
