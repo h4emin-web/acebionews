@@ -10,13 +10,14 @@ import { NewsAnalysisPanel } from "@/components/NewsAnalysisPanel";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
-import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo, useMfdsProducts, useMfdsDmf } from "@/hooks/useNewsData";
+import { IndustryReportsSection } from "@/components/IndustryReportsSection";
+import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo, useMfdsProducts, useMfdsDmf, useIndustryReports } from "@/hooks/useNewsData";
 import type { NewsItem } from "@/data/mockNews";
 
 const Index = () => {
   const [search, setSearch] = useState("");
   const [todayOnly, setTodayOnly] = useState(false);
-  const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외">("all");
+  const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트">("all");
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [nceModalOpen, setNceModalOpen] = useState(false);
 
@@ -38,6 +39,7 @@ const Index = () => {
 
   const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
   const { data: allKeywords = [] } = useAllApiKeywords();
+  const { data: reports = [] } = useIndustryReports();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
   const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(debouncedSearch);
   const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
@@ -46,7 +48,7 @@ const Index = () => {
 
   const allNews = (search ? searchResults : newsArticles).
   filter((n) => n.api_keywords && n.api_keywords.length > 0);
-  const displayNews = allNews.filter((n) => regionFilter === "all" || n.region === regionFilter);
+  const displayNews = allNews.filter((n) => regionFilter === "all" || regionFilter === "리포트" || n.region === regionFilter);
   const isLoading = search ? searchLoading : newsLoading;
   const isSearching = !!search;
 
@@ -125,7 +127,7 @@ const Index = () => {
             물질 특허 만료 NCE
           </button>
         </div>
-        {!search && <StatsBar news={allNews} totalKeywords={allKeywords.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />}
+        {!search && <StatsBar news={allNews} totalReports={reports.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />}
 
         {search && (
             <SearchResultsPanel
@@ -138,7 +140,9 @@ const Index = () => {
 
         <div className={`grid gap-5 ${selectedNews ? "lg:grid-cols-[1fr_380px]" : "lg:grid-cols-[1fr_340px]"}`}>
           <div className="space-y-4">
-            {isSearching ? (
+            {regionFilter === "리포트" ? (
+              <IndustryReportsSection />
+            ) : isSearching ? (
               /* When searching: show external news in main area */
               externalNewsLoading ? (
                 <div className="text-center py-16 card-elevated rounded-lg">

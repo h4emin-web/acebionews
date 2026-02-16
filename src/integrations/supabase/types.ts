@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      industry_reports: {
+        Row: {
+          broker: string
+          created_at: string
+          date: string
+          id: string
+          pdf_url: string | null
+          report_url: string
+          summary: string | null
+          title: string
+          views: number | null
+        }
+        Insert: {
+          broker: string
+          created_at?: string
+          date: string
+          id?: string
+          pdf_url?: string | null
+          report_url: string
+          summary?: string | null
+          title: string
+          views?: number | null
+        }
+        Update: {
+          broker?: string
+          created_at?: string
+          date?: string
+          id?: string
+          pdf_url?: string | null
+          report_url?: string
+          summary?: string | null
+          title?: string
+          views?: number | null
+        }
+        Relationships: []
+      }
       nce_patent_expiry: {
         Row: {
           api_name: string
