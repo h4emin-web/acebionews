@@ -112,17 +112,19 @@ async function summarizeContent(title: string, content: string): Promise<string 
   if (!GEMINI_KEY) return content.slice(0, 500); // fallback: just truncate
 
   try {
-    const prompt = `다음은 증권사 제약 산업분석 리포트입니다. 핵심 내용을 보기 좋게 정리해주세요.
+    const prompt = `다음은 증권사 제약 산업분석 리포트입니다. 핵심 내용을 가독성 좋게 정리해주세요.
 
 규칙:
-- 주요 내용을 구조적으로 정리 (핵심 요약, 주요 종목/이슈, 투자 의견 등)
-- 이모지를 적절히 사용해서 가독성 높이기
-- 줄바꿈으로 구분해서 보기 좋게
-- 최대 300자 이내
+- 마크다운 형식으로 작성
+- **핵심 요약** 섹션: 리포트의 주요 결론을 2-3줄로
+- **주요 내용** 섹션: 불릿포인트로 핵심 이슈/종목/수치 정리
+- **투자 의견** 섹션: 추천 종목이나 투자의견이 있으면 간단히 기재
+- 전체 500자 이내로 간결하게
+- 원문의 핵심 데이터(수치, 종목명, 가격 등)는 정확히 유지
 
 제목: ${title}
 내용:
-${content.slice(0, 2000)}`;
+${content.slice(0, 3000)}`;
 
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_KEY}`,
@@ -160,16 +162,17 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const maxPages = body.maxPages || 2;
-    const summarizeExisting = body.summarizeExisting || false; // backfill summaries
+    const summarizeExisting = body.summarizeExisting || false;
+    const resummarizeAll = body.resummarizeAll || false;
 
-    // --- Backfill mode: summarize reports that have no summary ---
-    if (summarizeExisting) {
+    // --- Backfill mode: summarize reports ---
+    if (summarizeExisting || resummarizeAll) {
       const { data: noSummary } = await supabase
         .from("industry_reports")
         .select("id, title, report_url, summary")
-        .is("summary", null)
+        .not("summary", "like", "## %")
         .order("date", { ascending: false })
-        .limit(10); // process 10 at a time to avoid timeout
+        .limit(8);
 
       let updated = 0;
       for (const report of noSummary || []) {
