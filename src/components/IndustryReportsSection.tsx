@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { FileText, ChevronDown, Download } from "lucide-react";
 import { useIndustryReports } from "@/hooks/useNewsData";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export const IndustryReportsSection = () => {
   const { data: reports = [], isLoading } = useIndustryReports();
@@ -39,21 +41,7 @@ export const IndustryReportsSection = () => {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-foreground line-clamp-2">{report.title}</h3>
-                    {report.pdf_url && (
-                      <a
-                        href={report.pdf_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="shrink-0 p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                        title="PDF 다운로드"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                  </div>
+                  <h3 className="text-sm font-medium text-foreground line-clamp-2">{report.title}</h3>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[11px] font-medium text-primary/80 bg-primary/5 px-1.5 py-0.5 rounded">
                       {report.broker}
@@ -67,11 +55,32 @@ export const IndustryReportsSection = () => {
             </button>
 
             {isOpen && (
-              <div className="px-4 pb-4 border-t border-border pt-3">
+              <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
                 {report.summary ? (
-                  <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{report.summary}</p>
+                  <div className="prose prose-sm dark:prose-invert max-w-none
+                    prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
+                    prose-p:text-foreground/80 prose-p:leading-relaxed prose-p:my-1
+                    prose-li:text-foreground/80 prose-li:my-0.5
+                    prose-strong:text-foreground prose-strong:font-semibold
+                    prose-ul:my-1.5 prose-ol:my-1.5
+                    text-sm">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {report.summary}
+                    </ReactMarkdown>
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">요약 정보가 없습니다.</p>
+                )}
+                {report.pdf_url && (
+                  <a
+                    href={report.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    PDF 다운로드
+                  </a>
                 )}
               </div>
             )}
