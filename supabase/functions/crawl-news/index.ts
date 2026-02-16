@@ -13,16 +13,36 @@ const RSS_SOURCES = [
   { rss: "https://www.expresspharma.in/feed/", name: "Express Pharma", region: "해외", country: "IN" },
 ];
 
-// HTML sources — 약업신문 & 데일리팜 + fallback overseas
+// HTML sources — 약업신문 & 데일리팜 + 의약뉴스 + 히트뉴스 + fallback overseas
 const HTML_SOURCES = [
   { url: "https://www.yakup.com/news/index.html?cat=12", name: "약업신문", region: "국내", country: "KR", parser: "yakup" },
   { url: "https://www.dailypharm.com/", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
+  { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
+  { url: "https://www.hitnews.co.kr/news/articleList.html?sc_sub_section_code=S2N16&view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
   { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP", parser: "generic" },
 ];
 
-function normalizeDate(_dateStr?: string): string {
-  // Always use today's date (KST) as the crawl date
+function normalizeDate(dateStr?: string): string {
+  if (dateStr) {
+    // Try to parse various date formats
+    // Format: "2026-02-16 05:55" or "2026-02-16" or "02.16 06:00" or "2026.02.16"
+    const isoMatch = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
+    }
+    const dotMatch = dateStr.match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/);
+    if (dotMatch) {
+      return `${dotMatch[1]}-${dotMatch[2].padStart(2, "0")}-${dotMatch[3].padStart(2, "0")}`;
+    }
+    // Short format like "02.16 06:00" — assume current year
+    const shortMatch = dateStr.match(/(\d{1,2})\.(\d{1,2})\s/);
+    if (shortMatch) {
+      const year = new Date().getFullYear();
+      return `${year}-${shortMatch[1].padStart(2, "0")}-${shortMatch[2].padStart(2, "0")}`;
+    }
+  }
+  // Fallback: today's date (KST)
   return new Date().toISOString().split("T")[0];
 }
 
@@ -130,6 +150,44 @@ function parseDailypharm(html: string): Array<{ title: string; summary: string; 
   return articles;
 }
 
+// Parse 의약뉴스 (newsmp.com) HTML
+function parseNewsmp(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const blockRegex = /<div class="list-block">([\s\S]*?)<\/div>\s*<!--\/\/ group -->/gi;
+  let m;
+  while ((m = blockRegex.exec(html)) !== null && articles.length < 15) {
+    const block = m[1];
+    const titleMatch = block.match(/<div class="list-titles">\s*<a[^>]*href="([^"]*)"[^>]*>\s*<strong>([\s\S]*?)<\/strong>/i);
+    if (!titleMatch) continue;
+    const url = titleMatch[1].trim();
+    const title = stripHtml(titleMatch[2]).trim();
+    const summaryMatch = block.match(/<p class="list-summary">\s*<a[^>]*>([\s\S]*?)<\/a>/i);
+    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const dateMatch = block.match(/<div class="list-dated">[^|]*\|\s*(\d{4}-\d{2}-\d{2})\s/i);
+    const dateStr = dateMatch ? dateMatch[1] : "";
+    if (title.length > 5) {
+      articles.push({ title, summary, url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
+// Parse 히트뉴스 (hitnews.co.kr) HTML
+function parseHitnews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const liRegex = /<li>\s*<h4 class="titles">\s*<a\s+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>\s*<\/h4>[\s\S]*?<em class="info dated">([\s\S]*?)<\/em>\s*<\/li>/gi;
+  let m;
+  while ((m = liRegex.exec(html)) !== null && articles.length < 20) {
+    const url = m[1].trim();
+    const title = stripHtml(m[2]).trim();
+    const dateStr = stripHtml(m[3]).trim(); // e.g. "02.16 06:00"
+    if (title.length > 5) {
+      articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
 // Fetch HTML and parse based on parser type
 async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
@@ -150,6 +208,10 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
       articles = parseYakup(html);
     } else if (source.parser === "dailypharm") {
       articles = parseDailypharm(html);
+    } else if (source.parser === "newsmp") {
+      articles = parseNewsmp(html);
+    } else if (source.parser === "hitnews") {
+      articles = parseHitnews(html);
     } else {
       // Generic fallback
       const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
