@@ -397,6 +397,100 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    const body = await req.json().catch(() => ({}));
+
+    // --- Backfill mode: re-summarize existing domestic news with long/raw summaries ---
+    if (body.backfillSummaries) {
+      const { data: articles } = await supabase
+        .from("news_articles")
+        .select("id, title, summary, region, country, source, url, date, api_keywords")
+        .eq("region", "국내")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      const needsSummary = (articles || []).filter((a: any) => a.summary && a.summary.length > 150);
+      console.log(`Found ${needsSummary.length} domestic articles needing summary`);
+
+      let updated = 0;
+      const batchSize = 20;
+      for (let i = 0; i < needsSummary.length; i += batchSize) {
+        const batch = needsSummary.slice(i, i + batchSize);
+        const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary.slice(0, 200)}`).join("\n");
+
+        try {
+          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "gemini-2.5-flash-lite",
+              messages: [
+                {
+                  role: "system",
+                  content: `You are a pharmaceutical news analyst. Summarize each article in 2 sentences in Korean, focusing on business impact for API (원료의약품) importers. Return JSON array with index and summary fields.`,
+                },
+                { role: "user", content: `Summarize these articles:\n\n${articleList}` },
+              ],
+              tools: [{
+                type: "function",
+                function: {
+                  name: "summarize_articles",
+                  description: "Return summaries for articles",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      results: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            index: { type: "number" },
+                            summary: { type: "string" },
+                          },
+                          required: ["index", "summary"],
+                          additionalProperties: false,
+                        },
+                      },
+                    },
+                    required: ["results"],
+                    additionalProperties: false,
+                  },
+                },
+              }],
+              tool_choice: { type: "function", function: { name: "summarize_articles" } },
+            }),
+          });
+
+          if (!aiResp.ok) {
+            console.error(`Gemini error: ${aiResp.status}`);
+            continue;
+          }
+
+          const aiData = await aiResp.json();
+          const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+          if (!toolCall) continue;
+
+          const parsed = JSON.parse(toolCall.function.arguments);
+          for (const r of parsed.results || []) {
+            const article = batch[r.index];
+            if (!article || !r.summary) continue;
+            await supabase.from("news_articles").update({ summary: r.summary }).eq("id", article.id);
+            updated++;
+          }
+        } catch (err) {
+          console.error("Backfill batch error:", err);
+        }
+        if (i + batchSize < needsSummary.length) await new Promise(r => setTimeout(r, 2000));
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, summarized: updated, total: needsSummary.length }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 1. Fetch all sources in parallel
     const rssPromises = RSS_SOURCES.map((s) => fetchRss(s).then((articles) =>
       articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country }))
