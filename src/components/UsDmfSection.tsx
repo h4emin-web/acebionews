@@ -75,7 +75,7 @@ export const UsDmfSection = ({ onKeywordClick }: Props) => {
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
         <Award className="w-4 h-4 text-amber-500" />
-        <h2 className="text-sm font-semibold text-foreground">2025 US DMF 승인 순위</h2>
+        <h2 className="text-sm font-semibold text-foreground">US DMF 2025</h2>
         <span className="text-[10px] text-muted-foreground ml-auto font-mono mr-2">TOP 50</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
@@ -87,7 +87,7 @@ export const UsDmfSection = ({ onKeywordClick }: Props) => {
                 onClick={() => setExpandedIdx(expandedIdx === idx ? null : idx)}
                 className="w-full px-5 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
               >
-                <span className={`w-6 text-center text-xs font-bold shrink-0 ${item.rank <= 3 ? "text-amber-500" : "text-muted-foreground"}`}>
+                <span className="w-6 text-center text-xs font-bold shrink-0 text-foreground">
                   {item.rank}
                 </span>
                 <div
