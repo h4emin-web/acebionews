@@ -3,13 +3,21 @@ import { useRegulatoryNotices } from "@/hooks/useNewsData";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
 
+const typeLabels: Record<string, string> = {
+  "Safety Alert": "Alert",
+  "Statement": "Statement",
+  "Drug Recall": "Recall",
+  "Warning": "Warning",
+};
+
 const typeColors: Record<string, string> = {
-  "Safety Alert": "bg-destructive/10 text-destructive",
-  "Statement": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  "Drug Recall": "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-  "Warning": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  Guidance: "region-badge-domestic",
-  Approval: "region-badge-mfds",
+  "Safety Alert": "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+  "Statement": "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+  "Drug Recall": "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+  "Warning": "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+  "NDA Approval": "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+  Guidance: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+  Approval: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
 };
 
 type Props = {
@@ -41,7 +49,7 @@ export const FdaSection = ({ onKeywordClick }: Props) => {
           <div key={n.id} className="px-5 py-3 hover:bg-muted/50 transition-colors group">
                 <div className="flex items-start justify-between gap-3 mb-1">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${typeColors[n.type] || "bg-muted text-muted-foreground"}`}>
-                    {n.type}
+                    {typeLabels[n.type] || n.type}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-[11px] text-muted-foreground font-mono">{n.date}</span>

@@ -14,13 +14,13 @@ const typeIcons: Record<string, React.ElementType> = {
 };
 
 const typeColors: Record<string, string> = {
-  "안전성 서한": "bg-destructive/10 text-destructive",
-  "회수·폐기": "bg-destructive/10 text-destructive",
-  "공문": "region-badge-mfds",
-  "안전성정보": "bg-destructive/10 text-destructive",
-  "허가변경": "region-badge-domestic",
-  "회수·판매중지": "bg-destructive/10 text-destructive",
-  "부작용": "region-badge-overseas",
+  "안전성 서한": "bg-red-100 text-red-600",
+  "회수·폐기": "bg-red-100 text-red-600",
+  "안전성정보": "bg-red-100 text-red-600",
+  "회수·판매중지": "bg-red-100 text-red-600",
+  "부작용": "bg-red-100 text-red-600",
+  "공문": "bg-blue-100 text-blue-600",
+  "허가변경": "bg-blue-100 text-blue-600",
 };
 
 type Props = {
