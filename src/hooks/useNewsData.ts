@@ -180,3 +180,30 @@ export function useAllApiKeywords() {
     },
   });
 }
+
+export type IndustryReport = {
+  id: string;
+  title: string;
+  broker: string;
+  date: string;
+  report_url: string;
+  pdf_url: string | null;
+  views: number;
+  summary: string | null;
+  created_at: string;
+};
+
+export function useIndustryReports() {
+  return useQuery({
+    queryKey: ["industry-reports"],
+    queryFn: async (): Promise<IndustryReport[]> => {
+      const { data, error } = await supabase
+        .from("industry_reports")
+        .select("*")
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as IndustryReport[];
+    },
+  });
+}

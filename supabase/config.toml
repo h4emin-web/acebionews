@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.search-drug-info]
 verify_jwt = false
+
+[functions.crawl-reports]
+verify_jwt = false
