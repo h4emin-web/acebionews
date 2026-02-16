@@ -88,17 +88,24 @@ async function fetchFdaAlerts(GEMINI_KEY: string, FIRECRAWL_API_KEY: string) {
     
     const notices = await callGemini(
       GEMINI_KEY,
-      `You extract FDA drug alerts and statements and translate them to Korean.
+      `You extract FDA drug alerts AND statements from a page that has TWO separate tables.
 
-For each alert/statement found:
-1. "title": Korean translated summary of the alert (e.g. "FDA, [약물명] 관련 안전성 경고 - [구체적 내용]")
-2. "date": date in YYYY-MM-DD format
-3. "type": one of "Safety Alert", "Drug Recall", "Warning", "Statement"
-4. "url": full FDA URL for the alert
+The page has:
+1. An "Alerts" section with a table of alerts (warnings, recalls, safety alerts)
+2. A "Statements" section with a table of statements
+
+You MUST extract items from BOTH tables. Extract up to 5 from Alerts and up to 5 from Statements.
+
+For each item:
+1. "title": Korean translated summary (e.g. "FDA, [약물명] 관련 안전성 경고 - [구체적 내용]" or "FDA, [내용] 발표")
+2. "date": date in YYYY-MM-DD format (convert M/D/YYYY to YYYY-MM-DD)
+3. "type": "Safety Alert" for items from Alerts table, "Statement" for items from Statements table
+4. "url": the full FDA URL from the link
 5. "relatedApis": array of related API ingredient names in format "한글명 (English Name)", or empty array if none
 
-Return a JSON array of the 10 most recent alerts. Include alerts even if no specific API is identified.`,
-      `Extract the 10 most recent FDA Drug Alerts & Statements:\n\n${markdown.slice(0, 8000)}`
+IMPORTANT: Each item must have a UNIQUE title. Do not create duplicates.
+Return a JSON array.`,
+      `Extract FDA Drug Alerts AND Statements from both tables:\n\n${markdown.slice(0, 10000)}`
     );
     
     const results = notices.slice(0, 10).map((n: any) => ({
