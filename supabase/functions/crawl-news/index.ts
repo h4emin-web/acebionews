@@ -19,6 +19,7 @@ const HTML_SOURCES = [
   { url: "https://www.dailypharm.com/", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
   { url: "https://www.hitnews.co.kr/news/articleList.html?sc_sub_section_code=S2N16&view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
+  { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
   { url: "https://www.nippon.com/en/tag/pharmaceutical", name: "Nippon", region: "해외", country: "JP", parser: "generic" },
 ];
@@ -188,6 +189,28 @@ function parseHitnews(html: string): Array<{ title: string; summary: string; url
   return articles;
 }
 
+// Parse 약사공론 (kpanews.co.kr) HTML
+function parseKpanews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const liRegex = /<li class="altlist-webzine-item">([\s\S]*?)<\/li>/gi;
+  let m;
+  while ((m = liRegex.exec(html)) !== null && articles.length < 20) {
+    const block = m[1];
+    const titleMatch = block.match(/<h2 class="altlist-subject">\s*<a\s+href="([^"]*)"[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
+    if (!titleMatch) continue;
+    const url = titleMatch[1].trim();
+    const title = stripHtml(titleMatch[2]).trim();
+    const summaryMatch = block.match(/<p class="altlist-summary">\s*([\s\S]*?)\s*<\/p>/i);
+    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const dateMatch = block.match(/<div class="altlist-info-item">(\d{2}-\d{2}\s+\d{2}:\d{2})<\/div>/i);
+    const dateStr = dateMatch ? dateMatch[1] : "";
+    if (title.length > 5) {
+      articles.push({ title, summary, url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
 // Fetch HTML and parse based on parser type
 async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
@@ -212,6 +235,8 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
       articles = parseNewsmp(html);
     } else if (source.parser === "hitnews") {
       articles = parseHitnews(html);
+    } else if (source.parser === "kpanews") {
+      articles = parseKpanews(html);
     } else {
       // Generic fallback
       const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
