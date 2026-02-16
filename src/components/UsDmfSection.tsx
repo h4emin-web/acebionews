@@ -90,11 +90,8 @@ export const UsDmfSection = ({ onKeywordClick }: Props) => {
                 <span className="w-6 text-center text-xs font-bold shrink-0 text-foreground">
                   {item.rank}
                 </span>
-                <div
-                  className="flex-1 min-w-0 cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); onKeywordClick(item.name); }}
-                >
-                  <span className="text-xs font-medium text-foreground block truncate hover:text-primary transition-colors">
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-medium text-foreground block truncate">
                     {item.nameKo}
                   </span>
                   <span className="text-[10px] text-muted-foreground block truncate">
