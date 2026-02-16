@@ -9,23 +9,59 @@ function normalizeDate(dateStr: string): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SCRAPE_SOURCES = [
-  { url: "https://nedrug.mfds.go.kr/pbp/CCBAC01", name: "의약품안전나라", source: "의약품안전나라", label: "의약품안전나라 (안전성 서한, 회수·폐기, 공문)" },
-  { url: "https://www.fda.gov/drugs/drug-safety-and-availability", name: "FDA Safety", source: "FDA", label: "FDA Safety" },
-];
-
-async function crawlScrapeSource(
-  regSource: typeof SCRAPE_SOURCES[0],
-  FIRECRAWL_API_KEY: string,
-  LOVABLE_API_KEY: string
-) {
+// Helper to call Gemini API
+async function callGemini(GEMINI_KEY: string, systemPrompt: string, userPrompt: string): Promise<any[]> {
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          { role: "user", parts: [{ text: `${systemPrompt}\n\n---\n\n${userPrompt}` }] },
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
+      }),
+    }
+  );
+  if (!resp.ok) {
+    console.error(`Gemini API error: ${resp.status}`);
+    return [];
+  }
+  const data = await resp.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   try {
-    console.log(`Crawling ${regSource.label}: ${regSource.url}`);
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : parsed.notices || parsed.alerts || [];
+  } catch {
+    // Try to extract JSON array from text
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) return JSON.parse(match[0]);
+    return [];
+  }
+}
+
+// Fetch FDA Drug Alerts & Statements via Firecrawl
+async function fetchFdaAlerts(GEMINI_KEY: string, FIRECRAWL_API_KEY: string) {
+  if (!FIRECRAWL_API_KEY) {
+    console.log("Skipping FDA alerts: no Firecrawl key");
+    return [];
+  }
+  try {
+    const url = "https://www.fda.gov/drugs/drug-safety-and-availability/drug-alerts-and-statements";
+    console.log(`Fetching FDA Alerts via Firecrawl: ${url}`);
+    
     const scrapeResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: {
@@ -33,7 +69,69 @@ async function crawlScrapeSource(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        url: regSource.url,
+        url,
+        formats: ["markdown"],
+        onlyMainContent: true,
+        timeout: 20000,
+      }),
+    });
+    
+    if (!scrapeResp.ok) {
+      console.error(`Firecrawl FDA scrape failed: ${scrapeResp.status}`);
+      return [];
+    }
+    
+    const scrapeData = await scrapeResp.json();
+    const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
+    console.log(`FDA markdown length: ${markdown.length}`);
+    if (!markdown || markdown.length < 50) return [];
+    
+    const notices = await callGemini(
+      GEMINI_KEY,
+      `You extract FDA drug alerts and statements and translate them to Korean.
+
+For each alert/statement found:
+1. "title": Korean translated summary of the alert (e.g. "FDA, [약물명] 관련 안전성 경고 - [구체적 내용]")
+2. "date": date in YYYY-MM-DD format
+3. "type": one of "Safety Alert", "Drug Recall", "Warning", "Statement"
+4. "url": full FDA URL for the alert
+5. "relatedApis": array of related API ingredient names in format "한글명 (English Name)", or empty array if none
+
+Return a JSON array of the 10 most recent alerts. Include alerts even if no specific API is identified.`,
+      `Extract the 10 most recent FDA Drug Alerts & Statements:\n\n${markdown.slice(0, 8000)}`
+    );
+    
+    const results = notices.slice(0, 10).map((n: any) => ({
+      title: n.title || "",
+      date: normalizeDate(n.date),
+      type: n.type || "Safety Alert",
+      source: "FDA",
+      url: n.url || url,
+      related_apis: n.relatedApis || [],
+    })).filter((n: any) => n.title.length > 5);
+    
+    console.log(`FDA Alerts: extracted ${results.length} notices`);
+    return results;
+  } catch (err) {
+    console.error("Error fetching FDA alerts:", err);
+    return [];
+  }
+}
+
+// Crawl 의약품안전나라 via Firecrawl
+async function crawlMfdsNotices(FIRECRAWL_API_KEY: string, GEMINI_KEY: string) {
+  try {
+    const url = "https://nedrug.mfds.go.kr/pbp/CCBAC01";
+    console.log(`Crawling 의약품안전나라: ${url}`);
+    
+    const scrapeResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url,
         formats: ["markdown"],
         onlyMainContent: true,
         timeout: 15000,
@@ -41,7 +139,7 @@ async function crawlScrapeSource(
     });
 
     if (!scrapeResp.ok) {
-      console.error(`Failed to scrape ${regSource.label}: ${scrapeResp.status}`);
+      console.error(`Failed to scrape 의약품안전나라: ${scrapeResp.status}`);
       return [];
     }
 
@@ -49,118 +147,49 @@ async function crawlScrapeSource(
     const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
     if (!markdown || markdown.length < 50) return [];
 
-    const sourceTypeMap: Record<string, string> = {
-      "의약품안전나라": "안전성 서한, 회수·폐기, 공문",
-      FDA: "Safety, Guidance, Approval, Warning",
-    };
-
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: `You extract regulatory notices related to Active Pharmaceutical Ingredients (APIs/원료의약품).
-
-CRITICAL RULES:
-- ONLY extract actual chemical/pharmaceutical ingredient names
-- Keywords MUST be in format: "한글명 (English Name)"
-- Examples: 유파티린 (Eupatilin), 세마글루타이드 (Semaglutide), 니볼루맙 (Nivolumab)
-- Do NOT use: plant names, brand names, vaccine types, biological categories
-- If a product mentions a plant extract, use the ACTIVE COMPOUND name
-- If no specific API ingredient name, set relatedApis to []
+    const notices = await callGemini(
+      GEMINI_KEY,
+      `You extract regulatory notices from Korean pharmaceutical safety authority (의약품안전나라).
 
 For each notice:
-1. Translate title to Korean if needed
-2. Classify type as one of: ${sourceTypeMap[regSource.source]}
+1. "title": the notice title in Korean
+2. "date": date in YYYY-MM-DD format
+3. "type": one of "안전성 서한", "회수·폐기", "공문"
+4. "url": URL if available
+5. "relatedApis": array of related API ingredient names in format "한글명 (English Name)"
 
-Return at most 8 most recent/relevant notices.`,
-          },
-          {
-            role: "user",
-            content: `Extract regulatory notices from ${regSource.label}:\n\n${markdown.slice(0, 6000)}`,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_notices",
-              description: "Extract regulatory notices",
-              parameters: {
-                type: "object",
-                properties: {
-                  notices: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        date: { type: "string" },
-                        type: { type: "string" },
-                        url: { type: "string" },
-                        relatedApis: { type: "array", items: { type: "string" } },
-                      },
-                      required: ["title", "date", "type", "relatedApis"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["notices"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_notices" } },
-      }),
-    });
+Return a JSON array. Only include items with identifiable pharmaceutical ingredient names.`,
+      `Extract regulatory notices:\n\n${markdown.slice(0, 6000)}`
+    );
 
-    if (!aiResp.ok) return [];
+    const results = notices
+      .filter((n: any) => n.relatedApis && n.relatedApis.length > 0)
+      .map((n: any) => ({
+        title: n.title || "",
+        date: normalizeDate(n.date),
+        type: n.type || "공문",
+        source: "의약품안전나라",
+        url: n.url || url,
+        related_apis: n.relatedApis,
+      }));
 
-    const aiData = await aiResp.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) return [];
-
-    const parsed = JSON.parse(toolCall.function.arguments);
-    const notices = parsed.notices || [];
-
-    const results = [];
-    for (const notice of notices) {
-      if (!notice.relatedApis || notice.relatedApis.length === 0) continue;
-      results.push({
-        title: notice.title,
-        date: normalizeDate(notice.date),
-        type: notice.type,
-        source: regSource.source,
-        url: notice.url || regSource.url,
-        related_apis: notice.relatedApis,
-      });
-    }
-
-    console.log(`Extracted ${results.length} notices from ${regSource.label}`);
+    console.log(`의약품안전나라: extracted ${results.length} notices`);
     return results;
   } catch (err) {
-    console.error(`Error processing ${regSource.label}:`, err);
+    console.error("Error crawling 의약품안전나라:", err);
     return [];
   }
 }
 
 // Fetch FDA NDA approvals from openFDA API
-async function fetchFdaNdaApprovals(LOVABLE_API_KEY: string) {
+async function fetchFdaNdaApprovals(GEMINI_KEY: string) {
   try {
-    // Use a simpler query that's more likely to return results
     const url = `https://api.fda.gov/drug/drugsfda.json?search=submissions.submission_type:"ORIG"&sort=submissions.submission_status_date:desc&limit=15`;
     console.log(`Fetching FDA NDA data`);
 
     const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!resp.ok) {
-      console.error(`openFDA API error: ${resp.status} ${await resp.text()}`);
+      console.error(`openFDA API error: ${resp.status}`);
       return [];
     }
 
@@ -180,80 +209,22 @@ async function fetchFdaNdaApprovals(LOVABLE_API_KEY: string) {
       return `Drug: ${r.sponsor_name || ""} - ${products} | NDA: ${appNum} | Date: ${formattedDate} | Status: ${submission?.submission_status || ""}`;
     }).join("\n");
 
-    console.log(`FDA NDA summaries:\n${summaries.slice(0, 500)}`);
-
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: `You convert FDA drug approval data into Korean regulatory notices.
+    const notices = await callGemini(
+      GEMINI_KEY,
+      `You convert FDA drug approval data into Korean regulatory notices.
 
 For each drug approval:
-1. Create a Korean title (e.g. "FDA, [한글 약물명] NDA 승인 - [적응증]")
-2. Extract the active pharmaceutical ingredient in format "한글명 (English Name)"
-3. Set type to "NDA Approval" or "NDA Submission"
-4. Date in YYYY-MM-DD format
-5. Set url to "https://www.accessdata.fda.gov/scripts/cder/daf/index.cfm?event=overview.process&ApplNo=" + the NDA number (digits only)
+1. "title": Korean title (e.g. "FDA, [한글 약물명] NDA 승인 - [적응증]")
+2. "date": YYYY-MM-DD format
+3. "type": "NDA Approval" or "NDA Submission"
+4. "url": "https://www.accessdata.fda.gov/scripts/cder/daf/index.cfm?event=overview.process&ApplNo=" + NDA number (digits only)
+5. "relatedApis": array with API in format "한글명 (English Name)"
 
-ONLY include entries with identifiable chemical API ingredients. Skip biologics, vaccines.`,
-          },
-          {
-            role: "user",
-            content: `Convert these FDA approvals:\n\n${summaries}`,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_notices",
-              description: "Extract formatted notices",
-              parameters: {
-                type: "object",
-                properties: {
-                  notices: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        date: { type: "string" },
-                        type: { type: "string" },
-                        url: { type: "string" },
-                        relatedApis: { type: "array", items: { type: "string" } },
-                      },
-                      required: ["title", "date", "type", "relatedApis"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["notices"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_notices" } },
-      }),
-    });
+Return JSON array. ONLY include entries with identifiable chemical API ingredients. Skip biologics, vaccines.`,
+      `Convert these FDA approvals:\n\n${summaries}`
+    );
 
-    if (!aiResp.ok) {
-      console.error(`AI error for NDA: ${aiResp.status}`);
-      return [];
-    }
-    const aiData = await aiResp.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) return [];
-
-    const parsed = JSON.parse(toolCall.function.arguments);
-    const notices = (parsed.notices || [])
+    const results2 = notices
       .filter((n: any) => n.relatedApis && n.relatedApis.length > 0)
       .map((n: any) => ({
         title: n.title,
@@ -263,8 +234,8 @@ ONLY include entries with identifiable chemical API ingredients. Skip biologics,
         url: n.url || "https://www.accessdata.fda.gov/scripts/cder/daf/index.cfm",
         related_apis: n.relatedApis,
       }));
-    console.log(`FDA NDA: extracted ${notices.length} notices`);
-    return notices;
+    console.log(`FDA NDA: extracted ${results2.length} notices`);
+    return results2;
   } catch (err) {
     console.error("Error fetching FDA NDA:", err);
     return [];
@@ -272,7 +243,7 @@ ONLY include entries with identifiable chemical API ingredients. Skip biologics,
 }
 
 // Fetch clinical trials from ClinicalTrials.gov API
-async function fetchClinicalTrials(LOVABLE_API_KEY: string) {
+async function fetchClinicalTrials(GEMINI_KEY: string) {
   try {
     const url = `https://clinicaltrials.gov/api/v2/studies?filter.overallStatus=COMPLETED&pageSize=15&sort=StudyFirstPostDate:desc`;
     console.log(`Fetching ClinicalTrials.gov data`);
@@ -299,79 +270,22 @@ async function fetchClinicalTrials(LOVABLE_API_KEY: string) {
       return `NCT: ${id} | Title: ${title} | Phase: ${phase} | Interventions: ${interventions} | Conditions: ${conditions}`;
     }).join("\n");
 
-    console.log(`Clinical summaries:\n${summaries.slice(0, 500)}`);
-
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: `You convert clinical trial data into Korean regulatory notices about API ingredients.
+    const notices = await callGemini(
+      GEMINI_KEY,
+      `You convert clinical trial data into Korean regulatory notices about API ingredients.
 
 For each trial:
-1. Create Korean title (e.g. "[API명] Phase 3 임상시험 완료 - [적응증]")
-2. Extract the active pharmaceutical ingredient in format "한글명 (English Name)"
-3. Set type to the phase + result (e.g. "Phase 3 완료", "Phase 2 완료")
-4. Set url to "https://clinicaltrials.gov/study/" + NCTId
+1. "title": Korean title (e.g. "[API명] Phase 3 임상시험 완료 - [적응증]")
+2. "date": YYYY-MM-DD format  
+3. "type": phase + result (e.g. "Phase 3 완료")
+4. "url": "https://clinicaltrials.gov/study/" + NCTId
+5. "relatedApis": array with API in format "한글명 (English Name)"
 
-ONLY include trials with identifiable chemical API ingredients. Skip biologics, vaccines, devices, behavioral interventions.`,
-          },
-          {
-            role: "user",
-            content: `Convert these clinical trials:\n\n${summaries}`,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_notices",
-              description: "Extract formatted notices",
-              parameters: {
-                type: "object",
-                properties: {
-                  notices: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        date: { type: "string" },
-                        type: { type: "string" },
-                        url: { type: "string" },
-                        relatedApis: { type: "array", items: { type: "string" } },
-                      },
-                      required: ["title", "date", "type", "relatedApis"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["notices"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_notices" } },
-      }),
-    });
+Return JSON array. ONLY include trials with identifiable chemical API ingredients. Skip biologics, vaccines, devices, behavioral interventions.`,
+      `Convert these clinical trials:\n\n${summaries}`
+    );
 
-    if (!aiResp.ok) {
-      console.error(`AI error for clinical: ${aiResp.status}`);
-      return [];
-    }
-    const aiData = await aiResp.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) return [];
-
-    const parsed = JSON.parse(toolCall.function.arguments);
-    const notices = (parsed.notices || [])
+    const results = notices
       .filter((n: any) => n.relatedApis && n.relatedApis.length > 0)
       .map((n: any) => ({
         title: n.title,
@@ -381,8 +295,8 @@ ONLY include trials with identifiable chemical API ingredients. Skip biologics, 
         url: n.url || "https://clinicaltrials.gov",
         related_apis: n.relatedApis,
       }));
-    console.log(`Clinical: extracted ${notices.length} notices`);
-    return notices;
+    console.log(`Clinical: extracted ${results.length} notices`);
+    return results;
   } catch (err) {
     console.error("Error fetching clinical trials:", err);
     return [];
@@ -393,25 +307,25 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-    if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
+    const GEMINI_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GEMINI_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY") || "";
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Run all data fetching in parallel
-    const [scrapeResults, ndaResults, clinicalResults] = await Promise.all([
-      Promise.all(SCRAPE_SOURCES.map((s) => crawlScrapeSource(s, FIRECRAWL_API_KEY, LOVABLE_API_KEY))).then((r) => r.flat()),
-      fetchFdaNdaApprovals(LOVABLE_API_KEY),
-      fetchClinicalTrials(LOVABLE_API_KEY),
+    const [fdaAlerts, mfdsResults, ndaResults, clinicalResults] = await Promise.all([
+      fetchFdaAlerts(GEMINI_KEY, FIRECRAWL_API_KEY),
+      FIRECRAWL_API_KEY ? crawlMfdsNotices(FIRECRAWL_API_KEY, GEMINI_KEY) : Promise.resolve([]),
+      fetchFdaNdaApprovals(GEMINI_KEY),
+      fetchClinicalTrials(GEMINI_KEY),
     ]);
 
-    const allResults = [...scrapeResults, ...ndaResults, ...clinicalResults];
-    console.log(`Total results: scrape=${scrapeResults.length}, nda=${ndaResults.length}, clinical=${clinicalResults.length}`);
+    const allResults = [...fdaAlerts, ...mfdsResults, ...ndaResults, ...clinicalResults];
+    console.log(`Total results: fdaAlerts=${fdaAlerts.length}, mfds=${mfdsResults.length}, nda=${ndaResults.length}, clinical=${clinicalResults.length}`);
 
     if (allResults.length > 0) {
       const { data: existing } = await supabase
@@ -431,7 +345,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, count: allResults.length, nda: ndaResults.length, clinical: clinicalResults.length }),
+      JSON.stringify({ success: true, fdaAlerts: fdaAlerts.length, mfds: mfdsResults.length, nda: ndaResults.length, clinical: clinicalResults.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
