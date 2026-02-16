@@ -39,7 +39,21 @@ export const IndustryReportsSection = () => {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-foreground line-clamp-2">{report.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-medium text-foreground line-clamp-2">{report.title}</h3>
+                    {report.pdf_url && (
+                      <a
+                        href={report.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="shrink-0 p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                        title="PDF 다운로드"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[11px] font-medium text-primary/80 bg-primary/5 px-1.5 py-0.5 rounded">
                       {report.broker}
@@ -53,33 +67,12 @@ export const IndustryReportsSection = () => {
             </button>
 
             {isOpen && (
-              <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
+              <div className="px-4 pb-4 border-t border-border pt-3">
                 {report.summary ? (
                   <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{report.summary}</p>
                 ) : (
                   <p className="text-sm text-muted-foreground italic">요약 정보가 없습니다.</p>
                 )}
-                <div className="flex items-center gap-2">
-                  <a
-                    href={report.report_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline"
-                  >
-                    원문 보기 →
-                  </a>
-                  {report.pdf_url && (
-                    <a
-                      href={report.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-destructive hover:underline"
-                    >
-                      <Download className="w-3 h-3" />
-                      PDF
-                    </a>
-                  )}
-                </div>
               </div>
             )}
           </div>
