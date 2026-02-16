@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Award, ChevronDown, FlaskConical } from "lucide-react";
+import { FileText, ChevronDown, FlaskConical } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 type DmfEntry = {
@@ -74,7 +74,7 @@ export const UsDmfSection = ({ onKeywordClick }: Props) => {
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
-        <Award className="w-4 h-4 text-amber-500" />
+        <FileText className="w-4 h-4 text-muted-foreground" />
         <h2 className="text-sm font-semibold text-foreground">US DMF 2025</h2>
         <span className="text-[10px] text-muted-foreground ml-auto font-mono mr-2">TOP 50</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
@@ -101,7 +101,7 @@ export const UsDmfSection = ({ onKeywordClick }: Props) => {
                     {item.name}
                   </span>
                 </div>
-                <span className="text-xs font-bold text-primary tabular-nums shrink-0">{item.count}</span>
+                <span className="text-xs font-bold text-muted-foreground tabular-nums shrink-0">{item.count}</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform shrink-0 ${expandedIdx === idx ? "rotate-180" : ""}`} />
               </button>
               {expandedIdx === idx && (
