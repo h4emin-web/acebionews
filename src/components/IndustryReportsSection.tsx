@@ -39,7 +39,7 @@ export const IndustryReportsSection = () => {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-foreground leading-snug">{report.title}</h3>
+                  <h3 className="text-sm font-medium text-foreground leading-snug break-words">{report.title}</h3>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-[11px] font-medium text-primary/80 bg-primary/5 px-1.5 py-0.5 rounded">
                       {report.broker}
