@@ -76,7 +76,7 @@ export const IndustryReportsSection = () => {
                     href={report.pdf_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-background border border-border text-destructive hover:bg-muted transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
                     PDF 다운로드
