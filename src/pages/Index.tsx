@@ -81,16 +81,9 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-md">
         <div className="container max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Pill className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-foreground tracking-tight">
-                API <span className="text-gradient">News</span>
-              </h1>
-              <p className="text-[11px] text-muted-foreground">원료의약품 뉴스</p>
-            </div>
+          <div className="flex items-center gap-1">
+            <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-b from-primary to-teal-400 bg-clip-text text-transparent">Bio</span>
+            <span className="text-2xl font-semibold tracking-tight text-foreground">news</span>
           </div>
           <div className="flex items-center gap-2">
 
