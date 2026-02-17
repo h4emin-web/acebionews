@@ -24,6 +24,11 @@ const HTML_SOURCES = [
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
 ];
 
+// Firecrawl sources — SPA sites that need JS rendering
+const FIRECRAWL_SOURCES = [
+  { url: "https://news.yaozh.com/archivelist/24", name: "药智新闻", region: "해외", country: "CN", parser: "yaozh" },
+];
+
 function normalizeDate(dateStr?: string): string {
   if (dateStr) {
     // Try to parse various date formats
@@ -247,6 +252,84 @@ function parseIyakuNews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
+// Parse 药智新闻 (yaozh.com) from Firecrawl markdown
+function parseYaozh(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  // Firecrawl returns markdown with links like [title](url) and dates
+  const lines = markdown.split("\n");
+  
+  for (let i = 0; i < lines.length && articles.length < 15; i++) {
+    const line = lines[i].trim();
+    // Match markdown links: [title](url)
+    const linkMatch = line.match(/\[([^\]]{10,})\]\((https?:\/\/news\.yaozh\.com\/[^\)]+)\)/);
+    if (!linkMatch) continue;
+    const title = linkMatch[1].trim();
+    const url = linkMatch[2].trim();
+    // Skip navigation links
+    if (url.includes("/archivelist/") || url.includes("/meeting") || title.length < 8) continue;
+    
+    // Look for date in nearby lines (format: YYYY-MM-DD or YYYY/MM/DD or MM-DD)
+    let dateStr = "";
+    for (let j = Math.max(0, i - 2); j <= Math.min(lines.length - 1, i + 3); j++) {
+      const dateMatch = lines[j].match(/(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})/);
+      if (dateMatch) {
+        dateStr = dateMatch[1].replace(/\//g, "-");
+        break;
+      }
+    }
+    
+    if (!articles.some(a => a.url === url)) {
+      articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
+// Fetch SPA sites using Firecrawl scrape API
+async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
+  try {
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+    if (!FIRECRAWL_API_KEY) {
+      console.error("FIRECRAWL_API_KEY not configured, skipping Firecrawl sources");
+      return [];
+    }
+
+    console.log(`Fetching via Firecrawl: ${source.name}`);
+    const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: source.url,
+        formats: ["markdown"],
+        waitFor: 3000,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!resp.ok) {
+      console.error(`Firecrawl fetch failed for ${source.name}: ${resp.status}`);
+      return [];
+    }
+
+    const data = await resp.json();
+    const markdown = data.data?.markdown || data.markdown || "";
+    
+    let articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+    if (source.parser === "yaozh") {
+      articles = parseYaozh(markdown);
+    }
+
+    console.log(`Extracted ${articles.length} articles from ${source.name} via Firecrawl`);
+    return articles;
+  } catch (err) {
+    console.error(`Firecrawl error for ${source.name}:`, err);
+    return [];
+  }
+}
+
 // Fetch HTML and parse based on parser type
 async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
@@ -402,6 +485,8 @@ async function extractKeywordsAndTranslate(
       if (!article) continue;
 
       const isForeign = article.region === "해외";
+      const langMap: Record<string, string> = { JP: "ja", CN: "zh", IN: "en", US: "en", EU: "en" };
+      const origLang = isForeign ? (langMap[article.country] || "en") : "ko";
       // Always use translated title/summary when available
       const finalTitle = r.translated_title || article.title;
       const finalSummary = r.translated_summary || article.summary;
@@ -416,7 +501,7 @@ async function extractKeywordsAndTranslate(
         date: article.date,
         api_keywords: r.apiKeywords || [],
         category: r.category || "",
-        original_language: isForeign ? (article.country === "JP" ? "ja" : "en") : "ko",
+        original_language: origLang,
       });
     }
 
@@ -613,8 +698,11 @@ serve(async (req) => {
     const htmlPromises = HTML_SOURCES.map((s) => fetchHtml(s).then((articles) =>
       articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country }))
     ));
+    const firecrawlPromises = FIRECRAWL_SOURCES.map((s) => fetchWithFirecrawl(s).then((articles) =>
+      articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country }))
+    ));
 
-    const allFetched = (await Promise.all([...rssPromises, ...htmlPromises])).flat();
+    const allFetched = (await Promise.all([...rssPromises, ...htmlPromises, ...firecrawlPromises])).flat();
     console.log(`Total fetched articles: ${allFetched.length}`);
 
     // 2. Extract keywords + translate foreign articles using Gemini
