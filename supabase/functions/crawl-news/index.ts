@@ -440,6 +440,69 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
 
+    // --- Backfill mode: fix keyword format to "한글명 (English Name)" ---
+    if (body.backfillKeywords) {
+      const { data: allArticles } = await supabase
+        .from("news_articles")
+        .select("id, api_keywords")
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      // Find articles with keywords that are English-only or missing Korean
+      const needsFix = (allArticles || []).filter((a: any) => {
+        return (a.api_keywords || []).some((kw: string) => {
+          // English-only (no Korean chars), or format like "Wegovy (위고비)" instead of "위고비 (Wegovy)"
+          const hasKorean = /[\uAC00-\uD7A3]/.test(kw);
+          const startsWithEnglish = /^[a-zA-Z]/.test(kw);
+          return !hasKorean || startsWithEnglish;
+        });
+      });
+      console.log(`Found ${needsFix.length} articles with keywords needing format fix`);
+
+      let fixed = 0;
+      const kBatchSize = 10;
+      for (let i = 0; i < needsFix.length; i += kBatchSize) {
+        const batch = needsFix.slice(i, i + kBatchSize);
+        const kwList = batch.map((a: any, idx: number) => `[${idx}] ${JSON.stringify(a.api_keywords)}`).join("\n");
+
+        try {
+          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "gemini-2.5-flash-lite",
+              messages: [
+                { role: "system", content: `제약 원료의약품 키워드 형식 전문가입니다. 각 키워드를 반드시 "한글명 (English Name)" 형식으로 변환하세요.
+규칙:
+- 영문만 있는 경우: 한국어 번역을 앞에 추가. 예: "Rivaroxaban" → "리바록사반 (Rivaroxaban)"
+- 한글만 있는 경우: 영문명을 괄호 안에 추가. 예: "세마글루타이드" → "세마글루타이드 (Semaglutide)"  
+- "영문 (한글)" 형식인 경우: 순서를 바꿔서 "한글 (영문)"으로. 예: "Wegovy (위고비)" → "위고비 (Wegovy)"
+- 이미 "한글 (영문)" 형식이면 그대로 유지
+- 브랜드명은 그대로 한글화. 예: "Uplizna" → "유플리즈나 (Uplizna)"
+- 코드명(JW0061 등)이나 카테고리(mRNA, GLP-1, siRNA)는 제외(빈 배열 반환)` },
+                { role: "user", content: `Fix keyword format:\n\n${kwList}` },
+              ],
+              tools: [{ type: "function", function: { name: "fix_keywords", description: "Fix keyword format", parameters: { type: "object", properties: { results: { type: "array", items: { type: "object", properties: { index: { type: "number" }, keywords: { type: "array", items: { type: "string" } } }, required: ["index", "keywords"], additionalProperties: false } } }, required: ["results"], additionalProperties: false } } }],
+              tool_choice: { type: "function", function: { name: "fix_keywords" } },
+            }),
+          });
+          if (!aiResp.ok) { console.error(`Gemini error: ${aiResp.status}`); continue; }
+          const aiData = await aiResp.json();
+          const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+          if (!toolCall) continue;
+          const parsed = JSON.parse(toolCall.function.arguments);
+          for (const r of parsed.results || []) {
+            const article = batch[r.index];
+            if (!article || !r.keywords) continue;
+            await supabase.from("news_articles").update({ api_keywords: r.keywords }).eq("id", article.id);
+            fixed++;
+          }
+        } catch (err) { console.error("Keyword fix batch error:", err); }
+        if (i + kBatchSize < needsFix.length) await new Promise(r => setTimeout(r, 1500));
+      }
+      return new Response(JSON.stringify({ success: true, fixed, total: needsFix.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // --- Backfill mode: translate existing foreign articles or re-summarize domestic ---
     if (body.backfillTranslations) {
       const { data: foreignArticles } = await supabase
