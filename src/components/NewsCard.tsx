@@ -50,6 +50,15 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
               {kw}
             </button>
           ))}
+          {news.relatedKeywords?.map((kw) => (
+            <button
+              key={`rel-${kw}`}
+              onClick={() => onKeywordClick(kw)}
+              className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-500/8 text-amber-600 hover:bg-amber-500/15 transition-colors cursor-pointer border border-amber-500/10"
+            >
+              {kw}
+            </button>
+          ))}
         </div>
         <a href={news.url} className="text-muted-foreground hover:text-primary transition-colors shrink-0" target="_blank" rel="noreferrer">
           <ExternalLink className="w-3.5 h-3.5" />

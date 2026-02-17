@@ -12,6 +12,7 @@ export type NewsArticle = {
   date: string;
   url: string;
   api_keywords: string[];
+  related_keywords: string[];
   category: string;
 };
 
