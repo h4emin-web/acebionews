@@ -27,7 +27,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         query: `"${keyword}" 원료의약품`,
-        limit: 20,
+        limit: 10,
       }),
     });
 
