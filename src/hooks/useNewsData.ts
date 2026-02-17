@@ -155,7 +155,7 @@ export function useRegulatoryNotices(source: string) {
         .select("*")
         .eq("source", source)
         .order("date", { ascending: false })
-        .limit(source === "FDA" ? 10 : 8);
+        .limit(8);
 
       if (error) throw error;
       return (data || []) as RegulatoryNotice[];
