@@ -332,8 +332,6 @@ async function extractKeywordsAndTranslate(
 
 ## TASK 1-B: RELATED KEYWORDS
 - relatedKeywords: 2-3 related/similar API ingredient names that are relevant to the article's therapeutic area or mechanism, but NOT explicitly mentioned in the article.
-- **CRITICAL: relatedKeywords MUST NOT overlap or duplicate any keyword in apiKeywords. If a keyword is already in apiKeywords, do NOT include it in relatedKeywords.**
-- **If no genuinely different related keywords exist, return an empty array []. Do NOT pad with duplicates.**
 - These should be competing drugs, same-class compounds, or closely related ingredients that a pharmaceutical professional would want to know about.
 - Format: "한글명 (English Name)"
 - Example: Article about 세마글루타이드 → relatedKeywords: ["터제파타이드 (Tirzepatide)", "오르포글리프론 (Orforglipron)", "리라글루타이드 (Liraglutide)"]
