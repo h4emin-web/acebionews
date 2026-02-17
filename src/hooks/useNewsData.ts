@@ -153,10 +153,10 @@ export function useRegulatoryNotices(source: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("regulatory_notices")
-        .select("*")
-        .eq("source", source)
-        .order("date", { ascending: false })
-        .limit(8);
+      .select("*")
+      .eq("source", source)
+      .order("date", { ascending: false })
+      .limit(10);
 
       if (error) throw error;
       return (data || []) as RegulatoryNotice[];

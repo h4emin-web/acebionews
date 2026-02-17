@@ -32,7 +32,7 @@ export const FdaSection = ({ onKeywordClick }: Props) => {
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
         <AlertTriangle className="w-4 h-4 text-pharma-amber" />
-        <h2 className="text-sm font-semibold text-foreground">미국 FDA 주요사항</h2>
+        <h2 className="text-sm font-semibold text-foreground">미국 FDA Alerts & Statements</h2>
         <span className="text-[10px] text-muted-foreground ml-auto font-mono mr-2">FDA</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
