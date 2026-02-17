@@ -150,6 +150,31 @@ export function useRegulatoryNotices(source: string) {
   return useQuery({
     queryKey: ["regulatory-notices", source],
     queryFn: async () => {
+      if (source === "FDA") {
+        // Fetch 5 Alerts and 5 Statements separately, then merge by date
+        const [alertsRes, statementsRes] = await Promise.all([
+          supabase
+            .from("regulatory_notices")
+            .select("*")
+            .eq("source", "FDA")
+            .eq("type", "Safety Alert")
+            .order("date", { ascending: false })
+            .limit(5),
+          supabase
+            .from("regulatory_notices")
+            .select("*")
+            .eq("source", "FDA")
+            .eq("type", "Statement")
+            .order("date", { ascending: false })
+            .limit(5),
+        ]);
+        if (alertsRes.error) throw alertsRes.error;
+        if (statementsRes.error) throw statementsRes.error;
+        const merged = [...(alertsRes.data || []), ...(statementsRes.data || [])];
+        merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return merged as RegulatoryNotice[];
+      }
+
       const { data, error } = await supabase
         .from("regulatory_notices")
         .select("*")
