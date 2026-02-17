@@ -330,14 +330,16 @@ async function extractKeywordsAndTranslate(
 - Keyword format: "한글명 (English Name)"
 - INVALID: Brand/product names only, generic categories (엑소좀, mRNA, GLP-1, siRNA, 백신), mechanism names.
 
-## TASK 2: TRANSLATION & SUMMARY
-- For articles marked [해외], translate title and summary into Korean. Articles may be in English or Japanese.
-  - Provide translated_title (Korean) and translated_summary (Korean, 2 sentences max, key facts only).
-- For articles marked [국내], set translated_title to null.
-  - Provide translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
+## TASK 2: TRANSLATION & SUMMARY (MANDATORY)
+- **CRITICAL: You MUST translate ALL [해외] articles. This is NOT optional.**
+- For articles marked [해외], you MUST provide:
+  - translated_title: Korean translation of the title. NEVER leave this empty for foreign articles.
+  - translated_summary: Korean summary, 2 sentences max, key facts only. 존댓말(~입니다, ~됩니다) 사용.
+- For articles marked [국내]:
+  - translated_title: set to the original Korean title.
+  - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
-## Output: JSON array where each item has index, apiKeywords, category, translated_title, translated_summary.
-- Only include articles with at least 1 valid keyword.
+## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
 - category: 규제/시장/공급망/R&D/임상/허가`,
           },
           {
@@ -362,10 +364,10 @@ async function extractKeywordsAndTranslate(
                         index: { type: "number" },
                         apiKeywords: { type: "array", items: { type: "string" } },
                         category: { type: "string" },
-                        translated_title: { type: "string", description: "Korean translated title for foreign articles, null for domestic" },
-                        translated_summary: { type: "string", description: "Korean translated 2-sentence summary for foreign articles, null for domestic" },
+                        translated_title: { type: "string", description: "Korean translated title. REQUIRED for all articles." },
+                        translated_summary: { type: "string", description: "Korean summary. REQUIRED for all articles." },
                       },
-                      required: ["index", "apiKeywords", "category"],
+                      required: ["index", "apiKeywords", "category", "translated_title", "translated_summary"],
                       additionalProperties: false,
                     },
                   },
@@ -396,14 +398,13 @@ async function extractKeywordsAndTranslate(
     const results: any[] = [];
 
     for (const r of parsed.results || []) {
-      if (!r.apiKeywords || r.apiKeywords.length === 0) continue;
       const article = articles[r.index];
       if (!article) continue;
 
-      // For foreign articles, use translated title/summary; for domestic, use AI summary if available
       const isForeign = article.region === "해외";
-      const finalTitle = (isForeign && r.translated_title) ? r.translated_title : article.title;
-      const finalSummary = r.translated_summary ? r.translated_summary : article.summary;
+      // Always use translated title/summary when available
+      const finalTitle = r.translated_title || article.title;
+      const finalSummary = r.translated_summary || article.summary;
 
       results.push({
         title: finalTitle,
@@ -413,7 +414,7 @@ async function extractKeywordsAndTranslate(
         country: article.country,
         url: article.url,
         date: article.date,
-        api_keywords: r.apiKeywords,
+        api_keywords: r.apiKeywords || [],
         category: r.category || "",
         original_language: isForeign ? (article.country === "JP" ? "ja" : "en") : "ko",
       });
@@ -439,7 +440,57 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
 
-    // --- Backfill mode: re-summarize existing domestic news with long/raw summaries ---
+    // --- Backfill mode: translate existing foreign articles or re-summarize domestic ---
+    if (body.backfillTranslations) {
+      const { data: foreignArticles } = await supabase
+        .from("news_articles")
+        .select("id, title, summary, region, country")
+        .eq("region", "해외")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      const needsTranslation = (foreignArticles || []).filter((a: any) => {
+        return /[a-zA-Z]{3,}/.test(a.title) || /[\u3040-\u309F\u30A0-\u30FF]/.test(a.title);
+      });
+      console.log(`Found ${needsTranslation.length} foreign articles needing translation`);
+
+      let translated = 0;
+      const tBatchSize = 5;
+      for (let i = 0; i < needsTranslation.length; i += tBatchSize) {
+        const batch = needsTranslation.slice(i, i + tBatchSize);
+        const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary?.slice(0, 200) || ""}`).join("\n");
+
+        try {
+          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "gemini-2.5-flash-lite",
+              messages: [
+                { role: "system", content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 한국어 2문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.` },
+                { role: "user", content: `Translate these articles to Korean:\n\n${articleList}` },
+              ],
+              tools: [{ type: "function", function: { name: "translate_articles", description: "Translate articles to Korean", parameters: { type: "object", properties: { results: { type: "array", items: { type: "object", properties: { index: { type: "number" }, translated_title: { type: "string" }, translated_summary: { type: "string" } }, required: ["index", "translated_title", "translated_summary"], additionalProperties: false } } }, required: ["results"], additionalProperties: false } } }],
+              tool_choice: { type: "function", function: { name: "translate_articles" } },
+            }),
+          });
+          if (!aiResp.ok) { console.error(`Gemini error: ${aiResp.status}`); continue; }
+          const aiData = await aiResp.json();
+          const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+          if (!toolCall) continue;
+          const parsed = JSON.parse(toolCall.function.arguments);
+          for (const r of parsed.results || []) {
+            const article = batch[r.index];
+            if (!article || !r.translated_title) continue;
+            await supabase.from("news_articles").update({ title: r.translated_title, summary: r.translated_summary || article.summary }).eq("id", article.id);
+            translated++;
+          }
+        } catch (err) { console.error("Translation batch error:", err); }
+        if (i + tBatchSize < needsTranslation.length) await new Promise(r => setTimeout(r, 2000));
+      }
+      return new Response(JSON.stringify({ success: true, translated, total: needsTranslation.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (body.backfillSummaries) {
       const { data: articles } = await supabase
         .from("news_articles")
@@ -451,8 +502,6 @@ serve(async (req) => {
       const needsSummary = (articles || []).filter((a: any) => {
         if (!a.summary) return false;
         if (a.summary.length > 150) return true;
-        if (a.summary.includes("API 수입") || a.summary.includes("원료의약품")) return true;
-        // Check for non-honorific endings
         if (/이다\.|했다\.|된다\.|보인다\.|한다\.|있다\.|없다\.|됐다\.|났다\.|왔다\.|겠다\.|진다\./.test(a.summary)) return true;
         return false;
       });
@@ -463,62 +512,24 @@ serve(async (req) => {
       for (let i = 0; i < needsSummary.length; i += batchSize) {
         const batch = needsSummary.slice(i, i + batchSize);
         const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary.slice(0, 200)}`).join("\n");
-
         try {
           const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
-              "Content-Type": "application/json",
-            },
+            headers: { Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model: "gemini-2.5-flash-lite",
               messages: [
-                {
-                  role: "system",
-                  content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어 2문장 이내로 간결하게 요약하세요. 비즈니스 조언이나 시사점은 넣지 말고, 기사 사실만 요약하세요. 반드시 존댓말(~입니다, ~됩니다, ~했습니다)을 사용하세요. "~이다", "~했다" 같은 반말은 절대 사용하지 마세요.`,
-                },
+                { role: "system", content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어 2문장 이내로 간결하게 요약하세요. 존댓말(~입니다, ~됩니다, ~했습니다)을 사용하세요.` },
                 { role: "user", content: `Summarize these articles:\n\n${articleList}` },
               ],
-              tools: [{
-                type: "function",
-                function: {
-                  name: "summarize_articles",
-                  description: "Return summaries for articles",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      results: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            index: { type: "number" },
-                            summary: { type: "string" },
-                          },
-                          required: ["index", "summary"],
-                          additionalProperties: false,
-                        },
-                      },
-                    },
-                    required: ["results"],
-                    additionalProperties: false,
-                  },
-                },
-              }],
+              tools: [{ type: "function", function: { name: "summarize_articles", description: "Return summaries", parameters: { type: "object", properties: { results: { type: "array", items: { type: "object", properties: { index: { type: "number" }, summary: { type: "string" } }, required: ["index", "summary"], additionalProperties: false } } }, required: ["results"], additionalProperties: false } } }],
               tool_choice: { type: "function", function: { name: "summarize_articles" } },
             }),
           });
-
-          if (!aiResp.ok) {
-            console.error(`Gemini error: ${aiResp.status}`);
-            continue;
-          }
-
+          if (!aiResp.ok) { console.error(`Gemini error: ${aiResp.status}`); continue; }
           const aiData = await aiResp.json();
           const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
           if (!toolCall) continue;
-
           const parsed = JSON.parse(toolCall.function.arguments);
           for (const r of parsed.results || []) {
             const article = batch[r.index];
@@ -526,16 +537,10 @@ serve(async (req) => {
             await supabase.from("news_articles").update({ summary: r.summary }).eq("id", article.id);
             updated++;
           }
-        } catch (err) {
-          console.error("Backfill batch error:", err);
-        }
+        } catch (err) { console.error("Backfill batch error:", err); }
         if (i + batchSize < needsSummary.length) await new Promise(r => setTimeout(r, 2000));
       }
-
-      return new Response(
-        JSON.stringify({ success: true, summarized: updated, total: needsSummary.length }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true, summarized: updated, total: needsSummary.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // 1. Fetch all sources in parallel
