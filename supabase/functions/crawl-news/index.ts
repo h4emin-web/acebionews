@@ -339,12 +339,13 @@ async function extractKeywordsAndTranslate(
 
 ## TASK 2: TRANSLATION & SUMMARY (MANDATORY)
 - **CRITICAL: You MUST translate ALL [해외] articles. This is NOT optional.**
+- **CRITICAL: Every article MUST have a non-empty translated_summary. If the original summary is empty, generate a 1-2 sentence summary based on the title.**
 - For articles marked [해외], you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty for foreign articles.
   - translated_summary: Korean summary, 2 sentences max, key facts only. 존댓말(~입니다, ~됩니다) 사용.
 - For articles marked [국내]:
   - translated_title: set to the original Korean title.
-  - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
+  - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 원문 요약이 비어있어도 제목을 기반으로 반드시 요약을 생성할 것. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
 ## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
 - category: 규제/시장/공급망/R&D/임상/허가`,
@@ -628,7 +629,7 @@ serve(async (req) => {
         .limit(200);
 
       const needsSummary = (articles || []).filter((a: any) => {
-        if (!a.summary) return false;
+        if (!a.summary || a.summary.trim() === '') return true;
         if (a.summary.length > 150) return true;
         if (/이다\.|했다\.|된다\.|보인다\.|한다\.|있다\.|없다\.|됐다\.|났다\.|왔다\.|겠다\.|진다\./.test(a.summary)) return true;
         return false;
@@ -639,7 +640,7 @@ serve(async (req) => {
       const batchSize = 20;
       for (let i = 0; i < needsSummary.length; i += batchSize) {
         const batch = needsSummary.slice(i, i + batchSize);
-        const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary.slice(0, 200)}`).join("\n");
+        const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${(a.summary || '(요약 없음 - 제목 기반으로 생성 필요)').slice(0, 200)}`).join("\n");
         try {
           const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
             method: "POST",
