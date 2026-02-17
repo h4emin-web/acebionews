@@ -47,11 +47,16 @@ export const FdaSection = ({ onKeywordClick }: Props) => {
         <div className="divide-y divide-border">
             {notices.map((n) =>
           <div key={n.id} className="px-5 py-3 hover:bg-muted/50 transition-colors group">
-                <div className="flex items-center justify-between gap-3 mb-1">
-                  <span className="text-[11px] text-muted-foreground font-mono">{n.date}</span>
-                  <a href={n.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                <div className="flex items-start justify-between gap-3 mb-1">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${typeColors[n.type] || "bg-muted text-muted-foreground"}`}>
+                    {typeLabels[n.type] || n.type}
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] text-muted-foreground font-mono">{n.date}</span>
+                    <a href={n.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
                 </div>
                 <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors leading-snug mb-1.5">
                   {n.title}
