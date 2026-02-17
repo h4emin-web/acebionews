@@ -323,29 +323,21 @@ async function extractKeywordsAndTranslate(
             content: `You are a pharmaceutical news analyst specializing in Active Pharmaceutical Ingredients (APIs/원료의약품).
 
 ## TASK 1: KEYWORD EXTRACTION
-- apiKeywords MUST contain the MOST relevant ingredient/compound name(s) that are EXPLICITLY written in the article title or summary. Usually 1-2 keywords.
+- apiKeywords MUST contain ingredient/compound names that are EXPLICITLY written in the article title or summary.
 - DO NOT guess, infer, or hallucinate ingredient names that are NOT in the text.
 - If an article only mentions a brand name without its active ingredient, set apiKeywords to [].
 - Valid keywords: small-molecule compounds, biologics, any INN or chemical name explicitly stated.
 - Keyword format: "한글명 (English Name)"
 - INVALID: Brand/product names only, generic categories (엑소좀, mRNA, GLP-1, siRNA, 백신), mechanism names.
 
-## TASK 1-B: RELATED KEYWORDS
-- relatedKeywords: 2-3 related/similar API ingredient names that are relevant to the article's therapeutic area or mechanism, but NOT explicitly mentioned in the article.
-- These should be competing drugs, same-class compounds, or closely related ingredients that a pharmaceutical professional would want to know about.
-- Format: "한글명 (English Name)"
-- Example: Article about 세마글루타이드 → relatedKeywords: ["터제파타이드 (Tirzepatide)", "오르포글리프론 (Orforglipron)", "리라글루타이드 (Liraglutide)"]
-- If no meaningful related keywords exist, return an empty array.
-
 ## TASK 2: TRANSLATION & SUMMARY (MANDATORY)
 - **CRITICAL: You MUST translate ALL [해외] articles. This is NOT optional.**
-- **CRITICAL: Every article MUST have a non-empty translated_summary. If the original summary is empty, generate a 1-2 sentence summary based on the title.**
 - For articles marked [해외], you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty for foreign articles.
   - translated_summary: Korean summary, 2 sentences max, key facts only. 존댓말(~입니다, ~됩니다) 사용.
 - For articles marked [국내]:
   - translated_title: set to the original Korean title.
-  - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 원문 요약이 비어있어도 제목을 기반으로 반드시 요약을 생성할 것. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
+  - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
 ## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
 - category: 규제/시장/공급망/R&D/임상/허가`,
@@ -371,12 +363,11 @@ async function extractKeywordsAndTranslate(
                       properties: {
                         index: { type: "number" },
                         apiKeywords: { type: "array", items: { type: "string" } },
-                        relatedKeywords: { type: "array", items: { type: "string" }, description: "2-3 related/similar API ingredients relevant to the article's therapeutic area" },
                         category: { type: "string" },
                         translated_title: { type: "string", description: "Korean translated title. REQUIRED for all articles." },
                         translated_summary: { type: "string", description: "Korean summary. REQUIRED for all articles." },
                       },
-                      required: ["index", "apiKeywords", "relatedKeywords", "category", "translated_title", "translated_summary"],
+                      required: ["index", "apiKeywords", "category", "translated_title", "translated_summary"],
                       additionalProperties: false,
                     },
                   },
@@ -424,7 +415,6 @@ async function extractKeywordsAndTranslate(
         url: article.url,
         date: article.date,
         api_keywords: r.apiKeywords || [],
-        related_keywords: r.relatedKeywords || [],
         category: r.category || "",
         original_language: isForeign ? (article.country === "JP" ? "ja" : "en") : "ko",
       });
@@ -513,62 +503,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, fixed, total: needsFix.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // --- Backfill mode: generate related keywords for existing articles ---
-    if (body.backfillRelatedKeywords) {
-      const batchLimit = body.limit || 50;
-      const { data: allArticles } = await supabase
-        .from("news_articles")
-        .select("id, title, summary, api_keywords, related_keywords")
-        .order("created_at", { ascending: false })
-        .limit(batchLimit);
-
-      const needsFix = (allArticles || []).filter((a: any) => {
-        return (a.api_keywords || []).length > 0 && (!a.related_keywords || a.related_keywords.length === 0);
-      });
-      console.log(`Found ${needsFix.length} articles needing related keywords`);
-
-      let fixed = 0;
-      const batchSize = 10;
-      for (let i = 0; i < needsFix.length; i += batchSize) {
-        const batch = needsFix.slice(i, i + batchSize);
-        const articleList = batch.map((a: any, idx: number) => `[${idx}] Keywords: ${JSON.stringify(a.api_keywords)} | Title: ${a.title}`).join("\n");
-
-        try {
-          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "gemini-2.5-flash-lite",
-              messages: [
-                { role: "system", content: `제약 원료의약품 전문가입니다. 각 기사의 주요 키워드를 보고, 같은 치료 영역이나 작용 기전의 관련/경쟁 원료의약품 2-3개를 추천하세요.
-규칙:
-- 형식: "한글명 (English Name)"
-- 주요 키워드와 중복되지 않는 관련 원료만 추천
-- 같은 적응증의 경쟁약물, 같은 계열 약물, 또는 병용약물 위주
-- 관련 원료가 없으면 빈 배열 반환` },
-                { role: "user", content: `Generate related keywords:\n\n${articleList}` },
-              ],
-              tools: [{ type: "function", function: { name: "generate_related", description: "Generate related keywords", parameters: { type: "object", properties: { results: { type: "array", items: { type: "object", properties: { index: { type: "number" }, relatedKeywords: { type: "array", items: { type: "string" } } }, required: ["index", "relatedKeywords"], additionalProperties: false } } }, required: ["results"], additionalProperties: false } } }],
-              tool_choice: { type: "function", function: { name: "generate_related" } },
-            }),
-          });
-          if (!aiResp.ok) { console.error(`Gemini error: ${aiResp.status}`); continue; }
-          const aiData = await aiResp.json();
-          const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-          if (!toolCall) continue;
-          const parsed = JSON.parse(toolCall.function.arguments);
-          for (const r of parsed.results || []) {
-            const article = batch[r.index];
-            if (!article || !r.relatedKeywords) continue;
-            await supabase.from("news_articles").update({ related_keywords: r.relatedKeywords }).eq("id", article.id);
-            fixed++;
-          }
-        } catch (err) { console.error("Related keywords batch error:", err); }
-        if (i + batchSize < needsFix.length) await new Promise(r => setTimeout(r, 1500));
-      }
-      return new Response(JSON.stringify({ success: true, fixed, total: needsFix.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
     // --- Backfill mode: translate existing foreign articles or re-summarize domestic ---
     if (body.backfillTranslations) {
       const { data: foreignArticles } = await supabase
@@ -629,7 +563,7 @@ serve(async (req) => {
         .limit(200);
 
       const needsSummary = (articles || []).filter((a: any) => {
-        if (!a.summary || a.summary.trim() === '') return true;
+        if (!a.summary) return false;
         if (a.summary.length > 150) return true;
         if (/이다\.|했다\.|된다\.|보인다\.|한다\.|있다\.|없다\.|됐다\.|났다\.|왔다\.|겠다\.|진다\./.test(a.summary)) return true;
         return false;
@@ -640,7 +574,7 @@ serve(async (req) => {
       const batchSize = 20;
       for (let i = 0; i < needsSummary.length; i += batchSize) {
         const batch = needsSummary.slice(i, i + batchSize);
-        const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${(a.summary || '(요약 없음 - 제목 기반으로 생성 필요)').slice(0, 200)}`).join("\n");
+        const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary.slice(0, 200)}`).join("\n");
         try {
           const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
             method: "POST",

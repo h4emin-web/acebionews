@@ -74,7 +74,6 @@ const Index = () => {
     date: news.date,
     url: news.url,
     apiKeywords: news.api_keywords,
-    relatedKeywords: news.related_keywords || [],
     category: news.category
   });
 

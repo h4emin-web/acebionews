@@ -8,7 +8,6 @@ export type NewsItem = {
   date: string;
   url: string;
   apiKeywords: string[];
-  relatedKeywords?: string[];
   category: string;
 };
 
