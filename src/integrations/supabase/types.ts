@@ -102,6 +102,7 @@ export type Database = {
           id: string
           original_language: string | null
           region: string
+          related_keywords: string[]
           source: string
           summary: string
           title: string
@@ -116,6 +117,7 @@ export type Database = {
           id?: string
           original_language?: string | null
           region: string
+          related_keywords?: string[]
           source: string
           summary: string
           title: string
@@ -130,6 +132,7 @@ export type Database = {
           id?: string
           original_language?: string | null
           region?: string
+          related_keywords?: string[]
           source?: string
           summary?: string
           title?: string
