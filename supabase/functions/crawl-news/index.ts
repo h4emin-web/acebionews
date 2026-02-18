@@ -228,7 +228,12 @@ function parseIyakuNews(html: string): Array<{ title: string; summary: string; u
     const block = parts[i];
     const urlMatch = block.match(/href=['"]([^'"]*)['"]/i);
     if (!urlMatch) continue;
-    const url = urlMatch[1].replace(/&amp;/g, "&").trim();
+    let url = urlMatch[1].replace(/&amp;/g, "&").trim();
+    // Extract actual destination URL from Google redirect URLs
+    const googleRedirect = url.match(/[?&]url=([^&]+)/);
+    if (googleRedirect) {
+      url = decodeURIComponent(googleRedirect[1]);
+    }
     // Extract title text between <p class='title'> and </p>
     const pMatch = block.match(/class=['"]title['"][^>]*>([\s\S]*?)<\/p>/i);
     if (!pMatch) continue;
