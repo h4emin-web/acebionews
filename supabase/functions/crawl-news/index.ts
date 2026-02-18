@@ -729,35 +729,52 @@ serve(async (req) => {
       console.log(`Cleaned up ${deletedCount} articles older than 7 days`);
     }
 
-    // 4. Insert new articles (skip duplicates by URL and similar titles)
-    if (allResults.length > 0) {
+    // 4. Filter out old articles (only keep last 3 days)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const threeDaysAgoStr = threeDaysAgo.toISOString().split("T")[0];
+    const recentResults = allResults.filter((r) => r.date >= threeDaysAgoStr);
+    console.log(`Filtered to ${recentResults.length} recent articles (${allResults.length - recentResults.length} old articles skipped)`);
+
+    // 5. Insert new articles (skip duplicates by URL and similar titles across ALL sources)
+    if (recentResults.length > 0) {
       const { data: existing } = await supabase
         .from("news_articles")
         .select("title, url");
 
       const existingUrls = new Set((existing || []).map((e: any) => e.url));
-      const existingTitles = (existing || []).map((e: any) => e.title);
 
-      // Simple similarity check: normalize title for comparison
-      const normalizeTitle = (t: string) => t.replace(/[^가-힣a-zA-Z0-9]/g, "").toLowerCase();
-      const existingNormalized = new Set(existingTitles.map(normalizeTitle));
+      // Normalize: strip all non-content chars for fuzzy matching
+      const normalizeTitle = (t: string) => t.replace(/[^가-힣a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
+      const existingNormalized = new Set((existing || []).map((e: any) => normalizeTitle(e.title)));
 
-      const newResults = allResults.filter((r) => {
+      // Also build a set of "short keys" (first 15 content chars) for fuzzy cross-source matching
+      const shortKey = (t: string) => normalizeTitle(t).slice(0, 20);
+      const existingShortKeys = new Set((existing || []).map((e: any) => shortKey(e.title)));
+
+      const newResults = recentResults.filter((r) => {
         if (existingUrls.has(r.url)) return false;
         const norm = normalizeTitle(r.title);
         if (existingNormalized.has(norm)) return false;
+        // Fuzzy: if first 20 normalized chars match an existing article, skip
+        const sk = shortKey(r.title);
+        if (sk.length >= 15 && existingShortKeys.has(sk)) return false;
         return true;
       });
 
       // Also deduplicate within the batch itself
       const seenUrls = new Set<string>();
       const seenNormTitles = new Set<string>();
+      const seenShortKeys = new Set<string>();
       const dedupedResults = newResults.filter((r) => {
         if (seenUrls.has(r.url)) return false;
         const norm = normalizeTitle(r.title);
         if (seenNormTitles.has(norm)) return false;
+        const sk = shortKey(r.title);
+        if (sk.length >= 15 && seenShortKeys.has(sk)) return false;
         seenUrls.add(r.url);
         seenNormTitles.add(norm);
+        seenShortKeys.add(sk);
         return true;
       });
 
@@ -768,7 +785,7 @@ serve(async (req) => {
           throw error;
         }
       }
-      console.log(`Inserted ${dedupedResults.length} new articles (${allResults.length - dedupedResults.length} duplicates skipped)`);
+      console.log(`Inserted ${dedupedResults.length} new articles (${recentResults.length - dedupedResults.length} duplicates skipped)`);
     }
 
     return new Response(
