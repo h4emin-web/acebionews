@@ -167,8 +167,8 @@ function parseNewsmp(html: string): Array<{ title: string; summary: string; url:
     if (articles.length >= 15) break;
     const titleMatch = block.match(/<div class="list-titles">\s*<a[^>]*href="([^"]*)"[^>]*>\s*<strong>([\s\S]*?)<\/strong>/i);
     if (!titleMatch) continue;
-    const url = titleMatch[1].trim();
-    const title = stripHtml(titleMatch[2]).trim();
+    const rawUrl = titleMatch[1].trim();
+    const url = rawUrl.startsWith("http") ? rawUrl : `https://www.newsmp.com${rawUrl}`;
     const summaryMatch = block.match(/<p class="list-summary">\s*<a[^>]*>([\s\S]*?)<\/a>/i);
     const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
     const dateMatch = block.match(/\|\s*(\d{4}-\d{2}-\d{2})\s/i);
