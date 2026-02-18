@@ -11,6 +11,7 @@ const RSS_SOURCES = [
   { rss: "https://www.fiercepharma.com/rss/xml", name: "FiercePharma", region: "해외", country: "US" },
   { rss: "https://www.pharmaceutical-technology.com/feed/", name: "Pharma Technology", region: "해외", country: "EU" },
   { rss: "https://www.expresspharma.in/feed/", name: "Express Pharma", region: "해외", country: "IN" },
+  { rss: "https://www.pharmnews.com/rss/allArticle.xml", name: "팜뉴스", region: "국내", country: "KR" },
 ];
 
 // HTML sources — 약업신문 & 데일리팜 + 의약뉴스 + 히트뉴스 + fallback overseas
@@ -159,17 +160,17 @@ function parseDailypharm(html: string): Array<{ title: string; summary: string; 
 // Parse 의약뉴스 (newsmp.com) HTML
 function parseNewsmp(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  const blockRegex = /<div class="list-block">([\s\S]*?)<\/div>\s*<!--\/\/ group -->/gi;
-  let m;
-  while ((m = blockRegex.exec(html)) !== null && articles.length < 15) {
-    const block = m[1];
+  // Split by "list-block" divs instead of using regex that fails with nested divs
+  const blocks = html.split(/<!--\s*group\s*\/\/-->/gi);
+  for (const block of blocks) {
+    if (articles.length >= 15) break;
     const titleMatch = block.match(/<div class="list-titles">\s*<a[^>]*href="([^"]*)"[^>]*>\s*<strong>([\s\S]*?)<\/strong>/i);
     if (!titleMatch) continue;
     const url = titleMatch[1].trim();
     const title = stripHtml(titleMatch[2]).trim();
     const summaryMatch = block.match(/<p class="list-summary">\s*<a[^>]*>([\s\S]*?)<\/a>/i);
     const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
-    const dateMatch = block.match(/<div class="list-dated">[^|]*\|\s*(\d{4}-\d{2}-\d{2})\s/i);
+    const dateMatch = block.match(/\|\s*(\d{4}-\d{2}-\d{2})\s/i);
     const dateStr = dateMatch ? dateMatch[1] : "";
     if (title.length > 5) {
       articles.push({ title, summary, url, date: normalizeDate(dateStr) });
@@ -255,30 +256,78 @@ function parseIyakuNews(html: string): Array<{ title: string; summary: string; u
 // Parse 药智新闻 (yaozh.com) from Firecrawl markdown
 function parseYaozh(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  // Firecrawl returns markdown with links like [title](url) and dates
+  const lines = markdown.split("\n");
+  
+  // Current date for filtering - only accept articles from last 30 days (exclude old like January if now is Feb+)
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+  
+  for (let i = 0; i < lines.length && articles.length < 15; i++) {
+    const line = lines[i].trim();
+    
+    // Match the actual format: **title**\n...\nkeywords YYYY-MM-DD](url)
+    // Or simpler: [title](https://news.yaozh.com/archive/XXXXX.html)
+    const linkMatch = line.match(/\]\((https:\/\/news\.yaozh\.com\/archive\/\d+\.html)\)/);
+    if (!linkMatch) continue;
+    const url = linkMatch[1].trim();
+    
+    // Extract title: look for **bold title** in nearby lines
+    let title = "";
+    for (let j = Math.max(0, i - 8); j <= i; j++) {
+      const boldMatch = lines[j].match(/\*\*(.{8,})\*\*/);
+      if (boldMatch) {
+        title = boldMatch[1].replace(/\\/g, "").trim();
+        break;
+      }
+    }
+    if (!title || title.length < 8) continue;
+    
+    // Extract date from the same line or nearby: YYYY-MM-DD at end
+    let dateStr = "";
+    const dateMatch = line.match(/(\d{4}-\d{2}-\d{2})\]\(/);
+    if (dateMatch) {
+      dateStr = dateMatch[1];
+    } else {
+      for (let j = Math.max(0, i - 3); j <= i; j++) {
+        const dm = lines[j].match(/(\d{4}-\d{2}-\d{2})/);
+        if (dm) { dateStr = dm[1]; break; }
+      }
+    }
+    
+    // Filter out old articles (e.g., January when we're in February)
+    const articleDate = normalizeDate(dateStr);
+    if (articleDate < cutoffStr) continue;
+    
+    if (!articles.some(a => a.url === url)) {
+      articles.push({ title, summary: "", url, date: articleDate });
+    }
+  }
+  return articles;
+}
+
+// Parse 팜뉴스 (pharmnews.com) from Firecrawl markdown
+function parsePharmnews(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   const lines = markdown.split("\n");
   
   for (let i = 0; i < lines.length && articles.length < 15; i++) {
     const line = lines[i].trim();
-    // Match markdown links: [title](url)
-    const linkMatch = line.match(/\[([^\]]{10,})\]\((https?:\/\/news\.yaozh\.com\/[^\)]+)\)/);
+    // Match markdown links to pharmnews article pages
+    const linkMatch = line.match(/\[([^\]]{10,})\]\((https?:\/\/www\.pharmnews\.com\/news\/articleView[^)]+)\)/);
     if (!linkMatch) continue;
-    const title = linkMatch[1].trim();
+    const title = linkMatch[1].replace(/\*\*/g, "").trim();
     const url = linkMatch[2].trim();
-    // Skip navigation links
-    if (url.includes("/archivelist/") || url.includes("/meeting") || title.length < 8) continue;
+    if (title.length < 8) continue;
     
-    // Look for date in nearby lines (format: YYYY-MM-DD or YYYY/MM/DD or MM-DD)
+    // Look for date nearby
     let dateStr = "";
     for (let j = Math.max(0, i - 2); j <= Math.min(lines.length - 1, i + 3); j++) {
-      const dateMatch = lines[j].match(/(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})/);
-      if (dateMatch) {
-        dateStr = dateMatch[1].replace(/\//g, "-");
-        break;
-      }
+      const dm = lines[j].match(/(\d{4}-\d{2}-\d{2})/);
+      if (dm) { dateStr = dm[1]; break; }
     }
     
-    if (!articles.some(a => a.url === url)) {
+    if (!articles.some(a => a.url === url || a.title === title)) {
       articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
     }
   }
@@ -320,6 +369,8 @@ async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<
     let articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
     if (source.parser === "yaozh") {
       articles = parseYaozh(markdown);
+    } else if (source.parser === "pharmnews") {
+      articles = parsePharmnews(markdown);
     }
 
     console.log(`Extracted ${articles.length} articles from ${source.name} via Firecrawl`);
