@@ -729,25 +729,46 @@ serve(async (req) => {
       console.log(`Cleaned up ${deletedCount} articles older than 7 days`);
     }
 
-    // 4. Insert new articles (skip duplicates)
+    // 4. Insert new articles (skip duplicates by URL and similar titles)
     if (allResults.length > 0) {
-      const today = new Date().toISOString().split("T")[0];
       const { data: existing } = await supabase
         .from("news_articles")
-        .select("title")
-        .gte("created_at", today);
+        .select("title, url");
 
-      const existingTitles = new Set((existing || []).map((e: any) => e.title));
-      const newResults = allResults.filter((r) => !existingTitles.has(r.title));
+      const existingUrls = new Set((existing || []).map((e: any) => e.url));
+      const existingTitles = (existing || []).map((e: any) => e.title);
 
-      if (newResults.length > 0) {
-        const { error } = await supabase.from("news_articles").insert(newResults);
+      // Simple similarity check: normalize title for comparison
+      const normalizeTitle = (t: string) => t.replace(/[^가-힣a-zA-Z0-9]/g, "").toLowerCase();
+      const existingNormalized = new Set(existingTitles.map(normalizeTitle));
+
+      const newResults = allResults.filter((r) => {
+        if (existingUrls.has(r.url)) return false;
+        const norm = normalizeTitle(r.title);
+        if (existingNormalized.has(norm)) return false;
+        return true;
+      });
+
+      // Also deduplicate within the batch itself
+      const seenUrls = new Set<string>();
+      const seenNormTitles = new Set<string>();
+      const dedupedResults = newResults.filter((r) => {
+        if (seenUrls.has(r.url)) return false;
+        const norm = normalizeTitle(r.title);
+        if (seenNormTitles.has(norm)) return false;
+        seenUrls.add(r.url);
+        seenNormTitles.add(norm);
+        return true;
+      });
+
+      if (dedupedResults.length > 0) {
+        const { error } = await supabase.from("news_articles").insert(dedupedResults);
         if (error) {
           console.error("DB insert error:", error);
           throw error;
         }
       }
-      console.log(`Inserted ${newResults.length} new articles (${allResults.length - newResults.length} duplicates skipped)`);
+      console.log(`Inserted ${dedupedResults.length} new articles (${allResults.length - dedupedResults.length} duplicates skipped)`);
     }
 
     return new Response(

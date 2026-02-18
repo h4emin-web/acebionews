@@ -335,11 +335,13 @@ serve(async (req) => {
     console.log(`Total results: fdaAlerts=${fdaAlerts.length}, mfds=${mfdsResults.length}, nda=${ndaResults.length}, clinical=${clinicalResults.length}`);
 
     if (allResults.length > 0) {
+      // Dedup by URL (primary) and title (secondary)
       const { data: existing } = await supabase
         .from("regulatory_notices")
-        .select("title");
+        .select("url, title");
+      const existingUrls = new Set((existing || []).map((e: any) => e.url));
       const existingTitles = new Set((existing || []).map((e: any) => e.title));
-      const newResults = allResults.filter((r) => !existingTitles.has(r.title));
+      const newResults = allResults.filter((r) => !existingUrls.has(r.url) && !existingTitles.has(r.title));
 
       if (newResults.length > 0) {
         const { error } = await supabase.from("regulatory_notices").insert(newResults);
