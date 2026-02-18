@@ -456,7 +456,12 @@ async function extractKeywordsAndTranslate(
 - DO NOT guess, infer, or hallucinate ingredient names that are NOT in the text.
 - If an article only mentions a brand name without its active ingredient, set apiKeywords to [].
 - Valid keywords: small-molecule compounds, biologics, any INN or chemical name explicitly stated.
-- Keyword format: "한글명 (English Name)"
+- **CRITICAL FORMAT RULE (applies to ALL articles — 국내, 해외, every country, every language, NO exceptions):**
+  - Every keyword MUST be in the format: "한글명 (English Name)"
+  - Examples: "세마글루타이드 (Semaglutide)", "리바록사반 (Rivaroxaban)", "트라스투주맙 (Trastuzumab)"
+  - If the article is in English, translate the ingredient name to Korean and put it first: "오젬픽 → 세마글루타이드 (Semaglutide)"
+  - If the article is in Japanese/Chinese, translate the ingredient name to Korean: "リバーロキサバン → 리바록사반 (Rivaroxaban)"
+  - NEVER return English-only keywords like "Semaglutide" or Korean-only keywords like "세마글루타이드"
 - INVALID: Brand/product names only, generic categories (엑소좀, mRNA, GLP-1, siRNA, 백신), mechanism names.
 
 ## TASK 2: TRANSLATION & SUMMARY (MANDATORY)
