@@ -11,7 +11,7 @@ const RSS_SOURCES = [
   { rss: "https://www.fiercepharma.com/rss/xml", name: "FiercePharma", region: "해외", country: "US" },
   { rss: "https://www.pharmaceutical-technology.com/feed/", name: "Pharma Technology", region: "해외", country: "EU" },
   { rss: "https://www.expresspharma.in/feed/", name: "Express Pharma", region: "해외", country: "IN" },
-  { rss: "https://www.pharmnews.com/rss/allArticle.xml", name: "팜뉴스", region: "국내", country: "KR" },
+  
 ];
 
 // HTML sources — 약업신문 & 데일리팜 + 의약뉴스 + 히트뉴스 + fallback overseas
@@ -21,6 +21,7 @@ const HTML_SOURCES = [
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
   { url: "https://www.hitnews.co.kr/news/articleList.html?sc_sub_section_code=S2N16&view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
+  { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
   { url: "https://iyakunews.com/news-new", name: "医薬ニュース", region: "해외", country: "JP", parser: "iyakunews" },
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
 ];
@@ -306,29 +307,23 @@ function parseYaozh(markdown: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
-// Parse 팜뉴스 (pharmnews.com) from Firecrawl markdown
-function parsePharmnews(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+// Parse 팜뉴스 (pharmnews.com) HTML — same structure as kpanews (altlist-webzine)
+function parsePharmnews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  const lines = markdown.split("\n");
-  
-  for (let i = 0; i < lines.length && articles.length < 15; i++) {
-    const line = lines[i].trim();
-    // Match markdown links to pharmnews article pages
-    const linkMatch = line.match(/\[([^\]]{10,})\]\((https?:\/\/www\.pharmnews\.com\/news\/articleView[^)]+)\)/);
-    if (!linkMatch) continue;
-    const title = linkMatch[1].replace(/\*\*/g, "").trim();
-    const url = linkMatch[2].trim();
-    if (title.length < 8) continue;
-    
-    // Look for date nearby
-    let dateStr = "";
-    for (let j = Math.max(0, i - 2); j <= Math.min(lines.length - 1, i + 3); j++) {
-      const dm = lines[j].match(/(\d{4}-\d{2}-\d{2})/);
-      if (dm) { dateStr = dm[1]; break; }
-    }
-    
-    if (!articles.some(a => a.url === url || a.title === title)) {
-      articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+  const liRegex = /<li class="altlist-webzine-item">([\s\S]*?)<\/li>/gi;
+  let m;
+  while ((m = liRegex.exec(html)) !== null && articles.length < 20) {
+    const block = m[1];
+    const titleMatch = block.match(/<h2 class="altlist-subject">\s*<a\s+href="([^"]*)"[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
+    if (!titleMatch) continue;
+    const url = titleMatch[1].trim();
+    const title = stripHtml(titleMatch[2]).replace(/&nbsp;/g, " ").trim();
+    const summaryMatch = block.match(/<p class="altlist-summary">\s*([\s\S]*?)\s*<\/p>/i);
+    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const dateMatch = block.match(/<div class="altlist-info-item">(\d{2}-\d{2}\s+\d{2}:\d{2})<\/div>/i);
+    const dateStr = dateMatch ? dateMatch[1] : "";
+    if (title.length > 5) {
+      articles.push({ title, summary, url, date: normalizeDate(dateStr) });
     }
   }
   return articles;
@@ -369,8 +364,6 @@ async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<
     let articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
     if (source.parser === "yaozh") {
       articles = parseYaozh(markdown);
-    } else if (source.parser === "pharmnews") {
-      articles = parsePharmnews(markdown);
     }
 
     console.log(`Extracted ${articles.length} articles from ${source.name} via Firecrawl`);
@@ -407,6 +400,8 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
       articles = parseHitnews(html);
     } else if (source.parser === "kpanews") {
       articles = parseKpanews(html);
+    } else if (source.parser === "pharmnews") {
+      articles = parsePharmnews(html);
     } else if (source.parser === "answersnews") {
       articles = parseIyakuNews(html);
     } else if (source.parser === "iyakunews") {
