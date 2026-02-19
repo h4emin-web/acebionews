@@ -18,12 +18,15 @@ serve(async (req) => {
 
     console.log(`Generating ingredient profile for: ${keyword}`);
 
-    const prompt = `당신은 원료의약품(API) 전문가입니다. "${keyword}" 원료의약품에 대해 아래 JSON 형식으로 정확하게 답변하세요.
+    const prompt = `당신은 원료의약품(API) 및 의약품 전문가입니다. "${keyword}"에 대해 아래 JSON 형식으로 정확하게 답변하세요.
+
+"${keyword}"가 완제의약품(제품명/브랜드명)인 경우, 해당 제품의 주성분(원료의약품/API)을 찾아서 그 원료의약품 기준으로 답변하세요.
+"${keyword}"가 원료의약품(API)인 경우, 그대로 해당 원료 기준으로 답변하세요.
 
 반드시 아래 JSON 형식만 출력하세요:
 {
-  "nameKo": "한글명",
-  "nameEn": "English Name",
+  "nameKo": "원료의약품 한글명",
+  "nameEn": "원료의약품 English Name",
   "cas": "CAS 번호 (모르면 null)",
   "category": "약효 분류",
   "mechanism": "작용기전을 1~2문장으로 간결하게",
@@ -34,11 +37,13 @@ serve(async (req) => {
   "originatorBrand": "오리지네이터 제품 브랜드명",
   "patentStatus": "특허 상태 간단 설명",
   "marketTrend": "시장 동향을 2~3문장으로",
-  "relatedApis": ["관련/경쟁 API 1", "관련/경쟁 API 2", "관련/경쟁 API 3"]
+  "relatedApis": ["관련/경쟁 API 1", "관련/경쟁 API 2", "관련/경쟁 API 3"],
+  "searchedAsProduct": true 또는 false (입력이 제품명이었으면 true)
 }
 
 중요 규칙:
 - 정확한 정보만 제공하세요. 모르는 항목은 null 또는 빈 배열로.
+- nameKo와 nameEn은 반드시 원료의약품(API)명으로 작성하세요.
 - JSON만 출력하세요.`;
 
     const aiResp = await fetch(

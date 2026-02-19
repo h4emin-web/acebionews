@@ -73,8 +73,14 @@ const Index = () => {
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
   const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(debouncedSearch);
   const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
-  const { data: mfdsProducts = [], isLoading: mfdsProductsLoading } = useMfdsProducts(debouncedSearch);
-  const { data: mfdsDmf = [], isLoading: mfdsDmfLoading } = useMfdsDmf(debouncedSearch);
+
+  // Derive ingredient keyword from AI profile (handles product→ingredient mapping)
+  const ingredientKeyword = drugInfo?.nameKo
+    ? `${drugInfo.nameKo} (${drugInfo.nameEn})`
+    : debouncedSearch;
+
+  const { data: mfdsProducts = [], isLoading: mfdsProductsLoading } = useMfdsProducts(ingredientKeyword);
+  const { data: mfdsDmf = [], isLoading: mfdsDmfLoading } = useMfdsDmf(ingredientKeyword);
 
   const allNews = (search ? searchResults : newsArticles).
   filter((n) => n.api_keywords && n.api_keywords.length > 0);

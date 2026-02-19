@@ -23,7 +23,7 @@ export const SearchBar = ({ value, onChange, suggestions }: Props) => {
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 200)}
-          placeholder="원료의약품명 검색"
+          placeholder="제품 및 원료의약품 검색"
           className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground outline-none text-sm"
         />
         {value && (
