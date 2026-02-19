@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { Pill, Clock, Search, CalendarDays, Globe, Flag, FlaskConical } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
+import { BioWeeklySection } from "@/components/BioWeeklySection";
 
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
@@ -21,7 +24,7 @@ const Index = () => {
     if (v && regionFilter === "리포트") setRegionFilter("all");
   };
   const [todayOnly, setTodayOnly] = useState(false);
-  const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트">("all");
+  const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트" | "바이오위클리">("all");
   
   const [nceModalOpen, setNceModalOpen] = useState(false);
 
@@ -44,6 +47,19 @@ const Index = () => {
   const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: reports = [] } = useIndustryReports();
+  
+  // Bio Weekly posts count
+  const { data: bioWeeklyPosts = [] } = useQuery({
+    queryKey: ["substack-posts-count"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("substack_posts")
+        .select("id")
+        .eq("is_free", true);
+      if (error) throw error;
+      return data || [];
+    },
+  });
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
   const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(debouncedSearch);
   const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
@@ -122,7 +138,7 @@ const Index = () => {
             물질 특허 만료 NCE
           </button>
         </div>
-        {!search && <StatsBar news={allNews} totalReports={reports.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />}
+        {!search && <StatsBar news={allNews} totalReports={reports.length} totalBioWeekly={bioWeeklyPosts.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />}
 
         {search && (
             <SearchResultsPanel
@@ -135,7 +151,9 @@ const Index = () => {
 
         <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
-            {regionFilter === "리포트" ? (
+            {regionFilter === "바이오위클리" ? (
+              <BioWeeklySection />
+            ) : regionFilter === "리포트" ? (
               <IndustryReportsSection />
             ) : isSearching ? (
               /* When searching: show external news in main area */
