@@ -19,7 +19,7 @@ async function fetchSubstackRSS(source: typeof SOURCES[0]): Promise<Array<{ titl
   // Determine RSS URL
   let rssUrl = "";
   if (source.source === "kiinbio") {
-    rssUrl = "https://kiinbio.substack.com/feed";
+    rssUrl = "https://newsletter.kiin.bio/feed";
   } else if (source.source === "decodingbio") {
     rssUrl = "https://decodingbio.substack.com/feed";
   } else if (source.source === "techlifesci") {
