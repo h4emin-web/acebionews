@@ -1,6 +1,7 @@
 import { ExternalLink, Globe, MapPin } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
 import { countryFlagCodes } from "@/data/mockNews";
+import { useCardEffects } from "@/hooks/useCardEffects";
 
 type Props = {
   news: NewsItem;
@@ -10,12 +11,24 @@ type Props = {
 
 export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
   const flagCode = countryFlagCodes[news.country] || null;
+  const { ref, ripples, handlePointerMove, handlePointerLeave, handleClick } = useCardEffects();
 
   return (
     <article
-      className="card-elevated rounded-lg p-5 transition-all duration-200 group animate-fade-in"
-      style={{ animationDelay: `${index * 50}ms` }}
+      ref={ref}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      onClick={handleClick}
+      className="card-elevated rounded-lg p-5 group animate-fade-in relative overflow-hidden"
+      style={{ animationDelay: `${index * 50}ms`, transition: "transform 0.15s ease-out, box-shadow 0.15s ease-out", willChange: "transform" }}
     >
+      {ripples.map((r) => (
+        <span
+          key={r.id}
+          className="absolute rounded-full bg-primary/10 pointer-events-none animate-[ripple_0.6s_ease-out_forwards]"
+          style={{ left: r.x - 40, top: r.y - 40, width: 80, height: 80 }}
+        />
+      ))}
       <div className="flex items-start justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2 flex-wrap">
           <span
