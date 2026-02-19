@@ -114,34 +114,66 @@ export function useDrugInfo(keyword: string) {
   });
 }
 
+// Extract Korean name from "한글명 (영문명)" format, or return as-is
+function extractKoreanName(keyword: string): string {
+  const match = keyword.match(/^([가-힣\s]+)\s*\(/);
+  return match ? match[1].trim() : keyword.trim();
+}
+
+// Extract English name from "한글명 (영문명)" format
+function extractEnglishName(keyword: string): string | null {
+  const match = keyword.match(/\(([^)]+)\)/);
+  return match ? match[1].trim() : null;
+}
+
 // MFDS domestic products (real data)
 export function useMfdsProducts(keyword: string) {
+  const koName = extractKoreanName(keyword);
+  const enName = extractEnglishName(keyword);
   return useQuery({
     queryKey: ["mfds-products", keyword],
     enabled: !!keyword,
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
+      // Search with Korean name first
       const { data, error } = await supabase.functions.invoke("scrape-mfds", {
-        body: { keyword, type: "products" },
+        body: { keyword: koName, type: "products" },
       });
       if (error) throw error;
-      return data?.domesticProducts || [];
+      const results = data?.domesticProducts || [];
+      // If no results with Korean, try English name
+      if (results.length === 0 && enName) {
+        const { data: enData, error: enError } = await supabase.functions.invoke("scrape-mfds", {
+          body: { keyword: enName, type: "products" },
+        });
+        if (!enError) return enData?.domesticProducts || [];
+      }
+      return results;
     },
   });
 }
 
 // MFDS DMF records (real data)
 export function useMfdsDmf(keyword: string) {
+  const koName = extractKoreanName(keyword);
+  const enName = extractEnglishName(keyword);
   return useQuery({
     queryKey: ["mfds-dmf", keyword],
     enabled: !!keyword,
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("scrape-mfds", {
-        body: { keyword, type: "dmf" },
+        body: { keyword: koName, type: "dmf" },
       });
       if (error) throw error;
-      return data?.dmfRecords || [];
+      const results = data?.dmfRecords || [];
+      if (results.length === 0 && enName) {
+        const { data: enData, error: enError } = await supabase.functions.invoke("scrape-mfds", {
+          body: { keyword: enName, type: "dmf" },
+        });
+        if (!enError) return enData?.dmfRecords || [];
+      }
+      return results;
     },
   });
 }
