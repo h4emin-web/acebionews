@@ -17,6 +17,7 @@ import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports } from "@/hooks/useNewsData";
 import type { NewsItem } from "@/data/mockNews";
+import { deduplicateNews } from "@/utils/deduplicateNews";
 
 const Index = () => {
   const [search, setSearch] = useState("");
@@ -88,8 +89,9 @@ const Index = () => {
   const { data: mfdsProducts = [], isLoading: mfdsProductsLoading } = useMfdsProducts(ingredientKeyword);
   const { data: mfdsDmf = [], isLoading: mfdsDmfLoading } = useMfdsDmf(ingredientKeyword);
 
-  const allNews = (search ? searchResults : newsArticles).
-  filter((n) => n.api_keywords && n.api_keywords.length > 0);
+  const allNews = deduplicateNews(
+    (search ? searchResults : newsArticles).filter((n) => n.api_keywords && n.api_keywords.length > 0)
+  );
   const displayNews = allNews.filter((n) => regionFilter === "all" || regionFilter === "리포트" || n.region === regionFilter);
   const isLoading = search ? searchLoading : newsLoading;
   const isSearching = !!search;
