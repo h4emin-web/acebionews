@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FileText, ChevronDown, Download } from "lucide-react";
+import { PillLoader } from "@/components/PillLoader";
 import { useIndustryReports } from "@/hooks/useNewsData";
 
 export const IndustryReportsSection = () => {
@@ -8,9 +9,8 @@ export const IndustryReportsSection = () => {
 
   if (isLoading) {
     return (
-      <div className="text-center py-16 card-elevated rounded-lg">
-        <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
-        <p className="text-muted-foreground text-sm">리포트 불러오는 중...</p>
+      <div className="card-elevated rounded-lg">
+        <PillLoader text="리포트 불러오는 중..." />
       </div>
     );
   }

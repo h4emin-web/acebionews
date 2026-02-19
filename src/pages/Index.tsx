@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pill, Clock, Search, CalendarDays, Globe, Flag, FlaskConical } from "lucide-react";
+import { PillLoader } from "@/components/PillLoader";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchBar } from "@/components/SearchBar";
@@ -181,9 +182,8 @@ const Index = () => {
             ) : isSearching ? (
               /* When searching: show external news in main area */
               externalNewsLoading ? (
-                <div className="text-center py-16 card-elevated rounded-lg">
-                  <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
-                  <p className="text-muted-foreground text-sm">관련 뉴스 검색중...</p>
+                <div className="card-elevated rounded-lg">
+                  <PillLoader text="관련 뉴스 검색중..." />
                 </div>
               ) : externalNews.length > 0 ? (
                 <div className="space-y-3">
@@ -216,9 +216,8 @@ const Index = () => {
             ) : (
               /* When not searching: show DB news */
               isLoading ? (
-                <div className="text-center py-16 card-elevated rounded-lg">
-                  <Search className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
-                  <p className="text-muted-foreground text-sm">검색중...</p>
+                <div className="card-elevated rounded-lg">
+                  <PillLoader text="뉴스 불러오는 중..." />
                 </div>
               ) : displayNews.length > 0 ? (
                 displayNews.map((news, i) => {

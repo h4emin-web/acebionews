@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FileText, ChevronDown, ExternalLink } from "lucide-react";
+import { PillLoader } from "@/components/PillLoader";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -32,9 +33,8 @@ export const IbricReportsSection = () => {
 
   if (isLoading) {
     return (
-      <div className="text-center py-16 card-elevated rounded-lg">
-        <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
-        <p className="text-muted-foreground text-sm">동향 리포트 불러오는 중...</p>
+      <div className="card-elevated rounded-lg">
+        <PillLoader text="동향 리포트 불러오는 중..." />
       </div>
     );
   }
