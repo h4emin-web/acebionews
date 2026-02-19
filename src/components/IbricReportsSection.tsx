@@ -63,17 +63,17 @@ export const IbricReportsSection = () => {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
-                  <h3 className="text-sm font-medium text-foreground leading-snug break-all">{report.title}</h3>
+                  <h3 className="text-base font-medium text-foreground leading-snug break-all">{report.title}</h3>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="text-[11px] font-medium text-primary/80 bg-primary/5 px-1.5 py-0.5 rounded">
+                    <span className="text-xs font-medium text-primary/80 bg-primary/5 px-1.5 py-0.5 rounded">
                       IBRIC 동향리포트
                     </span>
                     {report.author && (
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {report.author}{report.affiliation ? `(${report.affiliation})` : ""}
                       </span>
                     )}
-                    <span className="text-[11px] text-muted-foreground">{report.date}</span>
+                    <span className="text-xs text-muted-foreground">{report.date}</span>
                   </div>
                 </div>
                 <ChevronDown className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform mt-0.5 ${isOpen ? "rotate-180" : ""}`} />
@@ -83,26 +83,26 @@ export const IbricReportsSection = () => {
             {isOpen && (
               <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
                 {report.summary ? (
-                  <div className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-line">
+                  <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                     {report.summary.split("\n").map((line, idx) => {
                       const trimmed = line.trim();
                       if (/^\[.+\]$/.test(trimmed)) {
                         return (
-                          <p key={idx} className="text-foreground/90 text-[13px] font-semibold mt-3 mb-1 first:mt-0">
+                          <p key={idx} className="text-foreground/90 text-sm font-semibold mt-3 mb-1 first:mt-0">
                             {trimmed}
                           </p>
                         );
                       }
                       if (/^\*\*.+\*\*$/.test(trimmed)) {
                         return (
-                          <p key={idx} className="text-foreground/90 text-[13px] font-semibold mt-3 mb-1 first:mt-0">
+                          <p key={idx} className="text-foreground/90 text-sm font-semibold mt-3 mb-1 first:mt-0">
                             {trimmed.replace(/\*\*/g, "")}
                           </p>
                         );
                       }
                       if (/^#{1,6}\s/.test(trimmed)) {
                         return (
-                          <p key={idx} className="text-foreground/90 text-[13px] font-semibold mt-3 mb-1 first:mt-0">
+                          <p key={idx} className="text-foreground/90 text-sm font-semibold mt-3 mb-1 first:mt-0">
                             {trimmed.replace(/^#{1,6}\s*/, "")}
                           </p>
                         );

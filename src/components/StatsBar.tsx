@@ -39,8 +39,8 @@ export const StatsBar = ({ news, totalReports, totalBioWeekly, totalIbricReports
             >
               <s.icon className={`w-5 h-5 ${s.color}`} />
               <div>
-                <p className="text-lg font-bold text-foreground font-mono">{s.value}</p>
-                <p className="text-[11px] text-muted-foreground">{s.label}</p>
+                <p className="text-xl font-bold text-foreground font-mono">{s.value}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
               </div>
             </div>
           );
