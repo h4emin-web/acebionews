@@ -194,6 +194,53 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json().catch(() => ({}));
+
+    // Single article mode
+    if (body.single_url) {
+      const { single_url, title, author, affiliation, date } = body;
+      
+      // Check if already exists
+      const { data: existing } = await supabase
+        .from("ibric_reports")
+        .select("id")
+        .eq("url", single_url)
+        .maybeSingle();
+
+      if (existing) {
+        return new Response(
+          JSON.stringify({ success: true, message: "Already exists", inserted: 0 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Summarizing single article: ${title}`);
+      const summary = await summarizeInKorean(title, single_url, "");
+
+      const { error } = await supabase.from("ibric_reports").insert({
+        title,
+        author: author || null,
+        affiliation: affiliation || null,
+        description: null,
+        summary,
+        url: single_url,
+        date,
+        views: 0,
+      });
+
+      if (error) {
+        console.error("Insert error:", error);
+        return new Response(
+          JSON.stringify({ success: false, error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, inserted: 1, title }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const pages = body.pages || 2;
     const maxItems = body.limit || 20;
 
