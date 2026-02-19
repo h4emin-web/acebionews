@@ -122,10 +122,10 @@ export const BioWeeklySection = () => {
                           </p>
                         );
                       }
-                      if (trimmed.startsWith("## ") || trimmed.startsWith("# ")) {
+                      if (/^#{1,6}\s/.test(trimmed)) {
                         return (
                           <p key={idx} className="text-foreground/90 text-[13px] font-semibold mt-3 mb-1 first:mt-0">
-                            {trimmed.replace(/^#+\s*/, "")}
+                            {trimmed.replace(/^#{1,6}\s*/, "")}
                           </p>
                         );
                       }
