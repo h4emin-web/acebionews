@@ -29,6 +29,7 @@ const HTML_SOURCES = [
 // Firecrawl sources — SPA sites that need JS rendering
 const FIRECRAWL_SOURCES = [
   { url: "https://news.yaozh.com/archivelist/24", name: "药智新闻", region: "해외", country: "CN", parser: "yaozh" },
+  { url: "https://www.rttnews.com/content/industrynews.aspx?industry=biotechnology+%26+drugs", name: "RTTNews Biotech", region: "해외", country: "US", parser: "rttnews" },
 ];
 
 function normalizeDate(dateStr?: string): string {
@@ -334,6 +335,34 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
+// Parse RTTNews Biotech (from Firecrawl markdown)
+function parseRttnews(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const lines = markdown.split("\n");
+  
+  // Match pattern: - [Title](https://www.rttnews.com/XXXXX/slug.aspx) Month Day, Year HH:MM ET
+  const monthMap: Record<string, string> = {
+    January: "01", February: "02", March: "03", April: "04", May: "05", June: "06",
+    July: "07", August: "08", September: "09", October: "10", November: "11", December: "12"
+  };
+
+  for (const line of lines) {
+    if (articles.length >= 25) break;
+    const match = line.match(/^\s*-\s*\[([^\]]+)\]\((https:\/\/www\.rttnews\.com\/\d+\/[^)]+)\)\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\s+\d{2}:\d{2}\s+ET/);
+    if (!match) continue;
+    const title = match[1].trim();
+    const url = match[2].trim();
+    const month = monthMap[match[3]] || "01";
+    const day = match[4].padStart(2, "0");
+    const year = match[5];
+    const date = `${year}-${month}-${day}`;
+    if (title.length > 10) {
+      articles.push({ title, summary: "", url, date });
+    }
+  }
+  return articles;
+}
+
 // Fetch SPA sites using Firecrawl scrape API
 async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
@@ -369,6 +398,8 @@ async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<
     let articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
     if (source.parser === "yaozh") {
       articles = parseYaozh(markdown);
+    } else if (source.parser === "rttnews") {
+      articles = parseRttnews(markdown);
     }
 
     console.log(`Extracted ${articles.length} articles from ${source.name} via Firecrawl`);
