@@ -19,13 +19,15 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onClick={handleClick}
-      className="card-elevated rounded-lg p-5 group animate-fade-in relative overflow-hidden"
-      style={{ animationDelay: `${index * 50}ms`, transition: "transform 0.15s ease-out, box-shadow 0.15s ease-out", willChange: "transform" }}
+      className="card-3d rounded-xl p-5 group animate-fade-in relative overflow-hidden"
+      style={{ animationDelay: `${index * 50}ms` }}
     >
+      {/* Gradient shimmer on hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-primary/[0.03] via-transparent to-accent/[0.03]" />
       {ripples.map((r) => (
         <span
           key={r.id}
-          className="absolute rounded-full bg-primary/10 pointer-events-none animate-[ripple_0.6s_ease-out_forwards]"
+          className="absolute rounded-full bg-primary/15 pointer-events-none animate-[ripple_0.6s_ease-out_forwards]"
           style={{ left: r.x - 40, top: r.y - 40, width: 80, height: 80 }}
         />
       ))}
