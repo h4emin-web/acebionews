@@ -184,7 +184,7 @@ function parseNewsmp(html: string): Array<{ title: string; summary: string; url:
 // Parse 히트뉴스 (hitnews.co.kr) HTML
 function parseHitnews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  const liRegex = /<li>\s*<h4 class="titles">\s*<a\s+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>\s*<\/h4>[\s\S]*?<em class="info dated">([\s\S]*?)<\/em>\s*<\/li>/gi;
+  const liRegex = /<li>\s*<h4 class="titles">\s*<a\s+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>\s*<\/h4>[\s\S]*?<em class="info dated">([\s\S]*?)<\/em>[\s\S]*?<\/li>/gi;
   let m;
   while ((m = liRegex.exec(html)) !== null && articles.length < 20) {
     const url = m[1].trim();
