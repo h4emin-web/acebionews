@@ -21,7 +21,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const handleSearchChange = (v: string) => {
     setSearch(v);
-    if (v && regionFilter === "리포트") setRegionFilter("all");
+    if (v && (regionFilter === "리포트" || regionFilter === "바이오위클리" || regionFilter === "동향리포트")) setRegionFilter("all");
   };
   const [todayOnly, setTodayOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트" | "바이오위클리" | "동향리포트">("all");
