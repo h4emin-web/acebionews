@@ -34,7 +34,7 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
       <div className="flex items-start justify-between gap-3 mb-2.5">
         <div className="flex items-center gap-2 flex-wrap">
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold tracking-wide ${
               news.region === "국내" ? "region-badge-domestic" : "region-badge-overseas"
             }`}
           >
@@ -43,16 +43,16 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
               <img src={`https://flagcdn.com/16x12/${flagCode}.png`} alt={news.country} className="w-4 h-3 inline-block" />
             ) : "🌍"} {news.region}
           </span>
-          <span className="text-[11px] text-muted-foreground">{news.source}</span>
+          <span className="text-xs text-muted-foreground">{news.source}</span>
         </div>
-        <span className="text-[11px] text-muted-foreground font-mono shrink-0">{news.date}</span>
+        <span className="text-xs text-muted-foreground font-mono shrink-0">{news.date}</span>
       </div>
 
-      <h3 className="text-sm font-semibold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors">
+      <h3 className="text-base font-semibold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors">
         {news.title}
       </h3>
 
-      <p className="text-xs text-muted-foreground leading-relaxed mb-3">{news.summary}</p>
+      <p className="text-[13px] text-muted-foreground leading-relaxed mb-3">{news.summary}</p>
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
@@ -60,7 +60,7 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
             <button
               key={kw}
               onClick={() => onKeywordClick(kw)}
-              className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-primary/8 text-primary hover:bg-primary/15 transition-colors cursor-pointer border border-primary/10"
+              className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-primary/8 text-primary hover:bg-primary/15 transition-colors cursor-pointer border border-primary/10"
             >
               {kw}
             </button>
