@@ -114,6 +114,22 @@ export function useDrugInfo(keyword: string) {
   });
 }
 
+// MFDS ingredient lookup by product name
+export function useMfdsIngredientLookup(keyword: string) {
+  return useQuery({
+    queryKey: ["mfds-ingredient-lookup", keyword],
+    enabled: !!keyword,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("scrape-mfds", {
+        body: { keyword, type: "ingredient-lookup" },
+      });
+      if (error) throw error;
+      return data?.ingredient || null;
+    },
+  });
+}
+
 // Extract Korean name from "한글명 (영문명)" format, or return as-is
 function extractKoreanName(keyword: string): string {
   const match = keyword.match(/^([가-힣\s]+)\s*\(/);
