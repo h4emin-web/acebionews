@@ -107,10 +107,10 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-md">
         <div className="container max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-1">
+          <button onClick={() => { setSearch(""); setRegionFilter("all"); setTodayOnly(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex items-center gap-1 cursor-pointer">
             <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-b from-primary to-teal-400 bg-clip-text text-transparent">Bio</span>
             <span className="text-2xl font-semibold tracking-tight text-foreground">news</span>
-          </div>
+          </button>
           <div className="flex items-center gap-2">
 
             <button
