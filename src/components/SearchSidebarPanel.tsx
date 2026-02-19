@@ -1,4 +1,5 @@
-import { Loader2, Pill, Building2, Flag, FlaskConical, MapPin } from "lucide-react";
+import { Pill, Building2, Flag, FlaskConical } from "lucide-react";
+import { PillLoader } from "@/components/PillLoader";
 import { Badge } from "@/components/ui/badge";
 
 type Props = {
@@ -22,10 +23,7 @@ export const SearchSidebarPanel = ({ keyword, products, productsLoading, dmfReco
         </div>
         <div className="max-h-[300px] overflow-y-auto">
           {productsLoading ? (
-            <div className="px-4 py-6 flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              <p className="text-[11px] text-muted-foreground">의약품안전나라 조회중...</p>
-            </div>
+            <PillLoader text="의약품안전나라 조회중..." />
           ) : products.length > 0 ? (
             <div className="divide-y divide-border">
               {products.map((p: any, i: number) => (
@@ -64,10 +62,7 @@ export const SearchSidebarPanel = ({ keyword, products, productsLoading, dmfReco
         </div>
         <div className="max-h-[300px] overflow-y-auto">
           {dmfLoading ? (
-            <div className="px-4 py-6 flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              <p className="text-[11px] text-muted-foreground">의약품안전나라 조회중...</p>
-            </div>
+            <PillLoader text="의약품안전나라 조회중..." />
           ) : dmfRecords.length > 0 ? (
             <div className="divide-y divide-border">
               {dmfRecords.map((d: any, i: number) => (

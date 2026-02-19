@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { X, Star, Search, Loader2, ArrowUpDown, Sparkles } from "lucide-react";
+import { PillLoader } from "@/components/PillLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -200,10 +201,7 @@ export const NcePatentModal = ({ open, onClose, onKeywordClick }: Props) => {
         {/* Table */}
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="w-6 h-6 text-primary animate-spin" />
-              <p className="text-sm text-muted-foreground">데이터 로딩 중...</p>
-            </div>
+            <PillLoader text="데이터 로딩 중..." />
           ) : (
             <table className="w-full">
               <thead>

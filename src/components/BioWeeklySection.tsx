@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BookOpen, ChevronDown, ExternalLink } from "lucide-react";
+import { PillLoader } from "@/components/PillLoader";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,9 +44,8 @@ export const BioWeeklySection = () => {
 
   if (isLoading) {
     return (
-      <div className="text-center py-16 card-elevated rounded-lg">
-        <BookOpen className="w-8 h-8 text-muted-foreground mx-auto mb-3 animate-pulse" />
-        <p className="text-muted-foreground text-sm">바이오 위클리 불러오는 중...</p>
+      <div className="card-elevated rounded-lg">
+        <PillLoader text="바이오 위클리 불러오는 중..." />
       </div>
     );
   }

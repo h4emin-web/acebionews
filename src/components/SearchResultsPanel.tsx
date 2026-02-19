@@ -1,4 +1,5 @@
-import { Loader2, FlaskConical, Pill, Target, AlertTriangle, Building2, TrendingUp, Beaker, Link2 } from "lucide-react";
+import { FlaskConical, Pill, Target, AlertTriangle, Building2, TrendingUp, Beaker, Link2 } from "lucide-react";
+import { PillLoader } from "@/components/PillLoader";
 import { Badge } from "@/components/ui/badge";
 
 export type IngredientProfile = {
@@ -27,9 +28,8 @@ type Props = {
 export const SearchResultsPanel = ({ keyword, profile, loading, onRelatedClick }: Props) => {
   if (loading) {
     return (
-      <div className="bg-card border border-border rounded-lg p-8 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">원료 정보 분석중...</p>
+      <div className="bg-card border border-border rounded-lg">
+        <PillLoader text="원료 정보 분석중..." />
       </div>
     );
   }
