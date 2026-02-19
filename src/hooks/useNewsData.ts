@@ -51,7 +51,7 @@ export function useNewsArticles(year: number, month: number, day?: number | null
         .select("*")
         .gte("date", startDate)
         .lt("date", endDate)
-        .order("date", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as NewsArticle[];
