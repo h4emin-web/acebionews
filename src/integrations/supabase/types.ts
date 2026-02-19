@@ -173,6 +173,42 @@ export type Database = {
         }
         Relationships: []
       }
+      substack_posts: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          is_free: boolean
+          source: string
+          source_label: string
+          summary: string | null
+          title: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          is_free?: boolean
+          source: string
+          source_label: string
+          summary?: string | null
+          title: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          is_free?: boolean
+          source?: string
+          source_label?: string
+          summary?: string | null
+          title?: string
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
