@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.crawl-substack]
 verify_jwt = false
+
+[functions.crawl-ibric]
+verify_jwt = false

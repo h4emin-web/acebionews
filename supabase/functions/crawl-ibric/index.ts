@@ -5,33 +5,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const IBRIC_LIST_URL = "https://www.ibric.org/bric/trend/bio-report.do?mode=list&srCategoryId=100";
+const IBRIC_BASE_URL = "https://www.ibric.org/bric/trend/bio-report.do";
 
-interface IbricItem {
-  title: string;
-  author: string;
-  affiliation: string;
-  description: string;
-  url: string;
-  date: string;
-  views: number;
+function getPageUrl(page: number): string {
+  return `${IBRIC_BASE_URL}?mode=list&srCategoryId=100&page=${page}`;
 }
 
-async function scrapeIbricList(): Promise<IbricItem[]> {
-  const FIRECRAWL_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-  if (!FIRECRAWL_KEY) {
-    console.error("No FIRECRAWL_API_KEY");
-    return [];
-  }
-
+async function scrapeIbricPage(pageUrl: string, firecrawlKey: string): Promise<IbricItem[]> {
   try {
     const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${FIRECRAWL_KEY}`,
+        Authorization: `Bearer ${firecrawlKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url: IBRIC_LIST_URL, formats: ["markdown"], onlyMainContent: true }),
+      body: JSON.stringify({ url: pageUrl, formats: ["markdown"], onlyMainContent: true }),
     });
 
     if (!resp.ok) {
@@ -42,51 +30,33 @@ async function scrapeIbricList(): Promise<IbricItem[]> {
     const data = await resp.json();
     const markdown = data.data?.markdown || data.markdown || "";
     console.log("Markdown length:", markdown.length);
-    console.log("Markdown preview:", markdown.substring(0, 1000));
 
     const items: IbricItem[] = [];
-
-    // Split by article blocks - each starts with an image link containing articleNo
     const blocks = markdown.split(/- \[!\[/);
-    
+
     for (const block of blocks) {
-      // Find article URL
       const urlMatch = block.match(/mode=view&articleNo=(\d+)&srCategoryId=100/);
       if (!urlMatch) continue;
-      
-      const articleNo = urlMatch[1];
-      const url = `https://www.ibric.org/bric/trend/bio-report.do?mode=view&articleNo=${articleNo}&srCategoryId=100`;
 
-      // Find title - standalone link with the same articleNo (not image link)
+      const articleNo = urlMatch[1];
+      const url = `${IBRIC_BASE_URL}?mode=view&articleNo=${articleNo}&srCategoryId=100`;
+
       const titleRegex = new RegExp(`\\[([^\\]]{5,})\\]\\(https://www\\.ibric\\.org/bric/trend/bio-report\\.do\\?mode=view&articleNo=${articleNo}[^)]*\\)`);
       const titleMatch = block.match(titleRegex);
       if (!titleMatch) continue;
       const title = titleMatch[1].trim();
       if (title.includes("자세히 보기")) continue;
 
-      // Find author(affiliation)
       const authorMatch = block.match(/([가-힣]{2,5})\(([^)]+)\)/);
       const author = authorMatch ? authorMatch[1] : "";
       const affiliation = authorMatch ? authorMatch[2] : "";
 
-      // Find date - pattern: 2026.02.12.
       const dateMatch = block.match(/(\d{4})\.(\d{2})\.(\d{2})\./);
       const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : new Date().toISOString().split("T")[0];
 
-      // Avoid duplicates
       if (items.some(i => i.url === url)) continue;
 
-      items.push({
-        title,
-        author,
-        affiliation,
-        description: "",
-        url,
-        date,
-        views: 0,
-      });
-
-      if (items.length >= 5) break;
+      items.push({ title, author, affiliation, description: "", url, date, views: 0 });
     }
 
     return items;
@@ -94,6 +64,30 @@ async function scrapeIbricList(): Promise<IbricItem[]> {
     console.error("Scrape error:", e);
     return [];
   }
+}
+
+async function scrapeIbricList(pages: number = 2): Promise<IbricItem[]> {
+  const FIRECRAWL_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!FIRECRAWL_KEY) {
+    console.error("No FIRECRAWL_API_KEY");
+    return [];
+  }
+
+  const allItems: IbricItem[] = [];
+  const seenUrls = new Set<string>();
+
+  for (let page = 1; page <= pages; page++) {
+    console.log(`Scraping IBRIC page ${page}...`);
+    const pageItems = await scrapeIbricPage(getPageUrl(page), FIRECRAWL_KEY);
+    for (const item of pageItems) {
+      if (!seenUrls.has(item.url)) {
+        seenUrls.add(item.url);
+        allItems.push(item);
+      }
+    }
+  }
+
+  return allItems;
 }
 
 async function summarizeInKorean(title: string, url: string, description: string): Promise<string | null> {
@@ -200,10 +194,11 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json().catch(() => ({}));
-    const maxItems = body.limit || 3;
+    const pages = body.pages || 2;
+    const maxItems = body.limit || 20;
 
-    console.log("Fetching IBRIC trend reports...");
-    const items = await scrapeIbricList();
+    console.log(`Fetching IBRIC trend reports (pages: ${pages})...`);
+    const items = await scrapeIbricList(pages);
     console.log(`Found ${items.length} items`);
 
     let totalInserted = 0;
