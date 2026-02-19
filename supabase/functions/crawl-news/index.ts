@@ -509,6 +509,12 @@ async function extractKeywordsAndTranslate(
   - translated_title: set to the original Korean title.
   - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
+## TASK 3: 약물/제품 보충 설명 (IMPORTANT)
+- 요약만으로는 해당 약물이 무엇인지, 어디에 쓰이는지 알 수 없는 경우, translated_summary 끝에 한 줄로 보충 설명을 추가하세요.
+- 예: 제목이 "리툭산® 자가면역용혈성빈혈 허가"이고 요약이 허가 사실만 언급할 경우 → "리툭산(리툭시맙)은 B세포를 표적으로 하는 항체 치료제로, 혈액암 및 자가면역질환에 사용됩니다." 같은 설명을 요약 뒤에 덧붙입니다.
+- 이미 요약 내에서 약물의 용도/기전이 충분히 설명되어 있으면 추가하지 마세요.
+- 브랜드명만 등장하고 성분명이나 용도 설명이 없는 경우 반드시 추가하세요.
+
 ## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
 - category: 규제/시장/공급망/R&D/임상/허가`,
           },
