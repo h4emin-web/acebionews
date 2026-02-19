@@ -120,8 +120,13 @@ function parseProductsHtml(html: string): any[] {
 }
 
 async function scrapeDmf(keyword: string) {
+  const isEnglish = /^[a-zA-Z\s\-]+$/.test(keyword.trim());
   const params = new URLSearchParams();
-  params.set("searchIngrKorName", keyword);
+  if (isEnglish) {
+    params.set("searchIngrEngName", keyword);
+  } else {
+    params.set("searchIngrKorName", keyword);
+  }
 
   const url = `https://nedrug.mfds.go.kr/pbp/CCBAC03/getList?${params.toString()}`;
   console.log(`Fetching DMF: ${url}`);
