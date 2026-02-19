@@ -9,7 +9,7 @@ import { MfdsSection } from "@/components/MfdsSection";
 import { FdaSection } from "@/components/FdaSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
 import { BioWeeklySection } from "@/components/BioWeeklySection";
-
+import { IbricReportsSection } from "@/components/IbricReportsSection";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
@@ -24,7 +24,7 @@ const Index = () => {
     if (v && regionFilter === "리포트") setRegionFilter("all");
   };
   const [todayOnly, setTodayOnly] = useState(false);
-  const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트" | "바이오위클리">("all");
+  const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트" | "바이오위클리" | "동향리포트">("all");
   
   const [nceModalOpen, setNceModalOpen] = useState(false);
 
@@ -56,6 +56,16 @@ const Index = () => {
         .from("substack_posts")
         .select("id")
         .eq("is_free", true);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const { data: ibricReports = [] } = useQuery({
+    queryKey: ["ibric-reports-count"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ibric_reports")
+        .select("id");
       if (error) throw error;
       return data || [];
     },
@@ -138,7 +148,7 @@ const Index = () => {
             물질 특허 만료 NCE
           </button>
         </div>
-        {!search && <StatsBar news={allNews} totalReports={reports.length} totalBioWeekly={bioWeeklyPosts.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />}
+        {!search && <StatsBar news={allNews} totalReports={reports.length} totalBioWeekly={bioWeeklyPosts.length} totalIbricReports={ibricReports.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />}
 
         {search && (
             <SearchResultsPanel
@@ -151,7 +161,9 @@ const Index = () => {
 
         <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
-            {regionFilter === "바이오위클리" ? (
+            {regionFilter === "동향리포트" ? (
+              <IbricReportsSection />
+            ) : regionFilter === "바이오위클리" ? (
               <BioWeeklySection />
             ) : regionFilter === "리포트" ? (
               <IndustryReportsSection />

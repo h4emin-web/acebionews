@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      ibric_reports: {
+        Row: {
+          affiliation: string | null
+          author: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          summary: string | null
+          title: string
+          url: string
+          views: number | null
+        }
+        Insert: {
+          affiliation?: string | null
+          author?: string | null
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          summary?: string | null
+          title: string
+          url: string
+          views?: number | null
+        }
+        Update: {
+          affiliation?: string | null
+          author?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          summary?: string | null
+          title?: string
+          url?: string
+          views?: number | null
+        }
+        Relationships: []
+      }
       industry_reports: {
         Row: {
           broker: string
