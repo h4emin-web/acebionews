@@ -214,116 +214,159 @@ function parseDmfHtml(html: string): any[] {
 // Strip cell labels like "제품명 ", "제품영문명 " from MFDS table cells
 function stripCellLabel(text: string): string {
   return text
-    .replace(/^(제품명|제품영문명|업체명|업체명\(영문\)|품목기준코드|허가번호|허가일|품목구분|취소\/취하구분)\s*/g, "")
+    .replace(/^(제품명|제품영문명|업체명|업체명\(영문\)|품목기준코드|허가번호|허가일|품목구분|취소\/취하구분|취소\/취하일자|주성분\/주원료|주성분|주성분영문명|첨가제|묶음의약품보기|e약은요보기|품목분류|전문의약품|완제\/원료구분|허가\/신고|제조\/수입|수입제조국|마약구분|신약구분|표준코드|ATC코드)\s*/g, "")
     .trim();
 }
 
-// Step 1: Search MFDS by product name
-async function mfdsIngredientLookup(productName: string): Promise<{ nameKo: string | null; nameEn: string | null; productName: string } | null> {
-  const params = new URLSearchParams();
-  params.set("itemName", productName);
+// Simple string similarity: count matching characters
+function similarity(a: string, b: string): number {
+  const la = a.toLowerCase().replace(/\s/g, "");
+  const lb = b.toLowerCase().replace(/\s/g, "");
+  if (la === lb) return 1;
+  // Check if one contains the other
+  if (la.includes(lb) || lb.includes(la)) return 0.8;
+  // Count common characters in order (LCS-like)
+  let matches = 0;
+  let j = 0;
+  for (let i = 0; i < la.length && j < lb.length; i++) {
+    if (la[i] === lb[j]) { matches++; j++; }
+  }
+  return matches / Math.max(la.length, lb.length);
+}
 
-  const url = `https://nedrug.mfds.go.kr/searchDrug?${params.toString()}`;
-  console.log(`MFDS ingredient lookup: ${url}`);
-
-  const resp = await fetch(url, { headers: HEADERS });
-  if (!resp.ok) return null;
-
-  const html = await resp.text();
-
+// Extract all product rows from MFDS search result HTML
+function parseAllProductRows(html: string): Array<{ cells: string[]; rowHtml: string }> {
   const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
-  if (!tbodyMatch) return null;
+  if (!tbodyMatch) return [];
 
   const tbody = tbodyMatch[1];
-  const cleanTbody = tbody.replace(/<table[\s\S]*?<\/table>/gi, "");
+  // Replace nested tables with their text content (preserving ingredient info)
+  const cleanTbody = tbody.replace(/<table[\s\S]*?<\/table>/gi, (match) => {
+    return stripHtml(match);
+  });
 
+  const rows: Array<{ cells: string[]; rowHtml: string }> = [];
   const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  const rowMatch = rowRegex.exec(cleanTbody);
-  if (!rowMatch) return null;
+  let rowMatch;
+  while ((rowMatch = rowRegex.exec(cleanTbody)) !== null && rows.length < 30) {
+    const rawCells = extractCells(rowMatch[1]);
+    const cells = rawCells.map(stripCellLabel);
+    if (cells.length >= 3 && /^\d+$/.test(cells[0])) {
+      rows.push({ cells, rowHtml: rowMatch[1] });
+    }
+  }
+  return rows;
+}
 
-  const rawCells = extractCells(rowMatch[1]);
-  const cells = rawCells.map(stripCellLabel);
-  console.log(`MFDS cells (${cells.length}):`, JSON.stringify(cells.slice(0, 10)));
+// Pick the best matching product row for the search term
+function findBestMatch(rows: Array<{ cells: string[]; rowHtml: string }>, searchTerm: string): { cells: string[]; rowHtml: string } | null {
+  if (rows.length === 0) return null;
+  if (rows.length === 1) return rows[0];
 
-  const fullProductName = cells[1] || "";
-  
-  // Try extracting ingredient from parentheses in product name
-  // e.g. "타이레놀산160밀리그램(아세트아미노펜)" → "아세트아미노펜"
+  // Strip common suffixes like "정", "캡슐" for matching
+  const cleanSearch = searchTerm.replace(/[0-9\/밀리그램mg]+$/gi, "").trim();
+
+  let bestRow = rows[0];
+  let bestScore = -1;
+
+  for (const row of rows) {
+    const productName = row.cells[1] || "";
+    // Extract base product name (before dosage info)
+    const baseName = productName.replace(/[\d\/]+밀리그램.*$/g, "").replace(/\(.*\)/, "").trim();
+    
+    const score = similarity(cleanSearch, baseName);
+    // Bonus: if product has ingredient in parentheses, it's more useful
+    const hasIngredient = /\([가-힣a-zA-Z\s\-]+\)/.test(productName) ? 0.1 : 0;
+    const totalScore = score + hasIngredient;
+
+    if (totalScore > bestScore) {
+      bestScore = totalScore;
+      bestRow = row;
+    }
+  }
+
+  console.log(`Best match: "${bestRow.cells[1]}" (score: ${bestScore.toFixed(2)})`);
+  return bestRow;
+}
+
+// Extract ingredient from a product row
+// MFDS table columns: 0=순번, 1=제품명, 2=제품영문명, 3=업체명, ..., 11=주성분/주원료, 12=주성분영문명
+function extractIngredientFromRow(row: { cells: string[]; rowHtml: string }): { nameKo: string | null; nameEn: string | null; productName: string } | null {
+  const fullProductName = row.cells[1] || "";
+
+  // Direct column read: 주성분/주원료 (col 11), 주성분영문명 (col 12)
+  const mainIngredient = row.cells[11]?.trim() || "";
+  const mainIngredientEn = row.cells[12]?.trim() || "";
+
+  if (mainIngredient || mainIngredientEn) {
+    // Clean up: ingredient column may have dosage info like "니세르골린 5mg"
+    const koMatch = mainIngredient.match(/([가-힣]{2,}[가-힣a-zA-Z]*)/);
+    const enMatch = mainIngredientEn.match(/([A-Za-z][A-Za-z\s\-]{2,})/);
+    const nameKo = koMatch ? koMatch[1].trim() : null;
+    const nameEn = enMatch ? enMatch[1].trim() : null;
+    
+    if (nameKo || nameEn) {
+      console.log(`From table columns: Ko="${nameKo}" En="${nameEn}"`);
+      return { nameKo, nameEn, productName: fullProductName };
+    }
+  }
+
+  // Fallback: try extracting from parentheses in product name
   const ingredientFromName = fullProductName.match(/\(([가-힣a-zA-Z\s\-]+)\)/);
   if (ingredientFromName) {
     const nameKo = ingredientFromName[1].trim();
-    const nameEn = cells[2]?.match(/\(([A-Za-z\s\-]+)\)/)?.[1]?.trim() || null;
-    console.log(`MFDS: extracted from name parentheses: ${nameKo}`);
+    const nameEn = row.cells[2]?.match(/\(([A-Za-z\s\-]+)\)/)?.[1]?.trim() || null;
+    console.log(`From name parentheses: ${nameKo}`);
     return { nameKo, nameEn, productName: fullProductName };
   }
 
-  // Try detail page — look for 원료약품 section which has a structured table
-  const linkMatch = rowMatch[1].match(/href="([^"]*\/drug\/getDrugDetail[^"]*)"/i) ||
-                    rowMatch[1].match(/href="([^"]*getDrugDetail[^"]*)"/i) ||
-                    rowMatch[1].match(/href="([^"]*\/drug\/[^"]*)"/i);
+  console.log(`Could not extract ingredient from row: "${fullProductName}"`);
+  return null;
+}
 
-  if (linkMatch) {
-    let detailUrl = linkMatch[1].replace(/&amp;/g, "&");
-    if (detailUrl.startsWith("/")) detailUrl = `https://nedrug.mfds.go.kr${detailUrl}`;
-    console.log(`Fetching detail page: ${detailUrl}`);
+// Main MFDS ingredient lookup — tries exact search, then partial search
+async function mfdsIngredientLookup(productName: string): Promise<{ nameKo: string | null; nameEn: string | null; productName: string } | null> {
+  // Step 1: Exact search
+  const exactUrl = `https://nedrug.mfds.go.kr/searchDrug?itemName=${encodeURIComponent(productName)}`;
+  console.log(`MFDS exact search: ${exactUrl}`);
 
-    try {
-      const detailResp = await fetch(detailUrl, { headers: HEADERS });
-      if (detailResp.ok) {
-        const detailHtml = await detailResp.text();
-        
-        // Look for 원료약품 table section specifically
-        // The ingredient info is usually in a table with header containing "원료약품" or "성분"
-        const ingredientSectionMatch = detailHtml.match(/원료약품[\s\S]{0,500}?<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
-        if (ingredientSectionMatch) {
-          const ingredientRows = ingredientSectionMatch[1];
-          // Extract ingredient names from the table rows
-          const ingredientCells = extractCells(ingredientRows);
-          const cleaned = ingredientCells.map(c => c.trim()).filter(c => c.length > 1);
-          console.log(`Detail page ingredient cells:`, JSON.stringify(cleaned.slice(0, 8)));
-          
-          // Find cells that look like ingredient names (Korean pharmaceutical names)
-          for (const cell of cleaned) {
-            // Skip numeric, date-like, or label-like cells
-            if (/^\d/.test(cell) || /^[0-9.\-\/]+$/.test(cell) || cell.length < 2) continue;
-            if (/^(유효성분|첨가제|원료약품|성분명|분량|단위|규격|비고|총량|발현부위)/.test(cell)) continue;
-            
-            const koMatch = cell.match(/([가-힣]{2,})/);
-            const enMatch = cell.match(/([A-Za-z][A-Za-z\s\-]{2,})/);
-            if (koMatch || enMatch) {
-              console.log(`Detail page ingredient found: ${cell}`);
-              return {
-                nameKo: koMatch ? koMatch[1] : null,
-                nameEn: enMatch ? enMatch[1].trim() : null,
-                productName: fullProductName,
-              };
-            }
-          }
-        }
-        
-        // Broader fallback: look for 주성분/유효성분 text patterns
-        const broadPatterns = [
-          /주성분[^<]*?[:：]\s*([가-힣A-Za-z][가-힣A-Za-z\s\-]+)/i,
-          /유효성분[^<]*?[:：]\s*([가-힣A-Za-z][가-힣A-Za-z\s\-]+)/i,
-        ];
-        for (const pattern of broadPatterns) {
-          const match = detailHtml.match(pattern);
-          if (match) {
-            const raw = match[1].trim();
-            if (raw.length > 1 && !/발현부위/.test(raw)) {
-              const koMatch = raw.match(/([가-힣]{2,})/);
-              const enMatch = raw.match(/([A-Za-z][A-Za-z\s\-]{2,})/);
-              return {
-                nameKo: koMatch ? koMatch[1] : null,
-                nameEn: enMatch ? enMatch[1].trim() : null,
-                productName: fullProductName,
-              };
-            }
-          }
+  const exactResp = await fetch(exactUrl, { headers: HEADERS });
+  if (exactResp.ok) {
+    const exactHtml = await exactResp.text();
+    const exactRows = parseAllProductRows(exactHtml);
+    
+    if (exactRows.length > 0) {
+      console.log(`Exact search found ${exactRows.length} results`);
+      const bestRow = findBestMatch(exactRows, productName);
+      if (bestRow) {
+        const result = extractIngredientFromRow(bestRow);
+        if (result) return result;
+      }
+    }
+  }
+
+  // Step 2: Partial search — strip trailing "정", "캡슐", "정제" etc. and retry
+  const partialName = productName
+    .replace(/(정|캡슐|정제|산|액|시럽|주사|주|크림|겔|연고|패치|필름코팅정|서방정|츄어블정)$/g, "")
+    .trim();
+
+  if (partialName !== productName && partialName.length >= 2) {
+    const partialUrl = `https://nedrug.mfds.go.kr/searchDrug?itemName=${encodeURIComponent(partialName)}`;
+    console.log(`MFDS partial search: ${partialUrl}`);
+
+    const partialResp = await fetch(partialUrl, { headers: HEADERS });
+    if (partialResp.ok) {
+      const partialHtml = await partialResp.text();
+      const partialRows = parseAllProductRows(partialHtml);
+
+      if (partialRows.length > 0) {
+        console.log(`Partial search found ${partialRows.length} results`);
+        const bestRow = findBestMatch(partialRows, productName);
+        if (bestRow) {
+          const result = extractIngredientFromRow(bestRow);
+          if (result) return result;
         }
       }
-    } catch (e) {
-      console.error("Detail page fetch failed:", e);
     }
   }
 
