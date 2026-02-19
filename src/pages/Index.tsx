@@ -14,7 +14,7 @@ import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
-import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo, useMfdsProducts, useMfdsDmf, useIndustryReports } from "@/hooks/useNewsData";
+import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports } from "@/hooks/useNewsData";
 import type { NewsItem } from "@/data/mockNews";
 
 const Index = () => {
@@ -73,11 +73,16 @@ const Index = () => {
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
   const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(debouncedSearch);
   const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
+  const { data: mfdsIngredient } = useMfdsIngredientLookup(debouncedSearch);
 
-  // Derive ingredient keyword from AI profile (handles product→ingredient mapping)
-  const ingredientKeyword = drugInfo?.nameKo
-    ? `${drugInfo.nameKo} (${drugInfo.nameEn})`
-    : debouncedSearch;
+  // Priority: MFDS ingredient lookup → AI profile → raw search keyword
+  const ingredientKeyword = mfdsIngredient?.nameKo
+    ? mfdsIngredient.nameEn
+      ? `${mfdsIngredient.nameKo} (${mfdsIngredient.nameEn})`
+      : mfdsIngredient.nameKo
+    : drugInfo?.nameKo
+      ? `${drugInfo.nameKo} (${drugInfo.nameEn})`
+      : debouncedSearch;
 
   const { data: mfdsProducts = [], isLoading: mfdsProductsLoading } = useMfdsProducts(ingredientKeyword);
   const { data: mfdsDmf = [], isLoading: mfdsDmfLoading } = useMfdsDmf(ingredientKeyword);

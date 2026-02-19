@@ -18,6 +18,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, dmfRecords: results }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    } else if (type === "ingredient-lookup") {
+      const result = await scrapeIngredientByProduct(keyword);
+      return new Response(JSON.stringify({ success: true, ingredient: result }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     } else {
       const results = await scrapeProducts(keyword);
       return new Response(JSON.stringify({ success: true, domesticProducts: results }), {
@@ -212,4 +217,101 @@ function parseDmfHtml(html: string): any[] {
 
   console.log(`Parsed ${records.length} DMF records`);
   return records;
+}
+
+async function scrapeIngredientByProduct(productName: string) {
+  const params = new URLSearchParams();
+  params.set("itemName", productName);
+
+  const url = `https://nedrug.mfds.go.kr/searchDrug?${params.toString()}`;
+  console.log(`Fetching ingredient by product name: ${url}`);
+
+  const resp = await fetch(url, { headers: HEADERS });
+  if (!resp.ok) {
+    console.error("Product name fetch failed:", resp.status);
+    return null;
+  }
+
+  const html = await resp.text();
+
+  const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
+  if (!tbodyMatch) {
+    console.log("No tbody found for ingredient lookup");
+    return null;
+  }
+
+  const tbody = tbodyMatch[1];
+  const cleanTbody = tbody.replace(/<table[\s\S]*?<\/table>/gi, "");
+
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const rowMatch = rowRegex.exec(cleanTbody);
+  if (!rowMatch) return null;
+
+  const cells = extractCells(rowMatch[1]);
+  console.log(`Ingredient lookup cells (${cells.length}):`, JSON.stringify(cells.slice(0, 10)));
+
+  // Product name often contains ingredient in parentheses: "타이레놀산160밀리그램(아세트아미노펜)"
+  const fullProductName = cells[1] || "";
+  const ingredientFromName = fullProductName.match(/\(([가-힣a-zA-Z\s\-]+)\)/);
+  if (ingredientFromName) {
+    const nameKo = ingredientFromName[1].trim();
+    console.log(`Extracted ingredient from product name: ${nameKo}`);
+    // Also check English name column
+    const nameEn = cells[2]?.match(/\(([A-Za-z\s\-]+)\)/)?.[1]?.trim() || null;
+    return { nameKo, nameEn, productName: fullProductName };
+  }
+
+  // Fallback: check English product name for ingredient
+  const engProductName = cells[2] || "";
+  const ingredientFromEng = engProductName.match(/\(([A-Za-z\s\-]+)\)/);
+  if (ingredientFromEng) {
+    return { nameKo: null, nameEn: ingredientFromEng[1].trim(), productName: fullProductName };
+  }
+
+  console.log("Could not extract ingredient from product name, trying detail page...");
+
+  // Try detail page as fallback
+  const linkMatch = rowMatch[1].match(/href="([^"]*\/drug\/[^"]*)"/i) ||
+                    rowMatch[1].match(/href="([^"]*pbp[^"]*)"/i);
+
+  if (linkMatch) {
+    let detailUrl = linkMatch[1];
+    if (detailUrl.startsWith("/")) {
+      detailUrl = `https://nedrug.mfds.go.kr${detailUrl}`;
+    }
+    console.log(`Fetching detail page: ${detailUrl}`);
+
+    try {
+      const detailResp = await fetch(detailUrl, { headers: HEADERS });
+      if (detailResp.ok) {
+        const detailHtml = await detailResp.text();
+        const ingredientPatterns = [
+          /주성분[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>/i,
+          /유효성분[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>/i,
+          /원료약품[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>/i,
+        ];
+
+        for (const pattern of ingredientPatterns) {
+          const match = detailHtml.match(pattern);
+          if (match) {
+            const raw = stripHtml(match[1]).trim();
+            if (raw && raw.length > 1) {
+              console.log(`Found ingredient from detail page: ${raw}`);
+              const koMatch = raw.match(/([가-힣]+)/);
+              const enMatch = raw.match(/([A-Za-z][A-Za-z\s\-]{2,})/);
+              return {
+                nameKo: koMatch ? koMatch[1] : null,
+                nameEn: enMatch ? enMatch[1].trim() : null,
+                productName: fullProductName,
+              };
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Detail page fetch failed:", e);
+    }
+  }
+
+  return null;
 }
