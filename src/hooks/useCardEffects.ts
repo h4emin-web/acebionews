@@ -13,8 +13,7 @@ export function useCardEffects() {
     const rect = el.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
-    el.style.transform = `perspective(600px) rotateY(${x * 6}deg) rotateX(${-y * 6}deg) scale3d(1.02, 1.02, 1.02)`;
-    el.style.boxShadow = `${-x * 12}px ${y * 12}px 24px hsl(var(--border) / 0.35)`;
+    el.style.transform = `perspective(800px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg) scale3d(1.015, 1.015, 1.015)`;
   }, []);
 
   const handlePointerLeave = useCallback(() => {
