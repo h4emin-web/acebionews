@@ -835,9 +835,26 @@ serve(async (req) => {
       const normalizeTitle = (t: string) => t.replace(/[^가-힣a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
       const existingNormalized = new Set((existing || []).map((e: any) => normalizeTitle(e.title)));
 
-      // Also build a set of "short keys" (first 15 content chars) for fuzzy cross-source matching
+      // Build multiple fuzzy keys for better cross-language duplicate detection
       const shortKey = (t: string) => normalizeTitle(t).slice(0, 20);
+      const midKey = (t: string) => {
+        const norm = normalizeTitle(t);
+        // Use chars from middle portion too for better matching
+        return norm.length > 15 ? norm.slice(5, 25) : norm;
+      };
+      // Extract key noun chunks (3+ char Korean/CJK sequences) for semantic matching
+      const extractNouns = (t: string): string[] => {
+        const matches = t.match(/[가-힣\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]{3,}/g) || [];
+        return matches.filter(m => m.length >= 3).slice(0, 5).sort();
+      };
+      const nounKey = (t: string) => extractNouns(t).join("|");
+
       const existingShortKeys = new Set((existing || []).map((e: any) => shortKey(e.title)));
+      const existingMidKeys = new Set((existing || []).map((e: any) => midKey(e.title)));
+      const existingNounKeys = new Set((existing || []).map((e: any) => {
+        const nk = nounKey(e.title);
+        return nk.length >= 9 ? nk : ""; // Only use if substantial
+      }).filter((k: string) => k));
 
       const newResults = recentResults.filter((r) => {
         if (existingUrls.has(r.url)) return false;
@@ -846,6 +863,12 @@ serve(async (req) => {
         // Fuzzy: if first 20 normalized chars match an existing article, skip
         const sk = shortKey(r.title);
         if (sk.length >= 15 && existingShortKeys.has(sk)) return false;
+        // Mid-key fuzzy match
+        const mk = midKey(r.title);
+        if (mk.length >= 15 && existingMidKeys.has(mk)) return false;
+        // Noun-based semantic match (catches translated duplicates)
+        const nk = nounKey(r.title);
+        if (nk.length >= 9 && existingNounKeys.has(nk)) return false;
         return true;
       });
 
@@ -853,15 +876,19 @@ serve(async (req) => {
       const seenUrls = new Set<string>();
       const seenNormTitles = new Set<string>();
       const seenShortKeys = new Set<string>();
+      const seenNounKeys = new Set<string>();
       const dedupedResults = newResults.filter((r) => {
         if (seenUrls.has(r.url)) return false;
         const norm = normalizeTitle(r.title);
         if (seenNormTitles.has(norm)) return false;
         const sk = shortKey(r.title);
         if (sk.length >= 15 && seenShortKeys.has(sk)) return false;
+        const nk = nounKey(r.title);
+        if (nk.length >= 9 && seenNounKeys.has(nk)) return false;
         seenUrls.add(r.url);
         seenNormTitles.add(norm);
         seenShortKeys.add(sk);
+        if (nk.length >= 9) seenNounKeys.add(nk);
         return true;
       });
 
