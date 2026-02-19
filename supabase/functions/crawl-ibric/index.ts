@@ -46,30 +46,35 @@ async function scrapeIbricList(): Promise<IbricItem[]> {
 
     const items: IbricItem[] = [];
 
-    // Parse markdown - look for article links with titles
-    // Pattern: [Title](URL) where URL contains mode=view&articleNo=
-    const linkRegex = /\[([^\]]{5,})\]\((https:\/\/www\.ibric\.org\/bric\/trend\/bio-report\.do\?mode=view&articleNo=\d+[^)]*)\)/g;
-    let match;
-    const seenUrls = new Set<string>();
+    // Split by article blocks - each starts with an image link containing articleNo
+    const blocks = markdown.split(/- \[!\[/);
+    
+    for (const block of blocks) {
+      // Find article URL
+      const urlMatch = block.match(/mode=view&articleNo=(\d+)&srCategoryId=100/);
+      if (!urlMatch) continue;
+      
+      const articleNo = urlMatch[1];
+      const url = `https://www.ibric.org/bric/trend/bio-report.do?mode=view&articleNo=${articleNo}&srCategoryId=100`;
 
-    while ((match = linkRegex.exec(markdown)) !== null) {
-      const title = match[1].trim();
-      const url = match[2].trim();
+      // Find title - standalone link with the same articleNo (not image link)
+      const titleRegex = new RegExp(`\\[([^\\]]{5,})\\]\\(https://www\\.ibric\\.org/bric/trend/bio-report\\.do\\?mode=view&articleNo=${articleNo}[^)]*\\)`);
+      const titleMatch = block.match(titleRegex);
+      if (!titleMatch) continue;
+      const title = titleMatch[1].trim();
+      if (title.includes("자세히 보기")) continue;
 
-      // Skip duplicate URLs and non-title links
-      if (seenUrls.has(url)) continue;
-      if (title.includes("자세히 보기") || title.includes("Kiin Bio") || title.length < 5) continue;
-      seenUrls.add(url);
-
-      // Try to find date near this match
-      const afterMatch = markdown.substring(match.index, match.index + 500);
-      const dateMatch = afterMatch.match(/(\d{4})\.(\d{2})\.(\d{2})/);
-      const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : new Date().toISOString().split("T")[0];
-
-      // Try to find author/affiliation
-      const authorMatch = afterMatch.match(/([가-힣]+)\(([^)]+)\)/);
+      // Find author(affiliation)
+      const authorMatch = block.match(/([가-힣]{2,5})\(([^)]+)\)/);
       const author = authorMatch ? authorMatch[1] : "";
       const affiliation = authorMatch ? authorMatch[2] : "";
+
+      // Find date - pattern: 2026.02.12.
+      const dateMatch = block.match(/(\d{4})\.(\d{2})\.(\d{2})\./);
+      const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : new Date().toISOString().split("T")[0];
+
+      // Avoid duplicates
+      if (items.some(i => i.url === url)) continue;
 
       items.push({
         title,
