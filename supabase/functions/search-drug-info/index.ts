@@ -44,6 +44,7 @@ serve(async (req) => {
 중요 규칙:
 - 정확한 정보만 제공하세요. 모르는 항목은 null 또는 빈 배열로.
 - nameKo와 nameEn은 반드시 원료의약품(API)명으로 작성하세요.
+- 한글 표기는 식약처(MFDS) 공식 표기를 따르세요. 예: Wegovy→위고비, Ozempic→오젬픽, Semaglutide→세마글루타이드
 - JSON만 출력하세요.`;
 
     const aiResp = await fetch(
