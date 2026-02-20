@@ -11,7 +11,9 @@ const RSS_SOURCES = [
   { rss: "https://www.fiercepharma.com/rss/xml", name: "FiercePharma", region: "해외", country: "US" },
   { rss: "https://www.pharmaceutical-technology.com/feed/", name: "Pharma Technology", region: "해외", country: "EU" },
   { rss: "https://www.expresspharma.in/feed/", name: "Express Pharma", region: "해외", country: "IN" },
-  
+  { rss: "https://www.biopharmadive.com/feeds/news/", name: "BioPharma Dive", region: "해외", country: "US" },
+  { rss: "https://endpts.com/feed/", name: "Endpoints News", region: "해외", country: "US" },
+  { rss: "https://www.pharmatimes.com/rss", name: "PharmaTimes", region: "해외", country: "US" },
 ];
 
 // HTML sources — 약업신문 & 데일리팜 + 의약뉴스 + 히트뉴스 + fallback overseas
