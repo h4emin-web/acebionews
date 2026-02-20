@@ -14,6 +14,18 @@ function extractCoreWords(title: string): string[] {
   return matches.filter(w => !stopwords.has(w));
 }
 
+// Check if two word arrays share 3+ consecutive words
+function hasConsecutiveOverlap(wordsA: string[], wordsB: string[], minLen = 3): boolean {
+  if (wordsA.length < minLen || wordsB.length < minLen) return false;
+  for (let i = 0; i <= wordsA.length - minLen; i++) {
+    const seq = wordsA.slice(i, i + minLen);
+    for (let j = 0; j <= wordsB.length - minLen; j++) {
+      if (seq.every((w, k) => w === wordsB[j + k])) return true;
+    }
+  }
+  return false;
+}
+
 // Check if two titles are similar enough to be considered duplicates
 function areSimilar(a: string, b: string): boolean {
   const normA = normalizeTitle(a);
@@ -30,6 +42,10 @@ function areSimilar(a: string, b: string): boolean {
   // Core word overlap
   const wordsA = extractCoreWords(a);
   const wordsB = extractCoreWords(b);
+
+  // 3+ consecutive core words match → duplicate
+  if (hasConsecutiveOverlap(wordsA, wordsB, 3)) return true;
+
   if (wordsA.length < 2 || wordsB.length < 2) return false;
   
   const setB = new Set(wordsB);
