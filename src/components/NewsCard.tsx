@@ -57,13 +57,12 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
           {news.apiKeywords.map((kw) => (
-            <button
+            <span
               key={kw}
-              onClick={() => onKeywordClick(kw)}
-              className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-primary/8 text-primary hover:bg-primary/15 transition-colors cursor-pointer border border-primary/10"
+              className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-primary/8 text-primary border border-primary/10"
             >
               {kw}
-            </button>
+            </span>
           ))}
         </div>
         <a href={news.url} className="text-muted-foreground hover:text-primary transition-colors shrink-0" target="_blank" rel="noreferrer">
