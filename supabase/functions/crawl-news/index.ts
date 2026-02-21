@@ -19,7 +19,7 @@ const RSS_SOURCES = [
 // HTML sources — 약업신문 & 데일리팜 + 의약뉴스 + 히트뉴스 + fallback overseas
 const HTML_SOURCES = [
   { url: "https://www.yakup.com/news/index.html?cat=12", name: "약업신문", region: "국내", country: "KR", parser: "yakup" },
-  { url: "https://www.dailypharm.com/", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
+  { url: "https://www.dailypharm.com/user/news?group=%EC%A2%85%ED%95%A9", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
   { url: "https://www.hitnews.co.kr/news/articleList.html?sc_sub_section_code=S2N16&view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
@@ -145,17 +145,29 @@ function parseYakup(html: string): Array<{ title: string; summary: string; url: 
   return articles;
 }
 
-// Parse 데일리팜 HTML
+// Parse 데일리팜 HTML (종합뉴스 페이지)
 function parseDailypharm(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  // Match news items: <a href="https://www.dailypharm.com/user/news/XXXXX"> ... <div class="nc_cont ...">TITLE</div>
-  const itemRegex = /<a\s+href="(https:\/\/www\.dailypharm\.com\/user\/news\/\d+)"[^>]*>[\s\S]*?<div\s+class="nc_cont[^"]*"[^>]*>\s*([\s\S]*?)\s*<\/div>/gi;
-  let m;
-  while ((m = itemRegex.exec(html)) !== null && articles.length < 15) {
-    const url = m[1];
-    const title = stripHtml(m[2]).trim();
+  // Split by <li> items
+  const liParts = html.split(/<li\s+class="[^"]*"\s*>/gi);
+  for (let i = 1; i < liParts.length && articles.length < 20; i++) {
+    const block = liParts[i];
+    // Extract URL
+    const urlMatch = block.match(/<a\s+href="(https:\/\/www\.dailypharm\.com\/user\/news\/\d+)"/i);
+    if (!urlMatch) continue;
+    const url = urlMatch[1];
+    // Extract title from lin_title
+    const titleMatch = block.match(/<div\s+class="lin_title">([\s\S]*?)<\/div>/i);
+    if (!titleMatch) continue;
+    const title = stripHtml(titleMatch[1]).trim();
+    // Extract summary from lin_cont
+    const summaryMatch = block.match(/<div\s+class="lin_cont[^"]*">([\s\S]*?)<\/div>/i);
+    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    // Extract date from lin_data
+    const dateMatch = block.match(/<div class="lin_data">\s*<div>(\d{4}-\d{2}-\d{2})/i);
+    const dateStr = dateMatch ? dateMatch[1] : "";
     if (title.length > 5 && !articles.some(a => a.title === title)) {
-      articles.push({ title, summary: "", url, date: normalizeDate("") });
+      articles.push({ title, summary, url, date: normalizeDate(dateStr) });
     }
   }
   return articles;
