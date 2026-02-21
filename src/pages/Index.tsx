@@ -86,8 +86,15 @@ const Index = () => {
       ? `${drugInfo.nameKo} (${drugInfo.nameEn})`
       : debouncedSearch;
 
-  const { data: mfdsProducts = [], isLoading: mfdsProductsLoading } = useMfdsProducts(ingredientKeyword);
-  const { data: mfdsDmf = [], isLoading: mfdsDmfLoading } = useMfdsDmf(ingredientKeyword);
+  const { data: mfdsProductsData, isLoading: mfdsProductsLoading } = useMfdsProducts(ingredientKeyword);
+  const { data: mfdsDmfData, isLoading: mfdsDmfLoading } = useMfdsDmf(ingredientKeyword);
+
+  const mfdsProducts = mfdsProductsData?.products || [];
+  const mfdsProductsTotalCount = mfdsProductsData?.totalCount || 0;
+  const mfdsDmf = mfdsDmfData?.records || [];
+  const mfdsDmfTotalCount = mfdsDmfData?.totalCount || 0;
+
+  const isProductSearch = drugInfo?.searchedAsProduct === true;
 
   const allNews = deduplicateNews(
     (search ? searchResults : newsArticles).filter((n) => n.api_keywords && n.api_keywords.length > 0)
@@ -247,8 +254,11 @@ const Index = () => {
                 keyword={search}
                 products={mfdsProducts}
                 productsLoading={mfdsProductsLoading}
+                productsTotalCount={mfdsProductsTotalCount}
                 dmfRecords={mfdsDmf}
                 dmfLoading={mfdsDmfLoading}
+                dmfTotalCount={mfdsDmfTotalCount}
+                isProductSearch={isProductSearch}
               />
             ) : (
               <>
