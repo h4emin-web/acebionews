@@ -6,11 +6,28 @@ type Props = {
   keyword: string;
   products: any[];
   productsLoading: boolean;
+  productsTotalCount: number;
   dmfRecords: any[];
   dmfLoading: boolean;
+  dmfTotalCount: number;
+  isProductSearch: boolean;
 };
 
-export const SearchSidebarPanel = ({ keyword, products, productsLoading, dmfRecords, dmfLoading }: Props) => {
+export const SearchSidebarPanel = ({
+  keyword,
+  products,
+  productsLoading,
+  productsTotalCount,
+  dmfRecords,
+  dmfLoading,
+  dmfTotalCount,
+  isProductSearch,
+}: Props) => {
+  // 제품명 검색 시 국내 등록 제품/DMF 패널 숨김
+  if (isProductSearch) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
       {/* 국내 등록 제품 */}
@@ -19,6 +36,11 @@ export const SearchSidebarPanel = ({ keyword, products, productsLoading, dmfReco
           <div className="flex items-center gap-2">
             <Pill className="w-4 h-4 text-primary" />
             <h3 className="text-xs font-bold text-foreground">국내 등록 제품 (MFDS)</h3>
+            {productsTotalCount > 0 && (
+              <Badge variant="secondary" className="text-[10px] ml-auto">
+                총 {productsTotalCount}건
+              </Badge>
+            )}
           </div>
         </div>
         <div className="max-h-[300px] overflow-y-auto">
@@ -58,6 +80,11 @@ export const SearchSidebarPanel = ({ keyword, products, productsLoading, dmfReco
           <div className="flex items-center gap-2">
             <Flag className="w-4 h-4 text-primary" />
             <h3 className="text-xs font-bold text-foreground">원료의약품등록(DMF) 공고</h3>
+            {dmfTotalCount > 0 && (
+              <Badge variant="secondary" className="text-[10px] ml-auto">
+                총 {dmfTotalCount}건
+              </Badge>
+            )}
           </div>
         </div>
         <div className="max-h-[300px] overflow-y-auto">

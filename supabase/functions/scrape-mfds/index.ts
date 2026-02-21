@@ -15,8 +15,8 @@ serve(async (req) => {
     if (!keyword) throw new Error("keyword is required");
 
     if (type === "dmf") {
-      const results = await scrapeDmf(keyword);
-      return new Response(JSON.stringify({ success: true, dmfRecords: results }), {
+      const { records, totalCount } = await scrapeDmf(keyword);
+      return new Response(JSON.stringify({ success: true, dmfRecords: records, totalCount }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } else if (type === "ingredient-lookup") {
@@ -25,8 +25,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } else {
-      const results = await scrapeProducts(keyword);
-      return new Response(JSON.stringify({ success: true, domesticProducts: results }), {
+      const { products, totalCount } = await scrapeProducts(keyword);
+      return new Response(JSON.stringify({ success: true, domesticProducts: products, totalCount }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -75,20 +75,45 @@ async function scrapeProducts(keyword: string) {
   }
   params.set("indutyClassCode", "A0");
 
-  const url = `https://nedrug.mfds.go.kr/searchDrug?${params.toString()}`;
-  console.log(`Fetching products: ${url}`);
+  const allProducts: any[] = [];
+  let totalCount = 0;
+  let page = 1;
+  const maxPages = 10;
 
-  const resp = await fetch(url, { headers: HEADERS });
-  if (!resp.ok) {
-    console.error("Product fetch failed:", resp.status);
-    return [];
+  while (page <= maxPages) {
+    params.set("page", String(page));
+    const url = `https://nedrug.mfds.go.kr/searchDrug?${params.toString()}`;
+    console.log(`Fetching products page ${page}: ${url}`);
+
+    const resp = await fetch(url, { headers: HEADERS });
+    if (!resp.ok) {
+      console.error("Product fetch failed:", resp.status);
+      break;
+    }
+
+    const html = await resp.text();
+
+    // Extract total count from first page
+    if (page === 1) {
+      const countMatch = html.match(/총\s*([\d,]+)\s*건/);
+      totalCount = countMatch ? parseInt(countMatch[1].replace(/,/g, ""), 10) : 0;
+      console.log(`Products total count: ${totalCount}`);
+    }
+
+    const pageProducts = parseProductsHtml(html, false);
+    if (pageProducts.length === 0) break;
+    allProducts.push(...pageProducts);
+
+    // If we got all items, stop
+    if (allProducts.length >= totalCount) break;
+    page++;
   }
 
-  const html = await resp.text();
-  return parseProductsHtml(html);
+  console.log(`Total parsed products across ${page} pages: ${allProducts.length}`);
+  return { products: allProducts, totalCount };
 }
 
-function parseProductsHtml(html: string): any[] {
+function parseProductsHtml(html: string, limit = true): any[] {
   const products: any[] = [];
 
   const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
@@ -113,7 +138,7 @@ function parseProductsHtml(html: string): any[] {
         category: cells[8] || "",
       });
     }
-    if (products.length >= 10) break;
+    if (limit && products.length >= 10) break;
   }
 
   console.log(`Parsed ${products.length} products`);
@@ -129,25 +154,44 @@ async function scrapeDmf(keyword: string) {
     params.set("searchIngrKorName", keyword);
   }
 
-  const url = `https://nedrug.mfds.go.kr/pbp/CCBAC03/getList?${params.toString()}`;
-  console.log(`Fetching DMF: ${url}`);
+  const allRecords: any[] = [];
+  let totalCount = 0;
+  let page = 1;
+  const maxPages = 10;
 
-  const resp = await fetch(url, { headers: HEADERS });
-  if (!resp.ok) {
-    console.error("DMF fetch failed:", resp.status);
-    return [];
+  while (page <= maxPages) {
+    params.set("page", String(page));
+    const url = `https://nedrug.mfds.go.kr/pbp/CCBAC03/getList?${params.toString()}`;
+    console.log(`Fetching DMF page ${page}: ${url}`);
+
+    const resp = await fetch(url, { headers: HEADERS });
+    if (!resp.ok) {
+      console.error("DMF fetch failed:", resp.status);
+      break;
+    }
+
+    const html = await resp.text();
+
+    if (page === 1) {
+      const countMatch = html.match(/총\s*([\d,]+)\s*건/);
+      totalCount = countMatch ? parseInt(countMatch[1].replace(/,/g, ""), 10) : 0;
+      console.log(`DMF total count: ${totalCount}`);
+    }
+
+    const pageRecords = parseDmfHtml(html, false);
+    if (pageRecords.length === 0) break;
+    allRecords.push(...pageRecords);
+
+    if (allRecords.length >= totalCount) break;
+    page++;
   }
 
-  const html = await resp.text();
-  return parseDmfHtml(html);
+  console.log(`Total parsed DMF records across ${page} pages: ${allRecords.length}`);
+  return { records: allRecords, totalCount };
 }
 
-function parseDmfHtml(html: string): any[] {
+function parseDmfHtml(html: string, limit = true): any[] {
   const records: any[] = [];
-
-  const countMatch = html.match(/총\s*([\d,]+)건/);
-  const totalCount = countMatch ? countMatch[1] : "0";
-  console.log(`DMF total count: ${totalCount}`);
 
   const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
   if (!tbodyMatch) {
@@ -202,7 +246,7 @@ function parseDmfHtml(html: string): any[] {
         status,
       });
     }
-    if (records.length >= 10) break;
+    if (limit && records.length >= 10) break;
   }
 
   console.log(`Parsed ${records.length} DMF records`);

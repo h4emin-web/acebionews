@@ -157,14 +157,15 @@ export function useMfdsProducts(keyword: string) {
       });
       if (error) throw error;
       const results = data?.domesticProducts || [];
+      const totalCount = data?.totalCount || 0;
       // If no results with Korean, try English name
       if (results.length === 0 && enName) {
         const { data: enData, error: enError } = await supabase.functions.invoke("scrape-mfds", {
           body: { keyword: enName, type: "products" },
         });
-        if (!enError) return enData?.domesticProducts || [];
+        if (!enError) return { products: enData?.domesticProducts || [], totalCount: enData?.totalCount || 0 };
       }
-      return results;
+      return { products: results, totalCount };
     },
   });
 }
@@ -183,13 +184,14 @@ export function useMfdsDmf(keyword: string) {
       });
       if (error) throw error;
       const results = data?.dmfRecords || [];
+      const totalCount = data?.totalCount || 0;
       if (results.length === 0 && enName) {
         const { data: enData, error: enError } = await supabase.functions.invoke("scrape-mfds", {
           body: { keyword: enName, type: "dmf" },
         });
-        if (!enError) return enData?.dmfRecords || [];
+        if (!enError) return { records: enData?.dmfRecords || [], totalCount: enData?.totalCount || 0 };
       }
-      return results;
+      return { records: results, totalCount };
     },
   });
 }
