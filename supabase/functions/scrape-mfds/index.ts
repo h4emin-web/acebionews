@@ -65,13 +65,69 @@ function extractCells(rowHtml: string): string[] {
   return cells;
 }
 
+// Check if any product result is actually relevant to the search keyword
+function isRelevantProduct(product: any, keyword: string): boolean {
+  const kw = keyword.toLowerCase().replace(/\s/g, "");
+  if (kw.length < 2) return false;
+  const fields = [
+    product.name, product.nameEn, product.ingredient, product.ingredientEn,
+  ].filter(Boolean).map((f: string) => f.toLowerCase().replace(/\s/g, ""));
+  
+  for (const field of fields) {
+    if (field.includes(kw)) return true;
+  }
+  return false;
+}
+
+function isRelevantDmf(record: any, keyword: string): boolean {
+  const kw = keyword.toLowerCase().replace(/\s/g, "");
+  if (kw.length < 2) return false;
+  const fields = [
+    record.ingredientName,
+  ].filter(Boolean).map((f: string) => f.toLowerCase().replace(/\s/g, ""));
+  
+  for (const field of fields) {
+    if (field.includes(kw)) return true;
+  }
+  return false;
+}
+
 async function scrapeProducts(keyword: string) {
   const isEnglish = /^[a-zA-Z\s\-]+$/.test(keyword.trim());
-  const params = new URLSearchParams();
+  
+  // Try multiple search strategies
+  const searchStrategies = [];
   if (isEnglish) {
-    params.set("ingrEngName", keyword);
+    searchStrategies.push({ ingrEngName: keyword });
+    // Also try with ingrName1 in case of mixed content
   } else {
-    params.set("ingrName1", keyword);
+    searchStrategies.push({ ingrName1: keyword });
+    // Also try English name if available (extracted from parentheses)
+    const enMatch = keyword.match(/\(([^)]+)\)/);
+    if (enMatch) {
+      searchStrategies.push({ ingrEngName: enMatch[1].trim() });
+    }
+  }
+
+  for (const strategy of searchStrategies) {
+    const result = await scrapeProductsWithParams(strategy);
+    if (result.totalCount > 0 && result.products.length > 0) {
+      // Validate relevance - filter out irrelevant results
+      const searchTerm = isEnglish ? keyword : keyword.replace(/\s*\([^)]*\)\s*/g, "").trim();
+      const relevant = result.products.filter((p: any) => isRelevantProduct(p, searchTerm));
+      if (relevant.length > 0) {
+        return { products: relevant, totalCount: result.totalCount };
+      }
+    }
+  }
+
+  return { products: [], totalCount: 0 };
+}
+
+async function scrapeProductsWithParams(searchParams: Record<string, string>) {
+  const params = new URLSearchParams();
+  for (const [key, val] of Object.entries(searchParams)) {
+    params.set(key, val);
   }
   params.set("indutyClassCode", "A0");
 
@@ -98,6 +154,7 @@ async function scrapeProducts(keyword: string) {
       const countMatch = html.match(/총\s*([\d,]+)\s*건/);
       totalCount = countMatch ? parseInt(countMatch[1].replace(/,/g, ""), 10) : 0;
       console.log(`Products total count: ${totalCount}`);
+      if (totalCount === 0) break;
     }
 
     const pageProducts = parseProductsHtml(html, false);
@@ -136,6 +193,8 @@ function parseProductsHtml(html: string, limit = true): any[] {
         code: cells[5] || "",
         permitDate: cells[7] || "",
         category: cells[8] || "",
+        ingredient: cells[11] || "",
+        ingredientEn: cells[12] || "",
       });
     }
     if (limit && products.length >= 10) break;
@@ -147,11 +206,49 @@ function parseProductsHtml(html: string, limit = true): any[] {
 
 async function scrapeDmf(keyword: string) {
   const isEnglish = /^[a-zA-Z\s\-]+$/.test(keyword.trim());
-  const params = new URLSearchParams();
+  
+  // Try multiple search strategies
+  const searchStrategies = [];
   if (isEnglish) {
-    params.set("searchIngrEngName", keyword);
+    searchStrategies.push({ searchIngrEngName: keyword });
   } else {
-    params.set("searchIngrKorName", keyword);
+    searchStrategies.push({ searchIngrKorName: keyword });
+    const enMatch = keyword.match(/\(([^)]+)\)/);
+    if (enMatch) {
+      searchStrategies.push({ searchIngrEngName: enMatch[1].trim() });
+    }
+  }
+
+  for (const strategy of searchStrategies) {
+    const result = await scrapeDmfWithParams(strategy);
+    if (result.totalCount > 0 && result.records.length > 0) {
+      const searchTerm = isEnglish ? keyword : keyword.replace(/\s*\([^)]*\)\s*/g, "").trim();
+      const relevant = result.records.filter((r: any) => isRelevantDmf(r, searchTerm));
+      if (relevant.length > 0) {
+        return { records: relevant, totalCount: result.totalCount };
+      }
+      // If Korean name didn't match records but totalCount > 0, try English
+      if (!isEnglish) {
+        const enMatch = keyword.match(/\(([^)]+)\)/);
+        if (enMatch) {
+          const enRelevant = result.records.filter((r: any) => isRelevantDmf(r, enMatch[1].trim()));
+          if (enRelevant.length > 0) {
+            return { records: enRelevant, totalCount: result.totalCount };
+          }
+        }
+      }
+      // If totalCount matched but validation failed, still return (MFDS matched it)
+      return result;
+    }
+  }
+
+  return { records: [], totalCount: 0 };
+}
+
+async function scrapeDmfWithParams(searchParams: Record<string, string>) {
+  const params = new URLSearchParams();
+  for (const [key, val] of Object.entries(searchParams)) {
+    params.set(key, val);
   }
 
   const allRecords: any[] = [];
@@ -176,6 +273,7 @@ async function scrapeDmf(keyword: string) {
       const countMatch = html.match(/총\s*([\d,]+)\s*건/);
       totalCount = countMatch ? parseInt(countMatch[1].replace(/,/g, ""), 10) : 0;
       console.log(`DMF total count: ${totalCount}`);
+      if (totalCount === 0) break;
     }
 
     const pageRecords = parseDmfHtml(html, false);
