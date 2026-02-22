@@ -24,7 +24,7 @@ const HTML_SOURCES = [
   { url: "https://www.hitnews.co.kr/news/articleList.html?sc_sub_section_code=S2N16&view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
-  { url: "https://iyakunews.com/news-new", name: "医薬ニュース", region: "해외", country: "JP", parser: "iyakunews" },
+  
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
 ];
 
@@ -32,6 +32,8 @@ const HTML_SOURCES = [
 const FIRECRAWL_SOURCES = [
   { url: "https://news.yaozh.com/archivelist/24", name: "药智新闻", region: "해외", country: "CN", parser: "yaozh" },
   { url: "https://www.rttnews.com/content/industrynews.aspx?industry=biotechnology+%26+drugs", name: "RTTNews Biotech", region: "해외", country: "US", parser: "rttnews" },
+  { url: "https://www.asahi.com/apital/medicalnews/?iref=pc_apital_top", name: "朝日新聞 Apital", region: "해외", country: "JP", parser: "asahi" },
+  { url: "https://news.web.nhk.or.jp/newsweb/pl/news-nwa-topic-nationwide-0000414", name: "NHK 医療", region: "해외", country: "JP", parser: "nhk" },
 ];
 
 function normalizeDate(dateStr?: string): string {
@@ -378,6 +380,61 @@ function parseRttnews(markdown: string): Array<{ title: string; summary: string;
   return articles;
 }
 
+// Parse 朝日新聞 Apital (from Firecrawl markdown)
+function parseAsahi(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const lines = markdown.split("\n");
+
+  for (const line of lines) {
+    if (articles.length >= 20) break;
+    // Match: [**Title** date](https://www.asahi.com/articles/XXXXX.html)
+    const match = line.match(/\[\*\*(.+?)\*\*\s*(\d{1,2})\/(\d{1,2})\([^)]*\)\s*[\d:]*\]\((https:\/\/www\.asahi\.com\/articles\/[^)]+)\)/);
+    if (!match) continue;
+    const title = match[1].trim();
+    const monthStr = match[2].padStart(2, "0");
+    const dayStr = match[3].padStart(2, "0");
+    const url = match[4].trim();
+    const year = new Date().getFullYear();
+    const date = `${year}-${monthStr}-${dayStr}`;
+    if (title.length > 5 && !articles.some(a => a.url === url)) {
+      articles.push({ title, summary: "", url, date });
+    }
+  }
+  return articles;
+}
+
+// Parse NHK 医療 (from Firecrawl markdown)
+function parseNhk(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const lines = markdown.split("\n");
+
+  for (let i = 0; i < lines.length && articles.length < 20; i++) {
+    const line = lines[i].trim();
+    // Match: **Title**
+    const titleMatch = line.match(/\*\*(.{5,})\*\*/);
+    if (!titleMatch) continue;
+    const title = titleMatch[1].trim();
+    // Look nearby for URL and date
+    let url = "";
+    let dateStr = "";
+    for (let j = Math.max(0, i - 5); j <= Math.min(lines.length - 1, i + 5); j++) {
+      const urlMatch = lines[j].match(/\((https?:\/\/news\.web\.nhk[^)]+)\)/);
+      if (urlMatch && !url) url = urlMatch[1].trim();
+      const dateMatch = lines[j].match(/(\d{1,2})月(\d{1,2})日/);
+      if (dateMatch && !dateStr) {
+        const year = new Date().getFullYear();
+        dateStr = `${year}-${dateMatch[1].padStart(2, "0")}-${dateMatch[2].padStart(2, "0")}`;
+      }
+    }
+    if (!url || !title) continue;
+    if (!dateStr) dateStr = normalizeDate("");
+    if (!articles.some(a => a.url === url)) {
+      articles.push({ title, summary: "", url, date: dateStr });
+    }
+  }
+  return articles;
+}
+
 // Fetch SPA sites using Firecrawl scrape API
 async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
@@ -415,6 +472,10 @@ async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<
       articles = parseYaozh(markdown);
     } else if (source.parser === "rttnews") {
       articles = parseRttnews(markdown);
+    } else if (source.parser === "asahi") {
+      articles = parseAsahi(markdown);
+    } else if (source.parser === "nhk") {
+      articles = parseNhk(markdown);
     }
 
     console.log(`Extracted ${articles.length} articles from ${source.name} via Firecrawl`);
