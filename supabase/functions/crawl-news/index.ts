@@ -21,7 +21,7 @@ const HTML_SOURCES = [
   { url: "https://www.yakup.com/news/index.html?cat=12", name: "약업신문", region: "국내", country: "KR", parser: "yakup" },
   { url: "https://www.dailypharm.com/user/news?group=%EC%A2%85%ED%95%A9", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
-  { url: "https://www.hitnews.co.kr/news/articleList.html?sc_sub_section_code=S2N16&view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
+  { url: "https://www.hitnews.co.kr/news/articleList.html?view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
   
