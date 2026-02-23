@@ -41,7 +41,7 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
             {news.region === "국내" ? <MapPin className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
             {flagCode ? (
               <img src={`https://flagcdn.com/16x12/${flagCode}.png`} alt={news.country} className="w-4 h-3 inline-block" />
-            ) : "🌍"} {news.region}
+            ) : "🌍"}
           </span>
           <span className="text-xs text-muted-foreground">{news.source}</span>
         </div>
