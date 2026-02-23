@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.crawl-ibric]
 verify_jwt = false
+
+[functions.translate-news]
+verify_jwt = false

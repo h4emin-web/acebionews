@@ -877,14 +877,35 @@ serve(async (req) => {
     console.log(`Total fetched articles: ${allFetched.length}`);
 
     // 2. Extract keywords + translate foreign articles using Gemini
-    const batchSize = 65;
+    const batchSize = 25;
     const allResults: any[] = [];
     for (let i = 0; i < allFetched.length; i += batchSize) {
       const batch = allFetched.slice(i, i + batchSize);
       const results = await extractKeywordsAndTranslate(batch, GOOGLE_GEMINI_API_KEY);
+      
+      // Fallback: include any articles the AI missed (so they still get saved)
+      const returnedIndices = new Set(results.map((_: any, idx: number) => idx));
+      const returnedUrls = new Set(results.map((r: any) => r.url));
+      for (const article of batch) {
+        if (!returnedUrls.has(article.url)) {
+          const langMap: Record<string, string> = { JP: "ja", CN: "zh", IN: "en", US: "en", EU: "en" };
+          allResults.push({
+            title: article.title,
+            summary: article.summary || "",
+            source: article.source,
+            region: article.region,
+            country: article.country,
+            url: article.url,
+            date: article.date,
+            api_keywords: [],
+            category: "",
+            original_language: article.region === "해외" ? (langMap[article.country] || "en") : "ko",
+          });
+        }
+      }
       allResults.push(...results);
       if (i + batchSize < allFetched.length) {
-        await new Promise((r) => setTimeout(r, 3000));
+        await new Promise((r) => setTimeout(r, 2000));
       }
     }
 
@@ -985,6 +1006,8 @@ serve(async (req) => {
       }
       console.log(`Inserted ${dedupedResults.length} new articles (${recentResults.length - dedupedResults.length} duplicates skipped)`);
     }
+
+    // 6. Translation of untranslated articles is handled by separate translate-news function
 
     return new Response(
       JSON.stringify({ success: true, fetched: allFetched.length, withKeywords: allResults.length }),
