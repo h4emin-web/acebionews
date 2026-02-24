@@ -1,4 +1,4 @@
-import { Building2, Globe, Mail, Phone, MapPin } from "lucide-react";
+import { Building2, ExternalLink } from "lucide-react";
 import { PillLoader } from "@/components/PillLoader";
 import type { ManufacturerData, Manufacturer } from "@/hooks/useNewsData";
 
@@ -8,77 +8,38 @@ type Props = {
   loading: boolean;
 };
 
-const countryFlags: Record<string, string> = {
-  India: "in", China: "cn", Japan: "jp", Germany: "de", France: "fr",
-  Italy: "it", Spain: "es", Switzerland: "ch", UK: "gb", USA: "us",
-  "United States": "us", "South Korea": "kr", Canada: "ca", Australia: "au",
-  Netherlands: "nl", Belgium: "be", Sweden: "se", Denmark: "dk",
-  Ireland: "ie", Israel: "il", Singapore: "sg", Taiwan: "tw",
-};
+function ManufacturerItem({ m }: { m: Manufacturer }) {
+  const url = m.website
+    ? m.website.startsWith("http") ? m.website : `https://${m.website}`
+    : null;
 
-function getFlagCode(country: string): string | null {
-  return countryFlags[country] || null;
-}
-
-function ManufacturerCard({ m }: { m: Manufacturer }) {
-  const flag = getFlagCode(m.country);
-  return (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-2.5 hover:border-primary/30 transition-colors">
-      <div className="flex items-center gap-2 min-w-0">
-        <Building2 className="w-4 h-4 text-primary shrink-0" />
-        <h4 className="text-sm font-semibold text-foreground truncate">{m.name}</h4>
-      </div>
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {flag && <img src={`https://flagcdn.com/16x12/${flag}.png`} alt={m.country} className="w-4 h-3" />}
-        <MapPin className="w-3 h-3" />
-        <span>{m.city}, {m.country}</span>
-      </div>
-      <div className="space-y-1 pt-1 border-t border-border/50">
-        {m.website && (
-          <a href={m.website.startsWith("http") ? m.website : `https://${m.website}`} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-primary hover:underline truncate">
-            <Globe className="w-3 h-3 shrink-0" />
-            <span className="truncate">{m.website.replace(/^https?:\/\//, "")}</span>
-          </a>
-        )}
-        {m.email && (
-          <a href={`mailto:${m.email}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground truncate">
-            <Mail className="w-3 h-3 shrink-0" />
-            <span className="truncate">{m.email}</span>
-          </a>
-        )}
-        {m.phone && (
-          <a href={`tel:${m.phone}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-            <Phone className="w-3 h-3 shrink-0" />
-            <span>{m.phone}</span>
-          </a>
-        )}
-        {!m.website && !m.email && !m.phone && (
-          <p className="text-xs text-muted-foreground/60 italic">연락처 정보 없음</p>
-        )}
-      </div>
+  return url ? (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-accent/50 transition-colors group"
+    >
+      <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+      <span className="truncate text-foreground group-hover:text-primary transition-colors">{m.name}</span>
+      <ExternalLink className="w-3 h-3 text-muted-foreground/50 group-hover:text-primary shrink-0 ml-auto" />
+    </a>
+  ) : (
+    <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+      <Building2 className="w-3.5 h-3.5 shrink-0" />
+      <span className="truncate">{m.name}</span>
     </div>
   );
 }
 
-function RegionSection({ title, flagCode, manufacturers }: { title: string; flagCode: string | null; manufacturers: Manufacturer[] }) {
+function RegionGroup({ title, manufacturers }: { title: string; manufacturers: Manufacturer[] }) {
   if (manufacturers.length === 0) return null;
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-        {flagCode ? (
-          <img src={`https://flagcdn.com/20x15/${flagCode}.png`} alt={title} className="w-5 h-4" />
-        ) : (
-          <span>🌍</span>
-        )}
-        <span>{title}</span>
-        <span className="text-xs font-normal text-muted-foreground">({manufacturers.length}곳)</span>
-      </h3>
-      <div className="grid gap-2 sm:grid-cols-1">
-        {manufacturers.map((m, i) => (
-          <ManufacturerCard key={`${m.name}-${i}`} m={m} />
-        ))}
-      </div>
+    <div className="space-y-1">
+      <h3 className="text-xs font-medium text-muted-foreground px-3">{title}</h3>
+      {manufacturers.map((m, i) => (
+        <ManufacturerItem key={`${m.name}-${i}`} m={m} />
+      ))}
     </div>
   );
 }
@@ -102,14 +63,16 @@ export function ManufacturersPanel({ keyword, data, loading }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Building2 className="w-4 h-4" />
         <span>"{keyword}" 원료의약품 제조원</span>
       </div>
-      <RegionSection title="인도" flagCode="in" manufacturers={data.india} />
-      <RegionSection title="중국" flagCode="cn" manufacturers={data.china} />
-      <RegionSection title="해외 (일본·유럽·미국 등)" flagCode={null} manufacturers={data.global} />
+      <div className="card-elevated rounded-lg p-2 space-y-3">
+        <RegionGroup title="인도" manufacturers={data.india} />
+        <RegionGroup title="중국" manufacturers={data.china} />
+        <RegionGroup title="해외 (일본·유럽·미국 등)" manufacturers={data.global} />
+      </div>
     </div>
   );
 }
