@@ -314,7 +314,7 @@ function parseIyakuNews(html: string): Array<{ title: string; summary: string; u
 }
 
 // Parse 医药新闻 (bydrug.pharmcube.com/news) from Firecrawl markdown
-function parseYaozh(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+function parsebydrug(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   const lines = markdown.split("\n");
   
