@@ -99,8 +99,11 @@ async function scrapeProducts(keyword: string) {
   // Try multiple search strategies
   const searchStrategies: Record<string, string>[] = [];
   if (isEnglish) {
+    // For English keywords: search by ingredient English name first, then by item name
     searchStrategies.push({ ingrEngName: keyword });
+    searchStrategies.push({ itemName: keyword });
   } else {
+    // For Korean keywords: search by ingredient name, then try English if available
     searchStrategies.push({ ingrName1: keyword });
     const enMatch = keyword.match(/\(([^)]+)\)/);
     if (enMatch) {
@@ -117,6 +120,16 @@ async function scrapeProducts(keyword: string) {
       if (relevant.length > 0) {
         return { products: relevant, totalCount: result.totalCount };
       }
+      // For English search, also check if ingredient English name matches
+      if (isEnglish) {
+        const enRelevant = result.products.filter((p: any) => {
+          const engName = (p.ingredientEn || "").toLowerCase().replace(/\s/g, "");
+          return engName.includes(keyword.toLowerCase().replace(/\s/g, ""));
+        });
+        if (enRelevant.length > 0) {
+          return { products: enRelevant, totalCount: result.totalCount };
+        }
+      }
     }
   }
 
@@ -128,7 +141,7 @@ async function scrapeProductsWithParams(searchParams: Record<string, string>) {
   for (const [key, val] of Object.entries(searchParams)) {
     params.set(key, val);
   }
-  params.set("indutyClassCode", "A0");
+  // NOTE: Do NOT set indutyClassCode=A0 - it excludes 생물의약품 (biologics) from results
 
   const allProducts: any[] = [];
   let totalCount = 0;

@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -11,7 +9,7 @@ Deno.serve(async (req) => {
   try {
     const { keyword } = await req.json();
     if (!keyword || keyword.trim().length < 2) {
-      return new Response(JSON.stringify({ manufacturers: [] }), {
+      return new Response(JSON.stringify({ manufacturers: { india: [], china: [], global: [] } }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -19,7 +17,56 @@ Deno.serve(async (req) => {
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
-    console.log(`Searching manufacturers for: ${keyword}`);
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+
+    // Extract English name if keyword contains parentheses like "니세르골린 (Nicergoline)"
+    const enMatch = keyword.match(/\(([^)]+)\)/);
+    const searchName = enMatch ? enMatch[1].trim() : keyword.trim();
+    // Normalize: always use the same search term regardless of input language
+    const isKorean = /[가-힣]/.test(searchName);
+
+    console.log(`Searching manufacturers for: ${searchName} (original: ${keyword})`);
+
+    // Step 1: Use Firecrawl to search for real manufacturer data
+    let searchContext = "";
+    if (FIRECRAWL_API_KEY) {
+      try {
+        const queries = [
+          `"${searchName}" API manufacturer supplier pharmaceutical India China`,
+          `"${searchName}" active pharmaceutical ingredient producer GMP`,
+        ];
+
+        const searchResults = await Promise.all(
+          queries.map(async (q) => {
+            const resp = await fetch("https://api.firecrawl.dev/v1/search", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ query: q, limit: 5 }),
+            });
+            if (!resp.ok) return [];
+            const data = await resp.json();
+            return data.data || [];
+          })
+        );
+
+        const allResults = searchResults.flat();
+        searchContext = allResults
+          .map((r: any) => `[${r.title}] ${r.description || ""} (${r.url})`)
+          .join("\n");
+
+        console.log(`Firecrawl found ${allResults.length} search results for context`);
+      } catch (e) {
+        console.error("Firecrawl search failed, proceeding with AI only:", e);
+      }
+    }
+
+    // Step 2: Use AI with search context to extract verified manufacturers
+    const contextBlock = searchContext
+      ? `\n\n## SEARCH RESULTS FOR REFERENCE\nUse ONLY the following search results to identify real manufacturers. Do NOT add any manufacturer that is not mentioned or verifiable from these results:\n${searchContext}`
+      : "";
 
     const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
@@ -32,27 +79,25 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) manufacturing expert.
+            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert.
 
-Given an API ingredient name, provide REAL manufacturer information organized by region.
+Given an API ingredient name and web search results, extract ONLY REAL, VERIFIED manufacturers.
 
-## RULES
-- ONLY return manufacturers you are CONFIDENT actually produce this specific API ingredient. Do NOT guess or fabricate.
-- If you are not sure a company manufactures this ingredient, DO NOT include it.
-- It is better to return fewer (or zero) manufacturers than to include unverified ones.
-- For each manufacturer provide: company name, country, city, website URL, email, phone number.
-- If you cannot find verified info for a field, set it to null. Do NOT make up contact details, URLs, emails, or phone numbers.
-- If a website/email/phone is not publicly known, set it to null.
-- Return UP TO 3 manufacturers per region. Return fewer if you cannot verify 3.
-- Regions: India (인도), China (중국), Global (해외 - Japan, Europe, USA, etc.)
-- For the "global" region, prefer diverse countries (e.g. one from Japan, one from Europe, one from USA).
-- Company names should be in English.
-- If the ingredient is not a real pharmaceutical API, return empty arrays.
-- If you don't know any verified manufacturers for a region, return an empty array for that region.`,
+## CRITICAL RULES
+- ONLY include manufacturers that appear in the provided search results OR that you are 100% certain exist.
+- If you are NOT SURE, do NOT include it. Empty arrays are perfectly fine.
+- Do NOT fabricate or guess any information: company names, cities, websites, emails, or phone numbers.
+- For website/email/phone: ONLY include if you found the EXACT URL/email/phone from search results. If not found, set to null.
+- A wrong website or email is WORSE than no website or email. When in doubt, set to null.
+- Return UP TO 3 manufacturers per region, but fewer (or zero) is fine.
+- Regions: India, China, Global (Japan, Europe, USA, etc.)
+- Company names in English.
+- If the ingredient is not a real pharmaceutical API, return all empty arrays.
+- Korean and English searches for the same ingredient MUST return the same manufacturers.${contextBlock}`,
           },
           {
             role: "user",
-            content: `Find manufacturers for the API ingredient: "${keyword}"`,
+            content: `Find verified manufacturers for the API ingredient: "${searchName}"`,
           },
         ],
         tools: [
@@ -60,7 +105,7 @@ Given an API ingredient name, provide REAL manufacturer information organized by
             type: "function",
             function: {
               name: "provide_manufacturers",
-              description: "Provide manufacturer information for an API ingredient",
+              description: "Provide verified manufacturer information for an API ingredient",
               parameters: {
                 type: "object",
                 properties: {
@@ -72,9 +117,9 @@ Given an API ingredient name, provide REAL manufacturer information organized by
                         name: { type: "string" },
                         country: { type: "string" },
                         city: { type: "string" },
-                        website: { type: "string" },
-                        email: { type: "string" },
-                        phone: { type: "string" },
+                        website: { type: "string", description: "Exact verified URL only, or null" },
+                        email: { type: "string", description: "Exact verified email only, or null" },
+                        phone: { type: "string", description: "Exact verified phone only, or null" },
                       },
                       required: ["name", "country", "city"],
                       additionalProperties: false,
@@ -125,7 +170,7 @@ Given an API ingredient name, provide REAL manufacturer information organized by
 
     if (!aiResp.ok) {
       console.error(`Gemini API error: ${aiResp.status}`);
-      return new Response(JSON.stringify({ manufacturers: [] }), {
+      return new Response(JSON.stringify({ manufacturers: { india: [], china: [], global: [] } }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -133,7 +178,7 @@ Given an API ingredient name, provide REAL manufacturer information organized by
     const aiData = await aiResp.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) {
-      return new Response(JSON.stringify({ manufacturers: [] }), {
+      return new Response(JSON.stringify({ manufacturers: { india: [], china: [], global: [] } }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -147,7 +192,7 @@ Given an API ingredient name, provide REAL manufacturer information organized by
   } catch (e) {
     console.error("search-manufacturers error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error", manufacturers: [] }),
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error", manufacturers: { india: [], china: [], global: [] } }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
