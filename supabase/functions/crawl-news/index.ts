@@ -622,6 +622,62 @@ async function fetchHtml(
   }
 }
 
+// Fetch full body text for bydrug (Chinese) articles using Firecrawl
+async function enrichBydrugArticles(
+  articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>
+): Promise<void> {
+  const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!FIRECRAWL_API_KEY) return;
+
+  const bydrugArticles = articles.filter(a => a.source === "医药新闻" && a.url.includes("bydrug.pharmcube.com"));
+  if (bydrugArticles.length === 0) return;
+
+  // Scrape up to 10 articles in parallel (batches of 5 to avoid rate limits)
+  const toScrape = bydrugArticles.slice(0, 10);
+  console.log(`Enriching ${toScrape.length} bydrug articles with full body text`);
+
+  for (let i = 0; i < toScrape.length; i += 5) {
+    const batch = toScrape.slice(i, i + 5);
+    const results = await Promise.all(
+      batch.map(async (article) => {
+        try {
+          const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: article.url, formats: ["markdown"], onlyMainContent: true }),
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!resp.ok) return null;
+          const data = await resp.json();
+          const md = data.data?.markdown || data.markdown || "";
+          // Extract the main content paragraph (skip nav/header lines)
+          const lines = md.split("\n").filter((l: string) => {
+            const t = l.trim();
+            return t.length > 30 && !t.startsWith("!") && !t.startsWith("[") && !t.startsWith("http") && !t.includes("版权声明") && !t.includes("登录");
+          });
+          return { url: article.url, body: lines.join("\n").slice(0, 1500) };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    for (const r of results) {
+      if (!r || !r.body) continue;
+      const article = articles.find(a => a.url === r.url);
+      if (article) {
+        article.summary = r.body; // Replace short summary with full body text for AI processing
+      }
+    }
+
+    if (i + 5 < toScrape.length) await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`Enriched bydrug articles with body text`);
+}
+
 // Use Gemini API to extract keywords AND translate/summarize foreign articles
 async function extractKeywordsAndTranslate(
   articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>,
@@ -665,10 +721,11 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: You MUST translate ALL foreign articles. This is NOT optional.**
 - For foreign articles, you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: Korean summary, 2 sentences max, key facts only. 존댓말(~입니다, ~됩니다) 사용.
+  - translated_summary: Korean summary with KEY FACTS. Include specific numbers, company names, drug names, indications, and important details. 존댓말(~입니다, ~됩니다) 사용. 3-4 sentences for articles with rich content.
+- **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
+  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 3~4문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
 - translated_summary를 작성할 때, 독자가 모를 수 있는 전문 용어·약물명·기술명이 등장하면 **요약 문장 안에서** 자연스럽게 설명을 포함하세요.
@@ -1060,7 +1117,10 @@ serve(async (req) => {
     const allFetched = (await Promise.all([...rssPromises, ...htmlPromises, ...firecrawlPromises])).flat();
     console.log(`Total fetched articles: ${allFetched.length}`);
 
-    // 2. Extract keywords + translate foreign articles using Gemini
+    // 2. Enrich Chinese (bydrug) articles with full body text via Firecrawl
+    await enrichBydrugArticles(allFetched);
+
+    // 3. Extract keywords + translate foreign articles using Gemini
     const batchSize = 25;
     const allResults: any[] = [];
     for (let i = 0; i < allFetched.length; i += batchSize) {
