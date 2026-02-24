@@ -475,10 +475,15 @@ function extractIngredientFromRow(row: { cells: string[]; rowHtml: string }): { 
   // Fallback: try extracting from parentheses in product name
   const ingredientFromName = fullProductName.match(/\(([가-힣a-zA-Z\s\-]+)\)/);
   if (ingredientFromName) {
-    const nameKo = ingredientFromName[1].trim();
-    const nameEn = row.cells[2]?.match(/\(([A-Za-z\s\-]+)\)/)?.[1]?.trim() || null;
-    console.log(`From name parentheses: ${nameKo}`);
-    return { nameKo, nameEn, productName: fullProductName };
+    const candidate = ingredientFromName[1].trim();
+    // Filter out non-ingredient words commonly found in product name parentheses
+    const nonIngredientWords = ["원료", "수출용", "완제", "수출", "내수용", "위탁제조", "자체제조", "OEM", "반제품"];
+    if (candidate.length >= 2 && !nonIngredientWords.includes(candidate)) {
+      const nameEn = row.cells[2]?.match(/\(([A-Za-z\s\-]+)\)/)?.[1]?.trim() || null;
+      console.log(`From name parentheses: ${candidate}`);
+      return { nameKo: candidate, nameEn, productName: fullProductName };
+    }
+    console.log(`Skipping non-ingredient parenthetical: "${candidate}"`);
   }
 
   console.log(`Could not extract ingredient from row: "${fullProductName}"`);

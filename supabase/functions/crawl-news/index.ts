@@ -27,6 +27,7 @@ const HTML_SOURCES = [
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
 
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
+  { url: "https://www.yakuji.co.jp/entrycategory/6", name: "薬事日報", region: "해외", country: "JP", parser: "yakuji" },
 ];
 
 // Firecrawl sources — SPA sites that need JS rendering
@@ -339,6 +340,25 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
+// Parse 薬事日報 (yakuji.co.jp) HTML
+function parseYakuji(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const liRegex = /<li><a\s+href="(https:\/\/www\.yakuji\.co\.jp\/entry\d+\.html)">([\s\S]*?)<\/a>[\s\S]*?<span class="time-list">([\s\S]*?)<\/span><\/li>/gi;
+  let m;
+  while ((m = liRegex.exec(html)) !== null && articles.length < 20) {
+    const url = m[1].trim();
+    const title = stripHtml(m[2]).trim();
+    const rawDate = stripHtml(m[3]).trim();
+    // Parse "2026年02月24日 (火)" format
+    const dateMatch = rawDate.match(/(\d{4})年(\d{2})月(\d{2})日/);
+    const dateStr = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : "";
+    if (title.length > 5) {
+      articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Parse 医药新闻 (bydrug.pharmcube.com/news) from Firecrawl markdown
 //
@@ -600,7 +620,8 @@ async function fetchHtml(
       articles = parseRttnewsHtml(html);
     } else if (source.parser === "answersnews" || source.parser === "iyakunews") {
       articles = parseIyakuNews(html);
-    } else {
+    } else if (source.parser === "yakuji") {
+      articles = parseYakuji(html);
       // Generic fallback
       const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
       let lm;
@@ -620,6 +641,66 @@ async function fetchHtml(
     console.error(`HTML error for ${source.name}:`, err);
     return [];
   }
+}
+
+// Fetch full body text for ALL foreign articles using Firecrawl
+async function enrichForeignArticles(
+  articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>
+): Promise<void> {
+  const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!FIRECRAWL_API_KEY) return;
+
+  // Enrich ALL overseas articles, not just Chinese ones
+  const foreignArticles = articles.filter(a => a.region === "해외");
+  if (foreignArticles.length === 0) return;
+
+  // Scrape up to 30 articles (batches of 5 to avoid rate limits)
+  const toScrape = foreignArticles.slice(0, 30);
+  console.log(`Enriching ${toScrape.length} foreign articles with full body text`);
+
+  for (let i = 0; i < toScrape.length; i += 5) {
+    const batch = toScrape.slice(i, i + 5);
+    const results = await Promise.all(
+      batch.map(async (article) => {
+        try {
+          const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: article.url, formats: ["markdown"], onlyMainContent: true }),
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!resp.ok) return null;
+          const data = await resp.json();
+          const md = data.data?.markdown || data.markdown || "";
+          // Extract the main content paragraphs (skip nav/header/footer lines)
+          const lines = md.split("\n").filter((l: string) => {
+            const t = l.trim();
+            return t.length > 30 && !t.startsWith("!") && !t.startsWith("[") && !t.startsWith("http") 
+              && !t.includes("版权声明") && !t.includes("登录") && !t.includes("Subscribe")
+              && !t.includes("Sign up") && !t.includes("Cookie") && !t.includes("Privacy Policy")
+              && !t.includes("newsletter") && !t.includes("Advertisement");
+          });
+          return { url: article.url, body: lines.join("\n").slice(0, 2000) };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    for (const r of results) {
+      if (!r || !r.body || r.body.length < 50) continue;
+      const article = articles.find(a => a.url === r.url);
+      if (article) {
+        article.summary = r.body; // Replace short summary with full body text for AI processing
+      }
+    }
+
+    if (i + 5 < toScrape.length) await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`Enriched ${toScrape.length} foreign articles with body text`);
 }
 
 // Use Gemini API to extract keywords AND translate/summarize foreign articles
@@ -665,10 +746,11 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: You MUST translate ALL foreign articles. This is NOT optional.**
 - For foreign articles, you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: Korean summary, 2 sentences max, key facts only. 존댓말(~입니다, ~됩니다) 사용.
+  - translated_summary: Korean summary with KEY FACTS. Include specific numbers, company names, drug names, indications, and important details. 존댓말(~입니다, ~됩니다) 사용. 3-4 sentences for articles with rich content.
+- **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
+  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 3~4문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
 - translated_summary를 작성할 때, 독자가 모를 수 있는 전문 용어·약물명·기술명이 등장하면 **요약 문장 안에서** 자연스럽게 설명을 포함하세요.
@@ -1060,7 +1142,10 @@ serve(async (req) => {
     const allFetched = (await Promise.all([...rssPromises, ...htmlPromises, ...firecrawlPromises])).flat();
     console.log(`Total fetched articles: ${allFetched.length}`);
 
-    // 2. Extract keywords + translate foreign articles using Gemini
+    // 2. Enrich ALL foreign articles with full body text via Firecrawl
+    await enrichForeignArticles(allFetched);
+
+    // 3. Extract keywords + translate foreign articles using Gemini
     const batchSize = 25;
     const allResults: any[] = [];
     for (let i = 0; i < allFetched.length; i += batchSize) {
@@ -1119,74 +1204,100 @@ serve(async (req) => {
     });
     console.log(`Filtered to ${recentResults.length} recent articles (${allResults.length - recentResults.length} old articles skipped)`);
 
-    // 5. Insert new articles (skip duplicates)
+    // 5. Insert new articles (skip duplicates using fuzzy matching)
     if (recentResults.length > 0) {
-      const { data: existing } = await supabase.from("news_articles").select("title, url");
+      const { data: existing } = await supabase.from("news_articles").select("title, url, source");
 
       const existingUrls = new Set((existing || []).map((e: any) => e.url));
 
-      const normalizeTitle = (t: string) =>
-        t.replace(/[^가-힣a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
-      const existingNormalized = new Set((existing || []).map((e: any) => normalizeTitle(e.title)));
+      // --- Fuzzy dedup functions (same as frontend deduplicateNews.ts) ---
+      const normTitle = (title: string): string =>
+        title.replace(/[\s\-–—·:;,.'"""''「」『』【】\[\]()（）]/g, "")
+          .replace(/^(속보|단독|종합|업데이트|긴급)/g, "")
+          .toLowerCase();
 
-      const shortKey = (t: string) => normalizeTitle(t).slice(0, 20);
-      const midKey = (t: string) => {
-        const norm = normalizeTitle(t);
-        return norm.length > 15 ? norm.slice(5, 25) : norm;
+      const extractCoreWords = (title: string): string[] => {
+        const matches = title.match(/[가-힣]{2,}/g) || [];
+        const stopwords = new Set(["에서", "에게", "으로", "부터", "까지", "에는", "에도", "이다", "이며", "하는", "하고", "한다", "위한", "대한", "관련", "통해", "따른", "있는", "없는", "해당"]);
+        return matches.filter(w => !stopwords.has(w));
       };
-      const extractNouns = (t: string): string[] => {
-        const matches = t.match(/[가-힣\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]{3,}/g) || [];
-        return matches.filter(m => m.length >= 3).slice(0, 5).sort();
+
+      const hasConsecutiveOverlap = (wordsA: string[], wordsB: string[], minLen = 3): boolean => {
+        if (wordsA.length < minLen || wordsB.length < minLen) return false;
+        for (let i = 0; i <= wordsA.length - minLen; i++) {
+          const seq = wordsA.slice(i, i + minLen);
+          for (let j = 0; j <= wordsB.length - minLen; j++) {
+            if (seq.every((w, k) => w === wordsB[j + k])) return true;
+          }
+        }
+        return false;
       };
-      const nounKey = (t: string) => extractNouns(t).join("|");
 
-      const existingShortKeys = new Set((existing || []).map((e: any) => shortKey(e.title)));
-      const existingMidKeys = new Set((existing || []).map((e: any) => midKey(e.title)));
-      const existingNounKeys = new Set(
-        (existing || [])
-          .map((e: any) => { const nk = nounKey(e.title); return nk.length >= 9 ? nk : ""; })
-          .filter((k: string) => k)
-      );
+      const areSimilar = (a: string, b: string): boolean => {
+        const normA = normTitle(a);
+        const normB = normTitle(b);
+        if (normA === normB) return true;
+        // One contains the other (>60% length)
+        const shorter = normA.length < normB.length ? normA : normB;
+        const longer = normA.length < normB.length ? normB : normA;
+        if (longer.includes(shorter) && shorter.length / longer.length > 0.6) return true;
+        // For non-Korean titles, also do simple normalized comparison
+        const normSimple = (t: string) => t.replace(/[^a-zA-Z0-9\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF가-힣]/g, "").toLowerCase();
+        const sA = normSimple(a);
+        const sB = normSimple(b);
+        if (sA.length > 10 && sB.length > 10 && sA === sB) return true;
+        if (sA.length > 20 && sB.length > 20) {
+          const sh = sA.length < sB.length ? sA : sB;
+          const lo = sA.length < sB.length ? sB : sA;
+          if (lo.includes(sh) && sh.length / lo.length > 0.6) return true;
+        }
+        // Core word overlap (Korean)
+        const wordsA = extractCoreWords(a);
+        const wordsB = extractCoreWords(b);
+        if (hasConsecutiveOverlap(wordsA, wordsB, 3)) return true;
+        if (wordsA.length < 2 || wordsB.length < 2) return false;
+        const setB = new Set(wordsB);
+        const overlap = wordsA.filter(w => setB.has(w)).length;
+        const maxLen = Math.max(wordsA.length, wordsB.length);
+        return overlap / maxLen >= 0.7;
+      };
 
+      const existingTitles = (existing || []).map((e: any) => e.title as string);
+
+      // Check against existing DB articles
       const newResults = recentResults.filter((r) => {
         if (existingUrls.has(r.url)) return false;
-        const norm = normalizeTitle(r.title);
-        if (existingNormalized.has(norm)) return false;
-        const sk = shortKey(r.title);
-        if (sk.length >= 15 && existingShortKeys.has(sk)) return false;
-        const mk = midKey(r.title);
-        if (mk.length >= 15 && existingMidKeys.has(mk)) return false;
-        const nk = nounKey(r.title);
-        if (nk.length >= 9 && existingNounKeys.has(nk)) return false;
+        // Fuzzy match against all existing titles
+        for (const et of existingTitles) {
+          if (areSimilar(r.title, et)) return false;
+        }
         return true;
       });
 
       // Deduplicate within batch
-      const seenUrls = new Set<string>();
-      const seenNormTitles = new Set<string>();
-      const seenShortKeys = new Set<string>();
-      const seenNounKeys = new Set<string>();
-      const dedupedResults = newResults.filter((r) => {
-        if (seenUrls.has(r.url)) return false;
-        const norm = normalizeTitle(r.title);
-        if (seenNormTitles.has(norm)) return false;
-        const sk = shortKey(r.title);
-        if (sk.length >= 15 && seenShortKeys.has(sk)) return false;
-        const nk = nounKey(r.title);
-        if (nk.length >= 9 && seenNounKeys.has(nk)) return false;
-        seenUrls.add(r.url);
-        seenNormTitles.add(norm);
-        seenShortKeys.add(sk);
-        if (nk.length >= 9) seenNounKeys.add(nk);
-        return true;
-      });
+      const dedupedResults: any[] = [];
+      for (const r of newResults) {
+        if (dedupedResults.some(d => d.url === r.url)) continue;
+        if (dedupedResults.some(d => areSimilar(d.title, r.title))) continue;
+        dedupedResults.push(r);
+      }
 
       if (dedupedResults.length > 0) {
-        const { error } = await supabase.from("news_articles").insert(dedupedResults);
-        if (error) {
-          console.error("DB insert error:", error);
-          throw error;
+        // Insert one by one to skip DB-level duplicates (unique index on title+source)
+        let insertedCount = 0;
+        for (const article of dedupedResults) {
+          const { error } = await supabase.from("news_articles").insert(article);
+          if (error) {
+            if (error.code === "23505") {
+              console.log(`Skipped DB duplicate: ${article.title}`);
+              continue;
+            }
+            console.error("DB insert error:", error);
+          } else {
+            insertedCount++;
+          }
         }
+        console.log(`DB inserted ${insertedCount}/${dedupedResults.length}`);
       }
       console.log(`Inserted ${dedupedResults.length} new articles (${recentResults.length - dedupedResults.length} duplicates skipped)`);
     }

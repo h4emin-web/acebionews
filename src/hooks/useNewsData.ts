@@ -288,8 +288,6 @@ export type Manufacturer = {
   country: string;
   city: string;
   website: string | null;
-  email: string | null;
-  phone: string | null;
 };
 
 export type ManufacturerData = {
