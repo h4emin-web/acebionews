@@ -27,6 +27,7 @@ const HTML_SOURCES = [
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
 
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
+  { url: "https://www.yakuji.co.jp/entrycategory/6", name: "薬事日報", region: "해외", country: "JP", parser: "yakuji" },
 ];
 
 // Firecrawl sources — SPA sites that need JS rendering
@@ -339,6 +340,25 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
+// Parse 薬事日報 (yakuji.co.jp) HTML
+function parseYakuji(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const liRegex = /<li><a\s+href="(https:\/\/www\.yakuji\.co\.jp\/entry\d+\.html)">([\s\S]*?)<\/a>[\s\S]*?<span class="time-list">([\s\S]*?)<\/span><\/li>/gi;
+  let m;
+  while ((m = liRegex.exec(html)) !== null && articles.length < 20) {
+    const url = m[1].trim();
+    const title = stripHtml(m[2]).trim();
+    const rawDate = stripHtml(m[3]).trim();
+    // Parse "2026年02月24日 (火)" format
+    const dateMatch = rawDate.match(/(\d{4})年(\d{2})月(\d{2})日/);
+    const dateStr = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : "";
+    if (title.length > 5) {
+      articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Parse 医药新闻 (bydrug.pharmcube.com/news) from Firecrawl markdown
 //
@@ -600,7 +620,8 @@ async function fetchHtml(
       articles = parseRttnewsHtml(html);
     } else if (source.parser === "answersnews" || source.parser === "iyakunews") {
       articles = parseIyakuNews(html);
-    } else {
+    } else if (source.parser === "yakuji") {
+      articles = parseYakuji(html);
       // Generic fallback
       const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
       let lm;
