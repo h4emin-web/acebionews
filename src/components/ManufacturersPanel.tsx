@@ -1,6 +1,5 @@
-import { Building2, ExternalLink, Globe, Mail, Phone, ShieldCheck } from "lucide-react";
+import { Building2, ExternalLink, Globe } from "lucide-react";
 import { PillLoader } from "@/components/PillLoader";
-import { Badge } from "@/components/ui/badge";
 import type { ManufacturerData, Manufacturer } from "@/hooks/useNewsData";
 
 type Props = {
@@ -19,12 +18,6 @@ function ManufacturerItem({ m }: { m: Manufacturer }) {
       <div className="flex items-center gap-2">
         <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
         <span className="text-sm font-medium text-foreground">{m.name}</span>
-        {m.whoGmp && (
-          <Badge variant="secondary" className="text-[9px] gap-0.5 px-1.5">
-            <ShieldCheck className="w-2.5 h-2.5" />
-            WHO-GMP
-          </Badge>
-        )}
       </div>
       <div className="pl-5.5 flex flex-col gap-0.5 ml-1">
         {m.city && m.country && (
@@ -40,24 +33,6 @@ function ManufacturerItem({ m }: { m: Manufacturer }) {
             <Globe className="w-3 h-3 shrink-0" />
             <span className="truncate max-w-[200px]">{m.website}</span>
             <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-          </a>
-        )}
-        {m.email && (
-          <a
-            href={`mailto:${m.email}`}
-            className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1 w-fit transition-colors"
-          >
-            <Mail className="w-3 h-3 shrink-0" />
-            {m.email}
-          </a>
-        )}
-        {m.phone && (
-          <a
-            href={`tel:${m.phone}`}
-            className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1 w-fit transition-colors"
-          >
-            <Phone className="w-3 h-3 shrink-0" />
-            {m.phone}
           </a>
         )}
       </div>
