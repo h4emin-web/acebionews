@@ -1183,67 +1183,83 @@ serve(async (req) => {
     });
     console.log(`Filtered to ${recentResults.length} recent articles (${allResults.length - recentResults.length} old articles skipped)`);
 
-    // 5. Insert new articles (skip duplicates)
+    // 5. Insert new articles (skip duplicates using fuzzy matching)
     if (recentResults.length > 0) {
-      const { data: existing } = await supabase.from("news_articles").select("title, url");
+      const { data: existing } = await supabase.from("news_articles").select("title, url, source");
 
       const existingUrls = new Set((existing || []).map((e: any) => e.url));
 
-      const normalizeTitle = (t: string) =>
-        t.replace(/[^가-힣a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
-      const existingNormalized = new Set((existing || []).map((e: any) => normalizeTitle(e.title)));
+      // --- Fuzzy dedup functions (same as frontend deduplicateNews.ts) ---
+      const normTitle = (title: string): string =>
+        title.replace(/[\s\-–—·:;,.'"""''「」『』【】\[\]()（）]/g, "")
+          .replace(/^(속보|단독|종합|업데이트|긴급)/g, "")
+          .toLowerCase();
 
-      const shortKey = (t: string) => normalizeTitle(t).slice(0, 20);
-      const midKey = (t: string) => {
-        const norm = normalizeTitle(t);
-        return norm.length > 15 ? norm.slice(5, 25) : norm;
+      const extractCoreWords = (title: string): string[] => {
+        const matches = title.match(/[가-힣]{2,}/g) || [];
+        const stopwords = new Set(["에서", "에게", "으로", "부터", "까지", "에는", "에도", "이다", "이며", "하는", "하고", "한다", "위한", "대한", "관련", "통해", "따른", "있는", "없는", "해당"]);
+        return matches.filter(w => !stopwords.has(w));
       };
-      const extractNouns = (t: string): string[] => {
-        const matches = t.match(/[가-힣\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]{3,}/g) || [];
-        return matches.filter(m => m.length >= 3).slice(0, 5).sort();
+
+      const hasConsecutiveOverlap = (wordsA: string[], wordsB: string[], minLen = 3): boolean => {
+        if (wordsA.length < minLen || wordsB.length < minLen) return false;
+        for (let i = 0; i <= wordsA.length - minLen; i++) {
+          const seq = wordsA.slice(i, i + minLen);
+          for (let j = 0; j <= wordsB.length - minLen; j++) {
+            if (seq.every((w, k) => w === wordsB[j + k])) return true;
+          }
+        }
+        return false;
       };
-      const nounKey = (t: string) => extractNouns(t).join("|");
 
-      const existingShortKeys = new Set((existing || []).map((e: any) => shortKey(e.title)));
-      const existingMidKeys = new Set((existing || []).map((e: any) => midKey(e.title)));
-      const existingNounKeys = new Set(
-        (existing || [])
-          .map((e: any) => { const nk = nounKey(e.title); return nk.length >= 9 ? nk : ""; })
-          .filter((k: string) => k)
-      );
+      const areSimilar = (a: string, b: string): boolean => {
+        const normA = normTitle(a);
+        const normB = normTitle(b);
+        if (normA === normB) return true;
+        // One contains the other (>60% length)
+        const shorter = normA.length < normB.length ? normA : normB;
+        const longer = normA.length < normB.length ? normB : normA;
+        if (longer.includes(shorter) && shorter.length / longer.length > 0.6) return true;
+        // For non-Korean titles, also do simple normalized comparison
+        const normSimple = (t: string) => t.replace(/[^a-zA-Z0-9\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF가-힣]/g, "").toLowerCase();
+        const sA = normSimple(a);
+        const sB = normSimple(b);
+        if (sA.length > 10 && sB.length > 10 && sA === sB) return true;
+        if (sA.length > 20 && sB.length > 20) {
+          const sh = sA.length < sB.length ? sA : sB;
+          const lo = sA.length < sB.length ? sB : sA;
+          if (lo.includes(sh) && sh.length / lo.length > 0.6) return true;
+        }
+        // Core word overlap (Korean)
+        const wordsA = extractCoreWords(a);
+        const wordsB = extractCoreWords(b);
+        if (hasConsecutiveOverlap(wordsA, wordsB, 3)) return true;
+        if (wordsA.length < 2 || wordsB.length < 2) return false;
+        const setB = new Set(wordsB);
+        const overlap = wordsA.filter(w => setB.has(w)).length;
+        const maxLen = Math.max(wordsA.length, wordsB.length);
+        return overlap / maxLen >= 0.7;
+      };
 
+      const existingTitles = (existing || []).map((e: any) => e.title as string);
+
+      // Check against existing DB articles
       const newResults = recentResults.filter((r) => {
         if (existingUrls.has(r.url)) return false;
-        const norm = normalizeTitle(r.title);
-        if (existingNormalized.has(norm)) return false;
-        const sk = shortKey(r.title);
-        if (sk.length >= 15 && existingShortKeys.has(sk)) return false;
-        const mk = midKey(r.title);
-        if (mk.length >= 15 && existingMidKeys.has(mk)) return false;
-        const nk = nounKey(r.title);
-        if (nk.length >= 9 && existingNounKeys.has(nk)) return false;
+        // Fuzzy match against all existing titles
+        for (const et of existingTitles) {
+          if (areSimilar(r.title, et)) return false;
+        }
         return true;
       });
 
       // Deduplicate within batch
-      const seenUrls = new Set<string>();
-      const seenNormTitles = new Set<string>();
-      const seenShortKeys = new Set<string>();
-      const seenNounKeys = new Set<string>();
-      const dedupedResults = newResults.filter((r) => {
-        if (seenUrls.has(r.url)) return false;
-        const norm = normalizeTitle(r.title);
-        if (seenNormTitles.has(norm)) return false;
-        const sk = shortKey(r.title);
-        if (sk.length >= 15 && seenShortKeys.has(sk)) return false;
-        const nk = nounKey(r.title);
-        if (nk.length >= 9 && seenNounKeys.has(nk)) return false;
-        seenUrls.add(r.url);
-        seenNormTitles.add(norm);
-        seenShortKeys.add(sk);
-        if (nk.length >= 9) seenNounKeys.add(nk);
-        return true;
-      });
+      const dedupedResults: any[] = [];
+      for (const r of newResults) {
+        if (dedupedResults.some(d => d.url === r.url)) continue;
+        if (dedupedResults.some(d => areSimilar(d.title, r.title))) continue;
+        dedupedResults.push(r);
+      }
 
       if (dedupedResults.length > 0) {
         const { error } = await supabase.from("news_articles").insert(dedupedResults);
