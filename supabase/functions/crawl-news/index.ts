@@ -20,6 +20,7 @@ const RSS_SOURCES = [
 const HTML_SOURCES = [
   { url: "https://www.yakup.com/news/index.html?cat=12", name: "약업신문", region: "국내", country: "KR", parser: "yakup" },
   { url: "https://www.dailypharm.com/user/news?group=%EC%A2%85%ED%95%A9", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
+  { url: "https://www.dailypharm.com/user/news?group=%EC%A2%85%ED%95%A9&page=2", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
   { url: "https://www.hitnews.co.kr/news/articleList.html?view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
@@ -148,12 +149,17 @@ function parseYakup(html: string): Array<{ title: string; summary: string; url: 
 // Parse 데일리팜 HTML (종합뉴스 페이지)
 function parseDailypharm(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  
+  // Try multiple split patterns for robustness
   const liParts = html.split(/<li\s+class="[^"]*"\s*>/gi);
-  for (let i = 1; i < liParts.length && articles.length < 20; i++) {
+  for (let i = 1; i < liParts.length && articles.length < 30; i++) {
     const block = liParts[i];
-    const urlMatch = block.match(/<a\s+href="(https:\/\/www\.dailypharm\.com\/user\/news\/\d+)"/i);
+    // Broader URL match - also catch relative URLs
+    const urlMatch = block.match(/<a\s+href="((?:https:\/\/www\.dailypharm\.com)?\/user\/news\/\d+)"/i);
     if (!urlMatch) continue;
-    const url = urlMatch[1];
+    let url = urlMatch[1];
+    if (url.startsWith("/")) url = `https://www.dailypharm.com${url}`;
+    
     const titleMatch = block.match(/<div\s+class="lin_title">([\s\S]*?)<\/div>/i);
     if (!titleMatch) continue;
     const title = stripHtml(titleMatch[1]).trim();
@@ -165,6 +171,21 @@ function parseDailypharm(html: string): Array<{ title: string; summary: string; 
       articles.push({ title, summary, url, date: normalizeDate(dateStr) });
     }
   }
+  
+  // Fallback: try anchor tag pattern directly
+  if (articles.length === 0) {
+    const linkRegex = /<a\s+href="((?:https:\/\/www\.dailypharm\.com)?\/user\/news\/\d+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    while ((m = linkRegex.exec(html)) !== null && articles.length < 30) {
+      let url = m[1];
+      if (url.startsWith("/")) url = `https://www.dailypharm.com${url}`;
+      const title = stripHtml(m[2]).trim();
+      if (title.length > 5 && !articles.some(a => a.url === url)) {
+        articles.push({ title, summary: "", url, date: normalizeDate("") });
+      }
+    }
+  }
+  
   return articles;
 }
 
@@ -608,7 +629,7 @@ async function extractKeywordsAndTranslate(
 ): Promise<any[]> {
   if (articles.length === 0) return [];
 
-  const articleList = articles.map((a, i) => `[${i}] (${a.region}) ${a.title} | ${a.summary}`).join("\n");
+  const articleList = articles.map((a, i) => `[${i}] ${a.title} | ${a.summary}`).join("\n");
 
   try {
     const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -629,7 +650,7 @@ async function extractKeywordsAndTranslate(
 - DO NOT guess, infer, or hallucinate ingredient names that are NOT in the text.
 - If an article only mentions a brand name without its active ingredient, set apiKeywords to [].
 - Valid keywords: small-molecule compounds, biologics, any INN or chemical name explicitly stated.
-- **CRITICAL FORMAT RULE (applies to ALL articles — 국내, 해외, every country, every language, NO exceptions):**
+- **CRITICAL FORMAT RULE (applies to ALL articles — every country, every language, NO exceptions):**
   - Every keyword MUST be in the format: "한글명 (English Name)"
   - Examples: "세마글루타이드 (Semaglutide)", "리바록사반 (Rivaroxaban)", "트라스투주맙 (Trastuzumab)"
   - If the article is in English, translate the ingredient name to Korean and put it first: "오젬픽 → 세마글루타이드 (Semaglutide)"
@@ -637,13 +658,16 @@ async function extractKeywordsAndTranslate(
   - NEVER return English-only keywords like "Semaglutide" or Korean-only keywords like "세마글루타이드"
 - INVALID: Brand/product names only, generic categories (엑소좀, mRNA, GLP-1, siRNA, 백신), mechanism names.
 
+## CRITICAL: TITLE FORMATTING
+- NEVER add [국내], [해외], (국내), (해외) prefixes to translated_title. Return ONLY the article title without any region tags.
+
 ## TASK 2: TRANSLATION & SUMMARY (MANDATORY)
-- **CRITICAL: You MUST translate ALL [해외] articles. This is NOT optional.**
-- For articles marked [해외], you MUST provide:
-  - translated_title: Korean translation of the title. NEVER leave this empty for foreign articles.
+- **CRITICAL: You MUST translate ALL foreign articles. This is NOT optional.**
+- For foreign articles, you MUST provide:
+  - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
   - translated_summary: Korean summary, 2 sentences max, key facts only. 존댓말(~입니다, ~됩니다) 사용.
-- For articles marked [국내]:
-  - translated_title: set to the original Korean title.
+- For Korean articles:
+  - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
   - translated_summary: 기사 핵심 내용을 2문장 이내로 간결하게 요약. 사실만 기술하고 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
@@ -719,7 +743,9 @@ async function extractKeywordsAndTranslate(
       const isForeign = article.region === "해외";
       const langMap: Record<string, string> = { JP: "ja", CN: "zh", IN: "en", US: "en", EU: "en" };
       const origLang = isForeign ? (langMap[article.country] || "en") : "ko";
-      const finalTitle = r.translated_title || article.title;
+      // Strip region tags from title
+      const stripRegionTag = (t: string) => t.replace(/^\s*[\[\(](국내|해외)[\]\)]\s*/g, "").trim();
+      const finalTitle = stripRegionTag(r.translated_title || article.title);
       const finalSummary = r.translated_summary || article.summary;
 
       results.push({
