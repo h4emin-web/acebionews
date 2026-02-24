@@ -65,7 +65,7 @@ function ManufacturerItem({ m }: { m: Manufacturer }) {
   );
 }
 
-function RegionGroup({ title, manufacturers }: { title: string; manufacturers: Manufacturer[] }) {
+function RegionGroup({ title, manufacturers }: { title: React.ReactNode; manufacturers: Manufacturer[] }) {
   if (manufacturers.length === 0) return null;
   return (
     <div>
@@ -104,8 +104,8 @@ export function ManufacturersPanel({ keyword, data, loading }: Props) {
         <span>"{keyword}" 원료의약품 제조원</span>
       </div>
       <div className="card-elevated rounded-lg overflow-hidden">
-        <RegionGroup title="🇮🇳 인도" manufacturers={data.india} />
-        <RegionGroup title="🇨🇳 중국" manufacturers={data.china} />
+        <RegionGroup title={<><img src="https://flagcdn.com/w20/in.png" alt="India" className="inline w-4 h-3 mr-1" /> 인도</>} manufacturers={data.india} />
+        <RegionGroup title={<><img src="https://flagcdn.com/w20/cn.png" alt="China" className="inline w-4 h-3 mr-1" /> 중국</>} manufacturers={data.china} />
         <RegionGroup title="🌍 해외 (일본·유럽·미국 등)" manufacturers={data.global} />
       </div>
     </div>
