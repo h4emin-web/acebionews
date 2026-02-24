@@ -321,85 +321,75 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
 // ─────────────────────────────────────────────────────────────────────────────
 // Parse 医药新闻 (bydrug.pharmcube.com/news) from Firecrawl markdown
 //
-// bydrug.pharmcube.com은 React SPA입니다. Firecrawl이 반환하는 마크다운 구조는
-// 실제로 받아봐야 정확히 알 수 있으므로, 아래처럼 4가지 패턴을 모두 커버합니다:
+// 실제 URL 형식: https://bydrug.pharmcube.com/news/detail/{32자리 해시}
+// 예: https://bydrug.pharmcube.com/news/detail/53cf6634c1e57f4bfe178ef684914ed3
 //
-//  Pattern 1: [제목](https://bydrug.pharmcube.com/news/XXXXX)
-//  Pattern 2: **[제목](https://bydrug.pharmcube.com/news/XXXXX)**
-//  Pattern 3: | [제목](url) | 날짜 | ... |  (테이블 형식)
-//  Pattern 4: generic — bydrug URL만 있고 제목이 다른 형태인 경우
-//
-// 날짜 형식: YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD / YYYY年MM月DD日
+// 날짜는 "2小时前", "1小时前" 같은 상대 시간으로 표시되므로 → today로 처리
 // ─────────────────────────────────────────────────────────────────────────────
 function parseBydrug(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   const lines = markdown.split("\n");
 
-  // 30일 이상 오래된 기사는 제외
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  // bydrug URL 패턴: /news/detail/{해시} (해시는 영문 소문자+숫자 32자)
+  const BYDRUG_URL_RE = /https:\/\/bydrug\.pharmcube\.com\/news\/detail\/[a-f0-9]{32}/;
 
-  // 날짜 추출 헬퍼: 인접 라인들에서 날짜 찾기
-  const extractDateNearLine = (idx: number, lookahead = 3): string => {
+  // 날짜 추출 헬퍼 — 절대 날짜(YYYY-MM-DD, YYYY年MM月DD日)만 인식
+  // "X小时前", "X天前" 같은 상대 시간은 today로 fallback
+  const extractDateNearLine = (idx: number, lookahead = 4): string => {
     for (let j = idx; j <= Math.min(lines.length - 1, idx + lookahead); j++) {
       const dm = lines[j].match(/(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
       if (dm) return `${dm[1]}-${dm[2]}-${dm[3]}`;
       const cnDate = lines[j].match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
       if (cnDate) return `${cnDate[1]}-${cnDate[2].padStart(2, "0")}-${cnDate[3].padStart(2, "0")}`;
     }
-    return "";
+    // 상대 시간("X小时前", "X天前") → today (KST)
+    return normalizeDate("");
   };
 
   const addArticle = (title: string, url: string, dateStr: string) => {
-    const articleDate = normalizeDate(dateStr);
-    if (articleDate < cutoffStr) return;
     if (title.length < 5) return;
+    if (!BYDRUG_URL_RE.test(url)) return;
     if (articles.some(a => a.url === url)) return;
-    articles.push({ title, summary: "", url, date: articleDate });
+    articles.push({ title, summary: "", url, date: dateStr || normalizeDate("") });
   };
 
   for (let i = 0; i < lines.length && articles.length < 20; i++) {
     const line = lines[i].trim();
 
-    // Pattern 2: **[제목](url)**  — bold link
-    const boldLink = line.match(/\*\*\[([^\]]{5,})\]\((https:\/\/bydrug\.pharmcube\.com\/[^\s)]+)\)\*\*/);
-    if (boldLink) {
-      addArticle(boldLink[1].replace(/\\/g, "").trim(), boldLink[2].trim(), extractDateNearLine(i));
+    // URL이 포함된 라인인지 먼저 확인
+    const urlMatch = line.match(BYDRUG_URL_RE);
+    if (!urlMatch) continue;
+    const url = urlMatch[0];
+
+    // 제목 추출 우선순위:
+    // 1) 같은 라인의 마크다운 링크 텍스트: [제목](url)
+    const inlineLink = line.match(/\[([^\]]{5,})\]\(https:\/\/bydrug/);
+    if (inlineLink) {
+      const title = inlineLink[1].replace(/\\/g, "").trim();
+      addArticle(title, url, extractDateNearLine(i));
       continue;
     }
 
-    // Pattern 3: table row  | [제목](url) | 날짜 |
-    const tableRow = line.match(/^\|\s*\[([^\]]{5,})\]\((https:\/\/bydrug\.pharmcube\.com\/[^\s)]+)\)\s*\|/);
-    if (tableRow) {
-      const dateInRow = line.match(/(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
-      const dateStr = dateInRow ? `${dateInRow[1]}-${dateInRow[2]}-${dateInRow[3]}` : extractDateNearLine(i);
-      addArticle(tableRow[1].replace(/\\/g, "").trim(), tableRow[2].trim(), dateStr);
-      continue;
+    // 2) 위아래 라인에서 제목 찾기
+    //    - bold **제목**
+    //    - 헤딩 ## 제목 / ### 제목
+    //    - 이전 라인 plain text (5자 이상)
+    let title = "";
+    for (let j = Math.max(0, i - 5); j <= Math.min(lines.length - 1, i + 2); j++) {
+      const boldMatch = lines[j].match(/\*\*([^*]{5,})\*\*/);
+      if (boldMatch) { title = boldMatch[1].replace(/\\/g, "").trim(); break; }
+      const headingMatch = lines[j].match(/^#{1,4}\s+(.{5,})/);
+      if (headingMatch) { title = headingMatch[1].replace(/\\/g, "").trim(); break; }
     }
-
-    // Pattern 1: plain [제목](url)
-    const plainLink = line.match(/\[([^\]]{5,})\]\((https:\/\/bydrug\.pharmcube\.com\/[^\s)]+)\)/);
-    if (plainLink) {
-      addArticle(plainLink[1].replace(/\\/g, "").trim(), plainLink[2].trim(), extractDateNearLine(i));
-      continue;
-    }
-
-    // Pattern 4: URL 단독 등장, 제목은 이전/이후 라인에서 bold 추출
-    const urlOnly = line.match(/\(?(https:\/\/bydrug\.pharmcube\.com\/news\/\d+[^\s)]*)\)?/);
-    if (urlOnly) {
-      const url = urlOnly[1];
-      let title = "";
-      // 위아래 5줄에서 bold 텍스트 찾기
-      for (let j = Math.max(0, i - 5); j <= Math.min(lines.length - 1, i + 5); j++) {
-        const bold = lines[j].match(/\*\*([^*]{5,})\*\*/);
-        if (bold) { title = bold[1].replace(/\\/g, "").trim(); break; }
-        // h2/h3 헤딩
-        const heading = lines[j].match(/^#{1,3}\s+(.{5,})/);
-        if (heading) { title = heading[1].replace(/\\/g, "").trim(); break; }
+    // 3) 바로 위 plain 텍스트 라인 (링크도 헤딩도 아닌 경우)
+    if (!title && i > 0) {
+      const prevLine = lines[i - 1].trim();
+      if (prevLine.length >= 5 && !prevLine.startsWith("http") && !prevLine.startsWith("|")) {
+        title = stripHtml(prevLine).trim();
       }
-      if (title) addArticle(title, url, extractDateNearLine(i));
     }
+
+    if (title) addArticle(title, url, extractDateNearLine(i));
   }
 
   console.log(`parseBydrug: extracted ${articles.length} articles`);
