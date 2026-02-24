@@ -622,19 +622,20 @@ async function fetchHtml(
   }
 }
 
-// Fetch full body text for bydrug (Chinese) articles using Firecrawl
-async function enrichBydrugArticles(
+// Fetch full body text for ALL foreign articles using Firecrawl
+async function enrichForeignArticles(
   articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>
 ): Promise<void> {
   const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
   if (!FIRECRAWL_API_KEY) return;
 
-  const bydrugArticles = articles.filter(a => a.source === "医药新闻" && a.url.includes("bydrug.pharmcube.com"));
-  if (bydrugArticles.length === 0) return;
+  // Enrich ALL overseas articles, not just Chinese ones
+  const foreignArticles = articles.filter(a => a.region === "해외");
+  if (foreignArticles.length === 0) return;
 
-  // Scrape up to 10 articles in parallel (batches of 5 to avoid rate limits)
-  const toScrape = bydrugArticles.slice(0, 10);
-  console.log(`Enriching ${toScrape.length} bydrug articles with full body text`);
+  // Scrape up to 30 articles (batches of 5 to avoid rate limits)
+  const toScrape = foreignArticles.slice(0, 30);
+  console.log(`Enriching ${toScrape.length} foreign articles with full body text`);
 
   for (let i = 0; i < toScrape.length; i += 5) {
     const batch = toScrape.slice(i, i + 5);
@@ -653,12 +654,15 @@ async function enrichBydrugArticles(
           if (!resp.ok) return null;
           const data = await resp.json();
           const md = data.data?.markdown || data.markdown || "";
-          // Extract the main content paragraph (skip nav/header lines)
+          // Extract the main content paragraphs (skip nav/header/footer lines)
           const lines = md.split("\n").filter((l: string) => {
             const t = l.trim();
-            return t.length > 30 && !t.startsWith("!") && !t.startsWith("[") && !t.startsWith("http") && !t.includes("版权声明") && !t.includes("登录");
+            return t.length > 30 && !t.startsWith("!") && !t.startsWith("[") && !t.startsWith("http") 
+              && !t.includes("版权声明") && !t.includes("登录") && !t.includes("Subscribe")
+              && !t.includes("Sign up") && !t.includes("Cookie") && !t.includes("Privacy Policy")
+              && !t.includes("newsletter") && !t.includes("Advertisement");
           });
-          return { url: article.url, body: lines.join("\n").slice(0, 1500) };
+          return { url: article.url, body: lines.join("\n").slice(0, 2000) };
         } catch {
           return null;
         }
@@ -666,7 +670,7 @@ async function enrichBydrugArticles(
     );
 
     for (const r of results) {
-      if (!r || !r.body) continue;
+      if (!r || !r.body || r.body.length < 50) continue;
       const article = articles.find(a => a.url === r.url);
       if (article) {
         article.summary = r.body; // Replace short summary with full body text for AI processing
@@ -675,7 +679,7 @@ async function enrichBydrugArticles(
 
     if (i + 5 < toScrape.length) await new Promise(r => setTimeout(r, 1000));
   }
-  console.log(`Enriched bydrug articles with body text`);
+  console.log(`Enriched ${toScrape.length} foreign articles with body text`);
 }
 
 // Use Gemini API to extract keywords AND translate/summarize foreign articles
@@ -1117,8 +1121,8 @@ serve(async (req) => {
     const allFetched = (await Promise.all([...rssPromises, ...htmlPromises, ...firecrawlPromises])).flat();
     console.log(`Total fetched articles: ${allFetched.length}`);
 
-    // 2. Enrich Chinese (bydrug) articles with full body text via Firecrawl
-    await enrichBydrugArticles(allFetched);
+    // 2. Enrich ALL foreign articles with full body text via Firecrawl
+    await enrichForeignArticles(allFetched);
 
     // 3. Extract keywords + translate foreign articles using Gemini
     const batchSize = 25;
