@@ -204,11 +204,47 @@ function parseHitnews(html: string): Array<{ title: string; summary: string; url
   const liRegex = /<li>\s*<h4 class="titles">\s*<a\s+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>\s*<\/h4>[\s\S]*?<em class="info dated">([\s\S]*?)<\/em>[\s\S]*?<\/li>/gi;
   let m;
   while ((m = liRegex.exec(html)) !== null && articles.length < 20) {
-    const url = m[1].trim();
+    let url = m[1].trim();
+    // Fix relative URLs to absolute
+    if (url.startsWith("/")) {
+      url = `https://www.hitnews.co.kr${url}`;
+    } else if (!url.startsWith("http")) {
+      url = `https://www.hitnews.co.kr/${url}`;
+    }
     const title = stripHtml(m[2]).trim();
-    const dateStr = stripHtml(m[3]).trim(); // e.g. "02.16 06:00"
+    const dateStr = stripHtml(m[3]).trim();
     if (title.length > 5) {
       articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
+// Parse RTTNews Biotech HTML
+function parseRttnewsHtml(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  // RTTNews uses <a class="lnkr" href="/XXXXX/slug.aspx">Title</a>
+  const linkRegex = /<a[^>]*class="[^"]*lnkr[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
+  let m;
+  while ((m = linkRegex.exec(html)) !== null && articles.length < 25) {
+    let url = m[1].trim();
+    const title = stripHtml(m[2]).trim();
+    if (title.length < 10) continue;
+    if (!url.startsWith("http")) {
+      url = `https://www.rttnews.com${url}`;
+    }
+    articles.push({ title, summary: "", url, date: normalizeDate("") });
+  }
+  // Fallback: try generic <a href="/XXXXX/slug.aspx"> pattern
+  if (articles.length === 0) {
+    const fallbackRegex = /<a[^>]*href="(\/\d+\/[^"]+\.aspx)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let fm;
+    while ((fm = fallbackRegex.exec(html)) !== null && articles.length < 25) {
+      const url = `https://www.rttnews.com${fm[1].trim()}`;
+      const title = stripHtml(fm[2]).trim();
+      if (title.length > 10 && !title.includes("RTTNews") && !articles.some(a => a.url === url)) {
+        articles.push({ title, summary: "", url, date: normalizeDate("") });
+      }
     }
   }
   return articles;
@@ -491,7 +527,12 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
   try {
     console.log(`Fetching HTML: ${source.name}`);
     const resp = await fetch(source.url, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": source.url,
+      },
       signal: AbortSignal.timeout(15000),
     });
     if (!resp.ok) {
@@ -514,6 +555,8 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
       articles = parseKpanews(html);
     } else if (source.parser === "pharmnews") {
       articles = parsePharmnews(html);
+    } else if (source.parser === "rttnews-html") {
+      articles = parseRttnewsHtml(html);
     } else if (source.parser === "answersnews") {
       articles = parseIyakuNews(html);
     } else if (source.parser === "iyakunews") {
@@ -547,7 +590,7 @@ async function extractKeywordsAndTranslate(
 ): Promise<any[]> {
   if (articles.length === 0) return [];
 
-  const articleList = articles.map((a, i) => `[${i}] [${a.region}] ${a.title} | ${a.summary}`).join("\n");
+  const articleList = articles.map((a, i) => `[${i}] (${a.region}) ${a.title} | ${a.summary}`).join("\n");
 
   try {
     const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -921,11 +964,23 @@ serve(async (req) => {
       console.log(`Cleaned up ${deletedCount} articles older than 7 days`);
     }
 
-    // 4. Filter out old articles (only keep last 3 days)
+    // 4. Filter out old articles: domestic=last 3 days, foreign=yesterday only (KST)
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     const threeDaysAgoStr = threeDaysAgo.toISOString().split("T")[0];
-    const recentResults = allResults.filter((r) => r.date >= threeDaysAgoStr);
+    // KST yesterday
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const kstYesterday = new Date(kstNow);
+    kstYesterday.setDate(kstYesterday.getDate() - 1);
+    const yesterdayStr = kstYesterday.toISOString().split("T")[0];
+    const recentResults = allResults.filter((r) => {
+      if (r.region === "해외") {
+        // Foreign: only yesterday (KST)
+        return r.date >= yesterdayStr;
+      }
+      // Domestic: last 3 days
+      return r.date >= threeDaysAgoStr;
+    });
     console.log(`Filtered to ${recentResults.length} recent articles (${allResults.length - recentResults.length} old articles skipped)`);
 
     // 5. Insert new articles (skip duplicates by URL and similar titles across ALL sources)

@@ -5,6 +5,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type IbricItem = {
+  title: string;
+  author: string;
+  affiliation: string;
+  description: string;
+  url: string;
+  date: string;
+  views: number;
+};
+
 const IBRIC_BASE_URL = "https://www.ibric.org/bric/trend/bio-report.do";
 
 function getPageUrl(page: number): string {
