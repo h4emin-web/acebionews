@@ -27,7 +27,7 @@ const HTML_SOURCES = [
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
 
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
-  { url: "https://www.yakuji.co.jp/entrycategory/6", name: "薬事日報", region: "해외", country: "JP", parser: "yakuji" },
+  
 ];
 
 // Firecrawl sources — SPA sites that need JS rendering
@@ -238,7 +238,7 @@ function parseRttnewsHtml(html: string): Array<{ title: string; summary: string;
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   const linkRegex = /<a[^>]*class="[^"]*lnkr[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
   let m;
-  while ((m = linkRegex.exec(html)) !== null && articles.length < 25) {
+  while ((m = linkRegex.exec(html)) !== null && articles.length < 10) {
     let url = m[1].trim();
     const title = stripHtml(m[2]).trim();
     if (title.length < 10) continue;
@@ -250,7 +250,7 @@ function parseRttnewsHtml(html: string): Array<{ title: string; summary: string;
   if (articles.length === 0) {
     const fallbackRegex = /<a[^>]*href="(\/\d+\/[^"]+\.aspx)"[^>]*>([\s\S]*?)<\/a>/gi;
     let fm;
-    while ((fm = fallbackRegex.exec(html)) !== null && articles.length < 25) {
+    while ((fm = fallbackRegex.exec(html)) !== null && articles.length < 10) {
       const url = `https://www.rttnews.com${fm[1].trim()}`;
       const title = stripHtml(fm[2]).trim();
       if (title.length > 10 && !title.includes("RTTNews") && !articles.some(a => a.url === url)) {
@@ -451,7 +451,7 @@ function parseRttnews(markdown: string): Array<{ title: string; summary: string;
   };
 
   for (const line of lines) {
-    if (articles.length >= 25) break;
+    if (articles.length >= 10) break;
     const match = line.match(
       /^\s*-\s*\[([^\]]+)\]\((https:\/\/www\.rttnews\.com\/\d+\/[^)]+)\)\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\s+\d{2}:\d{2}\s+ET/
     );
@@ -622,17 +622,6 @@ async function fetchHtml(
       articles = parseIyakuNews(html);
     } else if (source.parser === "yakuji") {
       articles = parseYakuji(html);
-      // Generic fallback
-      const linkRegex = /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-      let lm;
-      while ((lm = linkRegex.exec(html)) !== null && articles.length < 10) {
-        const href = lm[1];
-        const text = stripHtml(lm[2]).trim();
-        if (text.length > 20 && text.length < 200 && !href.includes("javascript:")) {
-          const fullUrl = href.startsWith("http") ? href : `${source.url}${href.startsWith("/") ? "" : "/"}${href}`;
-          articles.push({ title: text, summary: "", url: fullUrl, date: normalizeDate("") });
-        }
-      }
     }
 
     console.log(`Extracted ${articles.length} articles from ${source.name} HTML`);
