@@ -24,13 +24,14 @@ const HTML_SOURCES = [
   { url: "https://www.hitnews.co.kr/news/articleList.html?view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
-  
+
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
 ];
 
 // Firecrawl sources — SPA sites that need JS rendering
 const FIRECRAWL_SOURCES = [
-  { url: "https://bydrug.pharmcube.com/news", name: "医药新闻", region: "해외", country: "CN", parser: "By Drug" },
+  // ✅ parser 이름을 "bydrug"으로 통일 (이전 "By Drug"은 fetchWithFirecrawl에서 매칭 안 됨)
+  { url: "https://bydrug.pharmcube.com/news", name: "医药新闻", region: "해외", country: "CN", parser: "bydrug" },
   { url: "https://www.rttnews.com/content/industrynews.aspx?industry=biotechnology+%26+drugs", name: "RTTNews Biotech", region: "해외", country: "US", parser: "rttnews" },
   { url: "https://www.asahi.com/apital/medicalnews/?iref=pc_apital_top", name: "朝日新聞 Apital", region: "해외", country: "JP", parser: "asahi" },
   { url: "https://news.web.nhk.or.jp/newsweb/pl/news-nwa-topic-nationwide-0000414", name: "NHK 医療", region: "해외", country: "JP", parser: "nhk" },
@@ -38,8 +39,6 @@ const FIRECRAWL_SOURCES = [
 
 function normalizeDate(dateStr?: string): string {
   if (dateStr) {
-    // Try to parse various date formats
-    // Format: "2026-02-16 05:55" or "2026-02-16" or "02.16 06:00" or "2026.02.16"
     const isoMatch = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (isoMatch) {
       return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
@@ -64,7 +63,18 @@ function stripCdata(text: string): string {
 }
 
 function stripHtml(text: string): string {
-  return text.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&#x27;/g, "'").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  return text
+    .replace(/<[^>]*>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // Parse RSS XML into articles
@@ -114,32 +124,20 @@ async function fetchRss(source: typeof RSS_SOURCES[0]): Promise<Array<{ title: s
 // Parse 약업신문 HTML
 function parseYakup(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  
-  // Split by <li> tags and find article items
   const liBlocks = html.split(/<li>/gi);
   for (const block of liBlocks) {
     if (articles.length >= 15) break;
-    
-    // Find link with mode=view
     const linkMatch = block.match(/href="([^"]*mode=view[^"]*)"/i);
     if (!linkMatch) continue;
-    
     const url = linkMatch[1].replace(/&amp;/g, "&");
     const fullUrl = url.startsWith("http") ? url : `https://www.yakup.com${url}`;
-    
-    // Extract title from title_con > span
     const titleMatch = block.match(/class="title_con">\s*<span>\s*([\s\S]*?)\s*<\/span>/i);
     if (!titleMatch) continue;
     const title = stripHtml(titleMatch[1]).trim();
-    
-    // Extract summary from text_con > span
     const summaryMatch = block.match(/class="text_con">\s*<span>\s*([\s\S]*?)\s*<\/span>/i);
     const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
-    
-    // Extract date
     const dateMatch = block.match(/class="date">\s*([\d.]+)\s*<\/span>/i);
     const dateStr = dateMatch ? dateMatch[1].replace(/\./g, "-") : "";
-    
     if (title.length > 5) {
       articles.push({ title, summary, url: fullUrl, date: normalizeDate(dateStr) });
     }
@@ -150,22 +148,17 @@ function parseYakup(html: string): Array<{ title: string; summary: string; url: 
 // Parse 데일리팜 HTML (종합뉴스 페이지)
 function parseDailypharm(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  // Split by <li> items
   const liParts = html.split(/<li\s+class="[^"]*"\s*>/gi);
   for (let i = 1; i < liParts.length && articles.length < 20; i++) {
     const block = liParts[i];
-    // Extract URL
     const urlMatch = block.match(/<a\s+href="(https:\/\/www\.dailypharm\.com\/user\/news\/\d+)"/i);
     if (!urlMatch) continue;
     const url = urlMatch[1];
-    // Extract title from lin_title
     const titleMatch = block.match(/<div\s+class="lin_title">([\s\S]*?)<\/div>/i);
     if (!titleMatch) continue;
     const title = stripHtml(titleMatch[1]).trim();
-    // Extract summary from lin_cont
     const summaryMatch = block.match(/<div\s+class="lin_cont[^"]*">([\s\S]*?)<\/div>/i);
     const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
-    // Extract date from lin_data
     const dateMatch = block.match(/<div class="lin_data">\s*<div>(\d{4}-\d{2}-\d{2})/i);
     const dateStr = dateMatch ? dateMatch[1] : "";
     if (title.length > 5 && !articles.some(a => a.title === title)) {
@@ -178,7 +171,6 @@ function parseDailypharm(html: string): Array<{ title: string; summary: string; 
 // Parse 의약뉴스 (newsmp.com) HTML
 function parseNewsmp(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  // Split by "list-block" divs instead of using regex that fails with nested divs
   const blocks = html.split(/<!--\s*group\s*\/\/-->/gi);
   for (const block of blocks) {
     if (articles.length >= 15) break;
@@ -205,7 +197,6 @@ function parseHitnews(html: string): Array<{ title: string; summary: string; url
   let m;
   while ((m = liRegex.exec(html)) !== null && articles.length < 20) {
     let url = m[1].trim();
-    // Fix relative URLs to absolute
     if (url.startsWith("/")) {
       url = `https://www.hitnews.co.kr${url}`;
     } else if (!url.startsWith("http")) {
@@ -223,7 +214,6 @@ function parseHitnews(html: string): Array<{ title: string; summary: string; url
 // Parse RTTNews Biotech HTML
 function parseRttnewsHtml(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  // RTTNews uses <a class="lnkr" href="/XXXXX/slug.aspx">Title</a>
   const linkRegex = /<a[^>]*class="[^"]*lnkr[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
   let m;
   while ((m = linkRegex.exec(html)) !== null && articles.length < 25) {
@@ -235,7 +225,6 @@ function parseRttnewsHtml(html: string): Array<{ title: string; summary: string;
     }
     articles.push({ title, summary: "", url, date: normalizeDate("") });
   }
-  // Fallback: try generic <a href="/XXXXX/slug.aspx"> pattern
   if (articles.length === 0) {
     const fallbackRegex = /<a[^>]*href="(\/\d+\/[^"]+\.aspx)"[^>]*>([\s\S]*?)<\/a>/gi;
     let fm;
@@ -275,92 +264,33 @@ function parseKpanews(html: string): Array<{ title: string; summary: string; url
 // Parse 医薬ニュース (iyakunews.com) HTML
 function parseIyakuNews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  // Split by rss-site-item divs
   const parts = html.split(/class=['"]rss-site-item['"]/gi);
-  
   for (let i = 1; i < parts.length && articles.length < 20; i++) {
     const block = parts[i];
     const urlMatch = block.match(/href=['"]([^'"]*)['"]/i);
     if (!urlMatch) continue;
     let url = urlMatch[1].replace(/&amp;/g, "&").trim();
-    // Extract actual destination URL from Google redirect URLs
     const googleRedirect = url.match(/[?&]url=([^&]+)/);
     if (googleRedirect) {
       url = decodeURIComponent(googleRedirect[1]);
     }
-    // Extract title text between <p class='title'> and </p>
     const pMatch = block.match(/class=['"]title['"][^>]*>([\s\S]*?)<\/p>/i);
     if (!pMatch) continue;
     let titleRaw = pMatch[1]
-      .replace(/<span[^>]*>.*?<\/span>/gi, "") // remove NEW! badge
-      .replace(/&lt;b&gt;/g, "").replace(/&lt;\/b&gt;/g, "") // remove escaped <b> tags
-      .replace(/<[^>]*>/g, "") // strip remaining HTML
+      .replace(/<span[^>]*>.*?<\/span>/gi, "")
+      .replace(/&lt;b&gt;/g, "").replace(/&lt;\/b&gt;/g, "")
+      .replace(/<[^>]*>/g, "")
       .replace(/&amp;/g, "&").replace(/&quot;/g, '"')
       .trim();
-    // Extract date: [YYYY/MM/DD HH:MM]
     const dateMatch = titleRaw.match(/\[(\d{4})\/(\d{2})\/(\d{2})\s+\d{2}:\d{2}\]/);
     let dateStr = "";
     if (dateMatch) {
       dateStr = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
       titleRaw = titleRaw.replace(/\s*\[\d{4}\/\d{2}\/\d{2}\s+\d{2}:\d{2}\]\s*/, "").trim();
     }
-    // Remove trailing source: " - ソース名" or "　[…]"
     titleRaw = titleRaw.replace(/\s*[ー－—]\s+[^\[]+$/, "").replace(/　$/, "").trim();
     if (titleRaw.length > 5) {
       articles.push({ title: titleRaw, summary: "", url, date: normalizeDate(dateStr) });
-    }
-  }
-  return articles;
-}
-
-// Parse 医药新闻 (bydrug.pharmcube.com/news) from Firecrawl markdown
-function parsebydrug(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
-  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  const lines = markdown.split("\n");
-  
-  // Current date for filtering - only accept articles from last 2 days (exclude old like January if now is Feb+)
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
-  
-  for (let i = 0; i < lines.length && articles.length < 15; i++) {
-    const line = lines[i].trim();
-    
-    // Match the actual format: **title**\n...\nkeywords YYYY-MM-DD](url)
-    // Or simpler: [title](https://news.yaozh.com/archive/XXXXX.html)
-    const linkMatch = line.match(/\]\((https:\/\/news\.yaozh\.com\/archive\/\d+\.html)\)/);
-    if (!linkMatch) continue;
-    const url = linkMatch[1].trim();
-    
-    // Extract title: look for **bold title** in nearby lines
-    let title = "";
-    for (let j = Math.max(0, i - 8); j <= i; j++) {
-      const boldMatch = lines[j].match(/\*\*(.{8,})\*\*/);
-      if (boldMatch) {
-        title = boldMatch[1].replace(/\\/g, "").trim();
-        break;
-      }
-    }
-    if (!title || title.length < 8) continue;
-    
-    // Extract date from the same line or nearby: YYYY-MM-DD at end
-    let dateStr = "";
-    const dateMatch = line.match(/(\d{4}-\d{2}-\d{2})\]\(/);
-    if (dateMatch) {
-      dateStr = dateMatch[1];
-    } else {
-      for (let j = Math.max(0, i - 3); j <= i; j++) {
-        const dm = lines[j].match(/(\d{4}-\d{2}-\d{2})/);
-        if (dm) { dateStr = dm[1]; break; }
-      }
-    }
-    
-    // Filter out old articles (e.g., January when we're in February)
-    const articleDate = normalizeDate(dateStr);
-    if (articleDate < cutoffStr) continue;
-    
-    if (!articles.some(a => a.url === url)) {
-      articles.push({ title, summary: "", url, date: articleDate });
     }
   }
   return articles;
@@ -388,20 +318,109 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Parse 医药新闻 (bydrug.pharmcube.com/news) from Firecrawl markdown
+//
+// bydrug.pharmcube.com은 React SPA입니다. Firecrawl이 반환하는 마크다운 구조는
+// 실제로 받아봐야 정확히 알 수 있으므로, 아래처럼 4가지 패턴을 모두 커버합니다:
+//
+//  Pattern 1: [제목](https://bydrug.pharmcube.com/news/XXXXX)
+//  Pattern 2: **[제목](https://bydrug.pharmcube.com/news/XXXXX)**
+//  Pattern 3: | [제목](url) | 날짜 | ... |  (테이블 형식)
+//  Pattern 4: generic — bydrug URL만 있고 제목이 다른 형태인 경우
+//
+// 날짜 형식: YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD / YYYY年MM月DD日
+// ─────────────────────────────────────────────────────────────────────────────
+function parseBydrug(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const lines = markdown.split("\n");
+
+  // 30일 이상 오래된 기사는 제외
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+
+  // 날짜 추출 헬퍼: 인접 라인들에서 날짜 찾기
+  const extractDateNearLine = (idx: number, lookahead = 3): string => {
+    for (let j = idx; j <= Math.min(lines.length - 1, idx + lookahead); j++) {
+      const dm = lines[j].match(/(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
+      if (dm) return `${dm[1]}-${dm[2]}-${dm[3]}`;
+      const cnDate = lines[j].match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+      if (cnDate) return `${cnDate[1]}-${cnDate[2].padStart(2, "0")}-${cnDate[3].padStart(2, "0")}`;
+    }
+    return "";
+  };
+
+  const addArticle = (title: string, url: string, dateStr: string) => {
+    const articleDate = normalizeDate(dateStr);
+    if (articleDate < cutoffStr) return;
+    if (title.length < 5) return;
+    if (articles.some(a => a.url === url)) return;
+    articles.push({ title, summary: "", url, date: articleDate });
+  };
+
+  for (let i = 0; i < lines.length && articles.length < 20; i++) {
+    const line = lines[i].trim();
+
+    // Pattern 2: **[제목](url)**  — bold link
+    const boldLink = line.match(/\*\*\[([^\]]{5,})\]\((https:\/\/bydrug\.pharmcube\.com\/[^\s)]+)\)\*\*/);
+    if (boldLink) {
+      addArticle(boldLink[1].replace(/\\/g, "").trim(), boldLink[2].trim(), extractDateNearLine(i));
+      continue;
+    }
+
+    // Pattern 3: table row  | [제목](url) | 날짜 |
+    const tableRow = line.match(/^\|\s*\[([^\]]{5,})\]\((https:\/\/bydrug\.pharmcube\.com\/[^\s)]+)\)\s*\|/);
+    if (tableRow) {
+      const dateInRow = line.match(/(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
+      const dateStr = dateInRow ? `${dateInRow[1]}-${dateInRow[2]}-${dateInRow[3]}` : extractDateNearLine(i);
+      addArticle(tableRow[1].replace(/\\/g, "").trim(), tableRow[2].trim(), dateStr);
+      continue;
+    }
+
+    // Pattern 1: plain [제목](url)
+    const plainLink = line.match(/\[([^\]]{5,})\]\((https:\/\/bydrug\.pharmcube\.com\/[^\s)]+)\)/);
+    if (plainLink) {
+      addArticle(plainLink[1].replace(/\\/g, "").trim(), plainLink[2].trim(), extractDateNearLine(i));
+      continue;
+    }
+
+    // Pattern 4: URL 단독 등장, 제목은 이전/이후 라인에서 bold 추출
+    const urlOnly = line.match(/\(?(https:\/\/bydrug\.pharmcube\.com\/news\/\d+[^\s)]*)\)?/);
+    if (urlOnly) {
+      const url = urlOnly[1];
+      let title = "";
+      // 위아래 5줄에서 bold 텍스트 찾기
+      for (let j = Math.max(0, i - 5); j <= Math.min(lines.length - 1, i + 5); j++) {
+        const bold = lines[j].match(/\*\*([^*]{5,})\*\*/);
+        if (bold) { title = bold[1].replace(/\\/g, "").trim(); break; }
+        // h2/h3 헤딩
+        const heading = lines[j].match(/^#{1,3}\s+(.{5,})/);
+        if (heading) { title = heading[1].replace(/\\/g, "").trim(); break; }
+      }
+      if (title) addArticle(title, url, extractDateNearLine(i));
+    }
+  }
+
+  console.log(`parseBydrug: extracted ${articles.length} articles`);
+  return articles;
+}
+
 // Parse RTTNews Biotech (from Firecrawl markdown)
 function parseRttnews(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   const lines = markdown.split("\n");
-  
-  // Match pattern: - [Title](https://www.rttnews.com/XXXXX/slug.aspx) Month Day, Year HH:MM ET
+
   const monthMap: Record<string, string> = {
     January: "01", February: "02", March: "03", April: "04", May: "05", June: "06",
-    July: "07", August: "08", September: "09", October: "10", November: "11", December: "12"
+    July: "07", August: "08", September: "09", October: "10", November: "11", December: "12",
   };
 
   for (const line of lines) {
     if (articles.length >= 25) break;
-    const match = line.match(/^\s*-\s*\[([^\]]+)\]\((https:\/\/www\.rttnews\.com\/\d+\/[^)]+)\)\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\s+\d{2}:\d{2}\s+ET/);
+    const match = line.match(
+      /^\s*-\s*\[([^\]]+)\]\((https:\/\/www\.rttnews\.com\/\d+\/[^)]+)\)\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\s+\d{2}:\d{2}\s+ET/
+    );
     if (!match) continue;
     const title = match[1].trim();
     const url = match[2].trim();
@@ -423,8 +442,9 @@ function parseAsahi(markdown: string): Array<{ title: string; summary: string; u
 
   for (const line of lines) {
     if (articles.length >= 20) break;
-    // Match: [**Title** date](https://www.asahi.com/articles/XXXXX.html)
-    const match = line.match(/\[\*\*(.+?)\*\*\s*(\d{1,2})\/(\d{1,2})\([^)]*\)\s*[\d:]*\]\((https:\/\/www\.asahi\.com\/articles\/[^)]+)\)/);
+    const match = line.match(
+      /\[\*\*(.+?)\*\*\s*(\d{1,2})\/(\d{1,2})\([^)]*\)\s*[\d:]*\]\((https:\/\/www\.asahi\.com\/articles\/[^)]+)\)/
+    );
     if (!match) continue;
     const title = match[1].trim();
     const monthStr = match[2].padStart(2, "0");
@@ -446,11 +466,9 @@ function parseNhk(markdown: string): Array<{ title: string; summary: string; url
 
   for (let i = 0; i < lines.length && articles.length < 20; i++) {
     const line = lines[i].trim();
-    // Match: **Title**
     const titleMatch = line.match(/\*\*(.{5,})\*\*/);
     if (!titleMatch) continue;
     const title = titleMatch[1].trim();
-    // Look nearby for URL and date
     let url = "";
     let dateStr = "";
     for (let j = Math.max(0, i - 5); j <= Math.min(lines.length - 1, i + 5); j++) {
@@ -472,7 +490,9 @@ function parseNhk(markdown: string): Array<{ title: string; summary: string; url
 }
 
 // Fetch SPA sites using Firecrawl scrape API
-async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
+async function fetchWithFirecrawl(
+  source: typeof FIRECRAWL_SOURCES[0]
+): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     if (!FIRECRAWL_API_KEY) {
@@ -502,10 +522,15 @@ async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<
 
     const data = await resp.json();
     const markdown = data.data?.markdown || data.markdown || "";
-    
+
+    // DEBUG: Supabase 로그에서 마크다운 구조를 확인할 수 있도록 첫 500자 출력
+    console.log(`[${source.name}] Firecrawl markdown preview:\n${markdown.slice(0, 500)}`);
+
     let articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-    if (source.parser === "yaozh") {
-      articles = parseYaozh(markdown);
+
+    if (source.parser === "bydrug") {
+      // ✅ "By Drug" → "bydrug"으로 통일됨
+      articles = parseBydrug(markdown);
     } else if (source.parser === "rttnews") {
       articles = parseRttnews(markdown);
     } else if (source.parser === "asahi") {
@@ -523,7 +548,9 @@ async function fetchWithFirecrawl(source: typeof FIRECRAWL_SOURCES[0]): Promise<
 }
 
 // Fetch HTML and parse based on parser type
-async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
+async function fetchHtml(
+  source: typeof HTML_SOURCES[0]
+): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
     console.log(`Fetching HTML: ${source.name}`);
     const resp = await fetch(source.url, {
@@ -557,9 +584,7 @@ async function fetchHtml(source: typeof HTML_SOURCES[0]): Promise<Array<{ title:
       articles = parsePharmnews(html);
     } else if (source.parser === "rttnews-html") {
       articles = parseRttnewsHtml(html);
-    } else if (source.parser === "answersnews") {
-      articles = parseIyakuNews(html);
-    } else if (source.parser === "iyakunews") {
+    } else if (source.parser === "answersnews" || source.parser === "iyakunews") {
       articles = parseIyakuNews(html);
     } else {
       // Generic fallback
@@ -701,7 +726,6 @@ async function extractKeywordsAndTranslate(
       const isForeign = article.region === "해외";
       const langMap: Record<string, string> = { JP: "ja", CN: "zh", IN: "en", US: "en", EU: "en" };
       const origLang = isForeign ? (langMap[article.country] || "en") : "ko";
-      // Always use translated title/summary when available
       const finalTitle = r.translated_title || article.title;
       const finalSummary = r.translated_summary || article.summary;
 
@@ -747,10 +771,8 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(500);
 
-      // Find articles with keywords that are English-only or missing Korean
       const needsFix = (allArticles || []).filter((a: any) => {
         return (a.api_keywords || []).some((kw: string) => {
-          // English-only (no Korean chars), or format like "Wegovy (위고비)" instead of "위고비 (Wegovy)"
           const hasKorean = /[\uAC00-\uD7A3]/.test(kw);
           const startsWithEnglish = /^[a-zA-Z]/.test(kw);
           return !hasKorean || startsWithEnglish;
@@ -763,7 +785,6 @@ serve(async (req) => {
       for (let i = 0; i < needsFix.length; i += kBatchSize) {
         const batch = needsFix.slice(i, i + kBatchSize);
         const kwList = batch.map((a: any, idx: number) => `[${idx}] ${JSON.stringify(a.api_keywords)}`).join("\n");
-
         try {
           const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
             method: "POST",
@@ -771,17 +792,45 @@ serve(async (req) => {
             body: JSON.stringify({
               model: "gemini-2.5-flash-lite",
               messages: [
-                { role: "system", content: `제약 원료의약품 키워드 형식 전문가입니다. 각 키워드를 반드시 "한글명 (English Name)" 형식으로 변환하세요.
+                {
+                  role: "system",
+                  content: `제약 원료의약품 키워드 형식 전문가입니다. 각 키워드를 반드시 "한글명 (English Name)" 형식으로 변환하세요.
 규칙:
 - 영문만 있는 경우: 한국어 번역을 앞에 추가. 예: "Rivaroxaban" → "리바록사반 (Rivaroxaban)"
-- 한글만 있는 경우: 영문명을 괄호 안에 추가. 예: "세마글루타이드" → "세마글루타이드 (Semaglutide)"  
+- 한글만 있는 경우: 영문명을 괄호 안에 추가. 예: "세마글루타이드" → "세마글루타이드 (Semaglutide)"
 - "영문 (한글)" 형식인 경우: 순서를 바꿔서 "한글 (영문)"으로. 예: "Wegovy (위고비)" → "위고비 (Wegovy)"
 - 이미 "한글 (영문)" 형식이면 그대로 유지
 - 브랜드명은 그대로 한글화. 예: "Uplizna" → "유플리즈나 (Uplizna)"
-- 코드명(JW0061 등)이나 카테고리(mRNA, GLP-1, siRNA)는 제외(빈 배열 반환)` },
+- 코드명(JW0061 등)이나 카테고리(mRNA, GLP-1, siRNA)는 제외(빈 배열 반환)`,
+                },
                 { role: "user", content: `Fix keyword format:\n\n${kwList}` },
               ],
-              tools: [{ type: "function", function: { name: "fix_keywords", description: "Fix keyword format", parameters: { type: "object", properties: { results: { type: "array", items: { type: "object", properties: { index: { type: "number" }, keywords: { type: "array", items: { type: "string" } } }, required: ["index", "keywords"], additionalProperties: false } } }, required: ["results"], additionalProperties: false } } }],
+              tools: [{
+                type: "function",
+                function: {
+                  name: "fix_keywords",
+                  description: "Fix keyword format",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      results: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            index: { type: "number" },
+                            keywords: { type: "array", items: { type: "string" } },
+                          },
+                          required: ["index", "keywords"],
+                          additionalProperties: false,
+                        },
+                      },
+                    },
+                    required: ["results"],
+                    additionalProperties: false,
+                  },
+                },
+              }],
               tool_choice: { type: "function", function: { name: "fix_keywords" } },
             }),
           });
@@ -799,10 +848,13 @@ serve(async (req) => {
         } catch (err) { console.error("Keyword fix batch error:", err); }
         if (i + kBatchSize < needsFix.length) await new Promise(r => setTimeout(r, 1500));
       }
-      return new Response(JSON.stringify({ success: true, fixed, total: needsFix.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ success: true, fixed, total: needsFix.length }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // --- Backfill mode: translate existing foreign articles or re-summarize domestic ---
+    // --- Backfill mode: translate existing foreign articles ---
     if (body.backfillTranslations) {
       const { data: foreignArticles } = await supabase
         .from("news_articles")
@@ -821,7 +873,6 @@ serve(async (req) => {
       for (let i = 0; i < needsTranslation.length; i += tBatchSize) {
         const batch = needsTranslation.slice(i, i + tBatchSize);
         const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary?.slice(0, 200) || ""}`).join("\n");
-
         try {
           const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
             method: "POST",
@@ -829,10 +880,39 @@ serve(async (req) => {
             body: JSON.stringify({
               model: "gemini-2.5-flash-lite",
               messages: [
-                { role: "system", content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 한국어 2문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.` },
+                {
+                  role: "system",
+                  content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 한국어 2문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.`,
+                },
                 { role: "user", content: `Translate these articles to Korean:\n\n${articleList}` },
               ],
-              tools: [{ type: "function", function: { name: "translate_articles", description: "Translate articles to Korean", parameters: { type: "object", properties: { results: { type: "array", items: { type: "object", properties: { index: { type: "number" }, translated_title: { type: "string" }, translated_summary: { type: "string" } }, required: ["index", "translated_title", "translated_summary"], additionalProperties: false } } }, required: ["results"], additionalProperties: false } } }],
+              tools: [{
+                type: "function",
+                function: {
+                  name: "translate_articles",
+                  description: "Translate articles to Korean",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      results: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            index: { type: "number" },
+                            translated_title: { type: "string" },
+                            translated_summary: { type: "string" },
+                          },
+                          required: ["index", "translated_title", "translated_summary"],
+                          additionalProperties: false,
+                        },
+                      },
+                    },
+                    required: ["results"],
+                    additionalProperties: false,
+                  },
+                },
+              }],
               tool_choice: { type: "function", function: { name: "translate_articles" } },
             }),
           });
@@ -844,15 +924,22 @@ serve(async (req) => {
           for (const r of parsed.results || []) {
             const article = batch[r.index];
             if (!article || !r.translated_title) continue;
-            await supabase.from("news_articles").update({ title: r.translated_title, summary: r.translated_summary || article.summary }).eq("id", article.id);
+            await supabase.from("news_articles").update({
+              title: r.translated_title,
+              summary: r.translated_summary || article.summary,
+            }).eq("id", article.id);
             translated++;
           }
         } catch (err) { console.error("Translation batch error:", err); }
         if (i + tBatchSize < needsTranslation.length) await new Promise(r => setTimeout(r, 2000));
       }
-      return new Response(JSON.stringify({ success: true, translated, total: needsTranslation.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ success: true, translated, total: needsTranslation.length }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
+    // --- Backfill mode: re-summarize domestic articles ---
     if (body.backfillSummaries) {
       const { data: articles } = await supabase
         .from("news_articles")
@@ -881,10 +968,38 @@ serve(async (req) => {
             body: JSON.stringify({
               model: "gemini-2.5-flash-lite",
               messages: [
-                { role: "system", content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어 2문장 이내로 간결하게 요약하세요. 존댓말(~입니다, ~됩니다, ~했습니다)을 사용하세요.` },
+                {
+                  role: "system",
+                  content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어 2문장 이내로 간결하게 요약하세요. 존댓말(~입니다, ~됩니다, ~했습니다)을 사용하세요.`,
+                },
                 { role: "user", content: `Summarize these articles:\n\n${articleList}` },
               ],
-              tools: [{ type: "function", function: { name: "summarize_articles", description: "Return summaries", parameters: { type: "object", properties: { results: { type: "array", items: { type: "object", properties: { index: { type: "number" }, summary: { type: "string" } }, required: ["index", "summary"], additionalProperties: false } } }, required: ["results"], additionalProperties: false } } }],
+              tools: [{
+                type: "function",
+                function: {
+                  name: "summarize_articles",
+                  description: "Return summaries",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      results: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            index: { type: "number" },
+                            summary: { type: "string" },
+                          },
+                          required: ["index", "summary"],
+                          additionalProperties: false,
+                        },
+                      },
+                    },
+                    required: ["results"],
+                    additionalProperties: false,
+                  },
+                },
+              }],
               tool_choice: { type: "function", function: { name: "summarize_articles" } },
             }),
           });
@@ -902,19 +1017,26 @@ serve(async (req) => {
         } catch (err) { console.error("Backfill batch error:", err); }
         if (i + batchSize < needsSummary.length) await new Promise(r => setTimeout(r, 2000));
       }
-      return new Response(JSON.stringify({ success: true, summarized: updated, total: needsSummary.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ success: true, summarized: updated, total: needsSummary.length }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
+    // =====================================================
+    // MAIN CRAWL FLOW
+    // =====================================================
+
     // 1. Fetch all sources in parallel
-    const rssPromises = RSS_SOURCES.map((s) => fetchRss(s).then((articles) =>
-      articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country }))
-    ));
-    const htmlPromises = HTML_SOURCES.map((s) => fetchHtml(s).then((articles) =>
-      articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country }))
-    ));
-    const firecrawlPromises = FIRECRAWL_SOURCES.map((s) => fetchWithFirecrawl(s).then((articles) =>
-      articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country }))
-    ));
+    const rssPromises = RSS_SOURCES.map((s) =>
+      fetchRss(s).then((articles) => articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country })))
+    );
+    const htmlPromises = HTML_SOURCES.map((s) =>
+      fetchHtml(s).then((articles) => articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country })))
+    );
+    const firecrawlPromises = FIRECRAWL_SOURCES.map((s) =>
+      fetchWithFirecrawl(s).then((articles) => articles.map((a) => ({ ...a, source: s.name, region: s.region, country: s.country })))
+    );
 
     const allFetched = (await Promise.all([...rssPromises, ...htmlPromises, ...firecrawlPromises])).flat();
     console.log(`Total fetched articles: ${allFetched.length}`);
@@ -925,9 +1047,8 @@ serve(async (req) => {
     for (let i = 0; i < allFetched.length; i += batchSize) {
       const batch = allFetched.slice(i, i + batchSize);
       const results = await extractKeywordsAndTranslate(batch, GOOGLE_GEMINI_API_KEY);
-      
-      // Fallback: include any articles the AI missed (so they still get saved)
-      const returnedIndices = new Set(results.map((_: any, idx: number) => idx));
+
+      // Fallback: include any articles the AI missed
       const returnedUrls = new Set(results.map((r: any) => r.url));
       for (const article of batch) {
         if (!returnedUrls.has(article.url)) {
@@ -964,45 +1085,37 @@ serve(async (req) => {
       console.log(`Cleaned up ${deletedCount} articles older than 7 days`);
     }
 
-    // 4. Filter out old articles: domestic=last 3 days, foreign=yesterday only (KST)
+    // 4. Filter by recency: domestic=last 3 days, foreign=yesterday+ (KST)
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     const threeDaysAgoStr = threeDaysAgo.toISOString().split("T")[0];
-    // KST yesterday
+
     const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const kstYesterday = new Date(kstNow);
     kstYesterday.setDate(kstYesterday.getDate() - 1);
     const yesterdayStr = kstYesterday.toISOString().split("T")[0];
+
     const recentResults = allResults.filter((r) => {
-      if (r.region === "해외") {
-        // Foreign: only yesterday (KST)
-        return r.date >= yesterdayStr;
-      }
-      // Domestic: last 3 days
+      if (r.region === "해외") return r.date >= yesterdayStr;
       return r.date >= threeDaysAgoStr;
     });
     console.log(`Filtered to ${recentResults.length} recent articles (${allResults.length - recentResults.length} old articles skipped)`);
 
-    // 5. Insert new articles (skip duplicates by URL and similar titles across ALL sources)
+    // 5. Insert new articles (skip duplicates)
     if (recentResults.length > 0) {
-      const { data: existing } = await supabase
-        .from("news_articles")
-        .select("title, url");
+      const { data: existing } = await supabase.from("news_articles").select("title, url");
 
       const existingUrls = new Set((existing || []).map((e: any) => e.url));
 
-      // Normalize: strip all non-content chars for fuzzy matching
-      const normalizeTitle = (t: string) => t.replace(/[^가-힣a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
+      const normalizeTitle = (t: string) =>
+        t.replace(/[^가-힣a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, "").toLowerCase();
       const existingNormalized = new Set((existing || []).map((e: any) => normalizeTitle(e.title)));
 
-      // Build multiple fuzzy keys for better cross-language duplicate detection
       const shortKey = (t: string) => normalizeTitle(t).slice(0, 20);
       const midKey = (t: string) => {
         const norm = normalizeTitle(t);
-        // Use chars from middle portion too for better matching
         return norm.length > 15 ? norm.slice(5, 25) : norm;
       };
-      // Extract key noun chunks (3+ char Korean/CJK sequences) for semantic matching
       const extractNouns = (t: string): string[] => {
         const matches = t.match(/[가-힣\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]{3,}/g) || [];
         return matches.filter(m => m.length >= 3).slice(0, 5).sort();
@@ -1011,28 +1124,26 @@ serve(async (req) => {
 
       const existingShortKeys = new Set((existing || []).map((e: any) => shortKey(e.title)));
       const existingMidKeys = new Set((existing || []).map((e: any) => midKey(e.title)));
-      const existingNounKeys = new Set((existing || []).map((e: any) => {
-        const nk = nounKey(e.title);
-        return nk.length >= 9 ? nk : ""; // Only use if substantial
-      }).filter((k: string) => k));
+      const existingNounKeys = new Set(
+        (existing || [])
+          .map((e: any) => { const nk = nounKey(e.title); return nk.length >= 9 ? nk : ""; })
+          .filter((k: string) => k)
+      );
 
       const newResults = recentResults.filter((r) => {
         if (existingUrls.has(r.url)) return false;
         const norm = normalizeTitle(r.title);
         if (existingNormalized.has(norm)) return false;
-        // Fuzzy: if first 20 normalized chars match an existing article, skip
         const sk = shortKey(r.title);
         if (sk.length >= 15 && existingShortKeys.has(sk)) return false;
-        // Mid-key fuzzy match
         const mk = midKey(r.title);
         if (mk.length >= 15 && existingMidKeys.has(mk)) return false;
-        // Noun-based semantic match (catches translated duplicates)
         const nk = nounKey(r.title);
         if (nk.length >= 9 && existingNounKeys.has(nk)) return false;
         return true;
       });
 
-      // Also deduplicate within the batch itself
+      // Deduplicate within batch
       const seenUrls = new Set<string>();
       const seenNormTitles = new Set<string>();
       const seenShortKeys = new Set<string>();
@@ -1061,8 +1172,6 @@ serve(async (req) => {
       }
       console.log(`Inserted ${dedupedResults.length} new articles (${recentResults.length - dedupedResults.length} duplicates skipped)`);
     }
-
-    // 6. Translation of untranslated articles is handled by separate translate-news function
 
     return new Response(
       JSON.stringify({ success: true, fetched: allFetched.length, withKeywords: allResults.length }),
