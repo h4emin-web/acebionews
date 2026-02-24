@@ -19,36 +19,48 @@ Deno.serve(async (req) => {
 
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
 
-    // Extract English name if keyword contains parentheses like "니세르골린 (Nicergoline)"
+    // Extract English name from "한글명 (EnglishName)" format
     const enMatch = keyword.match(/\(([^)]+)\)/);
-    const searchName = enMatch ? enMatch[1].trim() : keyword.trim();
-    // Normalize: always use the same search term regardless of input language
-    const isKorean = /[가-힣]/.test(searchName);
+    const koMatch = keyword.match(/^([가-힣\s]+)/);
+    const englishName = enMatch ? enMatch[1].trim() : null;
+    const koreanName = koMatch ? koMatch[1].trim() : keyword.trim();
+    // Use English name for search if available, otherwise use the raw keyword
+    const searchName = englishName || keyword.trim();
 
-    console.log(`Searching manufacturers for: ${searchName} (original: ${keyword})`);
+    console.log(`Searching manufacturers for: ${searchName} (ko: ${koreanName}, original: ${keyword})`);
 
-    // Step 1: Use Firecrawl to search for real manufacturer data
+    // Step 1: Use Firecrawl to search for real manufacturer data with multiple strategies
     let searchContext = "";
     if (FIRECRAWL_API_KEY) {
       try {
-        const queries = [
-          `"${searchName}" API manufacturer supplier pharmaceutical India China`,
-          `"${searchName}" active pharmaceutical ingredient producer GMP`,
-        ];
+        const queries = englishName
+          ? [
+              `"${englishName}" API manufacturer supplier India China pharmaceutical`,
+              `"${englishName}" active pharmaceutical ingredient producer`,
+            ]
+          : [
+              `"${searchName}" API manufacturer supplier pharmaceutical`,
+              `"${searchName}" 원료의약품 제조사 manufacturer`,
+            ];
 
         const searchResults = await Promise.all(
           queries.map(async (q) => {
-            const resp = await fetch("https://api.firecrawl.dev/v1/search", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ query: q, limit: 5 }),
-            });
-            if (!resp.ok) return [];
-            const data = await resp.json();
-            return data.data || [];
+            try {
+              const resp = await fetch("https://api.firecrawl.dev/v1/search", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ query: q, limit: 5 }),
+                signal: AbortSignal.timeout(10000),
+              });
+              if (!resp.ok) return [];
+              const data = await resp.json();
+              return data.data || [];
+            } catch {
+              return [];
+            }
           })
         );
 
@@ -63,9 +75,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 2: Use AI with search context to extract verified manufacturers
+    // Step 2: Use AI to extract manufacturers — allow AI knowledge + search context
     const contextBlock = searchContext
-      ? `\n\n## SEARCH RESULTS FOR REFERENCE\nUse ONLY the following search results to identify real manufacturers. Do NOT add any manufacturer that is not mentioned or verifiable from these results:\n${searchContext}`
+      ? `\n\n## WEB SEARCH RESULTS (참고용)\n다음 검색 결과를 참고하되, 본인의 지식도 함께 활용하세요:\n${searchContext}`
       : "";
 
     const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -79,23 +91,23 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert with deep knowledge of global API manufacturers.
+            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert.
 
-Task: Find REAL manufacturers/suppliers of the given API ingredient, categorized by region (India, China, Global).
+Task: Find manufacturers/suppliers of the given API ingredient by region (India, China, Global).
 
 ## RULES
-1. Return ONLY manufacturers you are confident actually produce or supply this specific API ingredient.
-2. For each manufacturer provide: company name (English), country, city.
-3. Website: provide the company's REAL homepage URL. If unsure, set to null. NEVER guess a URL.
-4. Email & Phone: provide ONLY if you are certain. Otherwise null. NEVER fabricate contact info.
-5. Return UP TO 3 per region. Fewer or zero is fine - accuracy over quantity.
-6. The SAME search term in Korean or English MUST return the same manufacturers.
+1. Use your knowledge of the pharmaceutical industry AND any search results provided.
+2. Return well-known, established manufacturers that are widely recognized as producers of this API.
+3. For each manufacturer: company name, country, city.
+4. Website: provide the company's actual homepage URL. Use the company's native language site (e.g. Chinese site for Chinese companies, Japanese site for Japanese companies). If unsure, set to null.
+5. Email & Phone: set to null (do not guess).
+6. Return UP TO 3 per region. Quality over quantity — but DO return results if you know real manufacturers.
 7. If the ingredient is not a real pharmaceutical compound, return all empty arrays.
-8. Prefer well-known, established manufacturers (e.g. WHO-GMP certified, CEP holders, major API producers).${contextBlock}`,
+8. Include major global producers like Teva, Mylan, BASF, DSM, etc. when applicable.${contextBlock}`,
           },
           {
             role: "user",
-            content: `"${searchName}" 원료의약품(API)을 실제로 제조하거나 공급하는 회사를 인도, 중국, 해외(일본·유럽·미국 등) 지역별로 찾아줘. 각 회사의 홈페이지, 이메일, 전화번호를 정확히 알려줘.`,
+            content: `"${searchName}"${englishName ? "" : ` (한국어: ${koreanName})`} 원료의약품(API)의 실제 제조사를 인도, 중국, 글로벌(일본·유럽·미국 등) 지역별로 찾아줘.`,
           },
         ],
         tools: [
@@ -103,7 +115,7 @@ Task: Find REAL manufacturers/suppliers of the given API ingredient, categorized
             type: "function",
             function: {
               name: "provide_manufacturers",
-              description: "Provide verified manufacturer information for an API ingredient",
+              description: "Provide manufacturer information for an API ingredient",
               parameters: {
                 type: "object",
                 properties: {
@@ -115,9 +127,9 @@ Task: Find REAL manufacturers/suppliers of the given API ingredient, categorized
                         name: { type: "string" },
                         country: { type: "string" },
                         city: { type: "string" },
-                        website: { type: "string", description: "Exact verified URL only, or null" },
-                        email: { type: "string", description: "Exact verified email only, or null" },
-                        phone: { type: "string", description: "Exact verified phone only, or null" },
+                        website: { type: "string", description: "Company homepage URL or null" },
+                        email: { type: "string", description: "null" },
+                        phone: { type: "string", description: "null" },
                       },
                       required: ["name", "country", "city"],
                       additionalProperties: false,
