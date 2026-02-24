@@ -98,7 +98,7 @@ const Index = () => {
   const isProductSearch = drugInfo?.searchedAsProduct === true;
 
   const allNews = deduplicateNews(
-    (search ? searchResults : newsArticles).filter((n) => n.api_keywords && n.api_keywords.length > 0)
+    (search ? searchResults : newsArticles)
   );
   const displayNews = allNews.filter((n) => regionFilter === "all" || regionFilter === "리포트" || n.region === regionFilter);
   const isLoading = search ? searchLoading : newsLoading;
