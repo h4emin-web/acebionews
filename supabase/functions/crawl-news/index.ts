@@ -330,66 +330,69 @@ function parseBydrug(markdown: string): Array<{ title: string; summary: string; 
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   const lines = markdown.split("\n");
 
-  // bydrug URL 패턴: /news/detail/{해시} (해시는 영문 소문자+숫자 32자)
-  const BYDRUG_URL_RE = /https:\/\/bydrug\.pharmcube\.com\/news\/detail\/[a-f0-9]{32}/;
+  // bydrug URL 패턴 — 해시 길이 유동적 (32~64자)
+  const BYDRUG_URL_RE = /https:\/\/bydrug\.pharmcube\.com\/news\/detail\/[a-f0-9]{20,}/;
 
-  // 날짜 추출 헬퍼 — 절대 날짜(YYYY-MM-DD, YYYY年MM月DD日)만 인식
-  // "X小时前", "X天前" 같은 상대 시간은 today로 fallback
-  const extractDateNearLine = (idx: number, lookahead = 4): string => {
+  // 날짜 추출: "2026-02-24 16:26" 패턴 또는 상대시간 → today
+  const extractDateNearLine = (idx: number, lookahead = 8): string => {
     for (let j = idx; j <= Math.min(lines.length - 1, idx + lookahead); j++) {
       const dm = lines[j].match(/(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
       if (dm) return `${dm[1]}-${dm[2]}-${dm[3]}`;
       const cnDate = lines[j].match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
       if (cnDate) return `${cnDate[1]}-${cnDate[2].padStart(2, "0")}-${cnDate[3].padStart(2, "0")}`;
     }
-    // 상대 시간("X小时前", "X天前") → today (KST)
     return normalizeDate("");
   };
 
-  const addArticle = (title: string, url: string, dateStr: string) => {
+  const addArticle = (title: string, summary: string, url: string, dateStr: string) => {
     if (title.length < 5) return;
     if (!BYDRUG_URL_RE.test(url)) return;
     if (articles.some(a => a.url === url)) return;
-    articles.push({ title, summary: "", url, date: dateStr || normalizeDate("") });
+    // 제목에서 불필요한 마크다운/이모지 제거
+    title = title.replace(/\\/g, "").replace(/\*\*/g, "").replace(/^【[^】]*】/, "").trim();
+    articles.push({ title, summary, url, date: dateStr || normalizeDate("") });
   };
 
+  // 주요 패턴: [제목](url) 다음에 요약 텍스트, 그 다음에 소스+날짜
   for (let i = 0; i < lines.length && articles.length < 20; i++) {
     const line = lines[i].trim();
 
-    // URL이 포함된 라인인지 먼저 확인
+    // 마크다운 링크: [제목](bydrug url)
+    const linkMatch = line.match(/^\[([^\]]{5,})\]\((https:\/\/bydrug\.pharmcube\.com\/news\/detail\/[a-f0-9]{20,})\)/);
+    if (linkMatch) {
+      const title = linkMatch[1];
+      const url = linkMatch[2];
+      // 다음 줄에 요약이 있을 수 있음
+      let summary = "";
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1].trim();
+        if (nextLine.length > 10 && !nextLine.startsWith("[") && !nextLine.startsWith("!") && !BYDRUG_URL_RE.test(nextLine)) {
+          summary = nextLine.slice(0, 300);
+        }
+      }
+      addArticle(title, summary, url, extractDateNearLine(i, 10));
+      continue;
+    }
+
+    // fallback: URL이 포함된 라인
     const urlMatch = line.match(BYDRUG_URL_RE);
     if (!urlMatch) continue;
     const url = urlMatch[0];
 
-    // 제목 추출 우선순위:
-    // 1) 같은 라인의 마크다운 링크 텍스트: [제목](url)
+    // 같은 라인의 인라인 링크
     const inlineLink = line.match(/\[([^\]]{5,})\]\(https:\/\/bydrug/);
     if (inlineLink) {
-      const title = inlineLink[1].replace(/\\/g, "").trim();
-      addArticle(title, url, extractDateNearLine(i));
+      addArticle(inlineLink[1], "", url, extractDateNearLine(i, 10));
       continue;
     }
 
-    // 2) 위아래 라인에서 제목 찾기
-    //    - bold **제목**
-    //    - 헤딩 ## 제목 / ### 제목
-    //    - 이전 라인 plain text (5자 이상)
-    let title = "";
-    for (let j = Math.max(0, i - 5); j <= Math.min(lines.length - 1, i + 2); j++) {
-      const boldMatch = lines[j].match(/\*\*([^*]{5,})\*\*/);
-      if (boldMatch) { title = boldMatch[1].replace(/\\/g, "").trim(); break; }
-      const headingMatch = lines[j].match(/^#{1,4}\s+(.{5,})/);
-      if (headingMatch) { title = headingMatch[1].replace(/\\/g, "").trim(); break; }
-    }
-    // 3) 바로 위 plain 텍스트 라인 (링크도 헤딩도 아닌 경우)
-    if (!title && i > 0) {
+    // 이전 라인에서 제목 찾기
+    if (i > 0) {
       const prevLine = lines[i - 1].trim();
-      if (prevLine.length >= 5 && !prevLine.startsWith("http") && !prevLine.startsWith("|")) {
-        title = stripHtml(prevLine).trim();
+      if (prevLine.length >= 5 && !prevLine.startsWith("http") && !prevLine.startsWith("|") && !prevLine.startsWith("!")) {
+        addArticle(stripHtml(prevLine), "", url, extractDateNearLine(i, 10));
       }
     }
-
-    if (title) addArticle(title, url, extractDateNearLine(i));
   }
 
   console.log(`parseBydrug: extracted ${articles.length} articles`);
