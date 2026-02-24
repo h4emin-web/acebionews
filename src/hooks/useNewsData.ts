@@ -290,6 +290,7 @@ export type Manufacturer = {
   website: string | null;
   email: string | null;
   phone: string | null;
+  whoGmp?: boolean | null;
 };
 
 export type ManufacturerData = {

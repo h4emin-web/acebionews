@@ -17,68 +17,15 @@ Deno.serve(async (req) => {
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
-    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-
     // Extract English name from "한글명 (EnglishName)" format
     const enMatch = keyword.match(/\(([^)]+)\)/);
     const koMatch = keyword.match(/^([가-힣\s]+)/);
     const englishName = enMatch ? enMatch[1].trim() : null;
     const koreanName = koMatch ? koMatch[1].trim() : keyword.trim();
-    // Use English name for search if available, otherwise use the raw keyword
+    // Always send BOTH names to Gemini so Korean and English searches yield the same result
     const searchName = englishName || keyword.trim();
 
     console.log(`Searching manufacturers for: ${searchName} (ko: ${koreanName}, original: ${keyword})`);
-
-    // Step 1: Use Firecrawl to search for real manufacturer data with multiple strategies
-    let searchContext = "";
-    if (FIRECRAWL_API_KEY) {
-      try {
-        const queries = englishName
-          ? [
-              `"${englishName}" API manufacturer supplier India China pharmaceutical`,
-              `"${englishName}" active pharmaceutical ingredient producer`,
-            ]
-          : [
-              `"${searchName}" API manufacturer supplier pharmaceutical`,
-              `"${searchName}" 원료의약품 제조사 manufacturer`,
-            ];
-
-        const searchResults = await Promise.all(
-          queries.map(async (q) => {
-            try {
-              const resp = await fetch("https://api.firecrawl.dev/v1/search", {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ query: q, limit: 5 }),
-                signal: AbortSignal.timeout(10000),
-              });
-              if (!resp.ok) return [];
-              const data = await resp.json();
-              return data.data || [];
-            } catch {
-              return [];
-            }
-          })
-        );
-
-        const allResults = searchResults.flat();
-        searchContext = allResults
-          .map((r: any) => `[${r.title}] ${r.description || ""} (${r.url})`)
-          .join("\n");
-
-        console.log(`Firecrawl found ${allResults.length} search results for context`);
-      } catch (e) {
-        console.error("Firecrawl search failed, proceeding with AI only:", e);
-      }
-    }
-
-    // Step 2: Use AI to extract manufacturers — allow AI knowledge + search context
-    const contextBlock = searchContext
-      ? `\n\n## WEB SEARCH RESULTS (참고용)\n다음 검색 결과를 참고하되, 본인의 지식도 함께 활용하세요:\n${searchContext}`
-      : "";
 
     const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
@@ -91,23 +38,23 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert.
+            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert with deep knowledge of global manufacturers.
 
-Task: Find manufacturers/suppliers of the given API ingredient by region (India, China, Global).
+IMPORTANT: The user may provide a Korean name, English name, or both. You MUST identify the correct API ingredient regardless of language and return the SAME manufacturers whether searched in Korean or English.
 
-## RULES
-1. Use your knowledge of the pharmaceutical industry AND any search results provided.
-2. Return well-known, established manufacturers that are widely recognized as producers of this API.
-3. For each manufacturer: company name, country, city.
-4. Website: provide the company's actual homepage URL. Use the company's native language site (e.g. Chinese site for Chinese companies, Japanese site for Japanese companies). If unsure, set to null.
-5. Email & Phone: set to null (do not guess).
-6. Return UP TO 3 per region. Quality over quantity — but DO return results if you know real manufacturers.
-7. If the ingredient is not a real pharmaceutical compound, return all empty arrays.
-8. Include major global producers like Teva, Mylan, BASF, DSM, etc. when applicable.${contextBlock}`,
+For example: "아토르바스타틴" and "Atorvastatin" MUST return the same manufacturers.`,
           },
           {
             role: "user",
-            content: `"${searchName}"${englishName ? "" : ` (한국어: ${koreanName})`} 원료의약품(API)의 실제 제조사를 인도, 중국, 글로벌(일본·유럽·미국 등) 지역별로 찾아줘.`,
+            content: `"${searchName}"${koreanName !== searchName ? ` (한국어명: ${koreanName})` : ""}의 원료의약품(API) 제조원을 인도, 중국, 해외(일본·유럽·미국 등) 지역별로 최대 3개씩 알려줘.
+
+조건:
+1. WHO-GMP 인증을 받은 제조원을 우선순위로 배치해줘. WHO-GMP 인증이 없으면 있는 만큼만 알려줘.
+2. 각 제조원에 대해: 회사명, 국가, 도시, 홈페이지 URL, 연락 가능한 이메일, 전화번호를 알려줘.
+3. 홈페이지는 실제 회사 공식 홈페이지 URL을 넣어줘. 확실하지 않으면 null로.
+4. 이메일과 전화번호도 공식적으로 알려진 것만 넣고, 모르면 null로.
+5. WHO-GMP 인증 여부도 알려줘 (true/false/unknown).
+6. 해당 원료가 실제 의약품 성분이 아니면 모두 빈 배열로 반환해.`,
           },
         ],
         tools: [
@@ -115,61 +62,15 @@ Task: Find manufacturers/suppliers of the given API ingredient by region (India,
             type: "function",
             function: {
               name: "provide_manufacturers",
-              description: "Provide manufacturer information for an API ingredient",
+              description: "Provide manufacturer information for an API ingredient by region",
               parameters: {
                 type: "object",
                 properties: {
-                  india: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        country: { type: "string" },
-                        city: { type: "string" },
-                        website: { type: "string", description: "Company homepage URL or null" },
-                        email: { type: "string", description: "null" },
-                        phone: { type: "string", description: "null" },
-                      },
-                      required: ["name", "country", "city"],
-                      additionalProperties: false,
-                    },
-                  },
-                  china: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        country: { type: "string" },
-                        city: { type: "string" },
-                        website: { type: "string" },
-                        email: { type: "string" },
-                        phone: { type: "string" },
-                      },
-                      required: ["name", "country", "city"],
-                      additionalProperties: false,
-                    },
-                  },
-                  global: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        country: { type: "string" },
-                        city: { type: "string" },
-                        website: { type: "string" },
-                        email: { type: "string" },
-                        phone: { type: "string" },
-                      },
-                      required: ["name", "country", "city"],
-                      additionalProperties: false,
-                    },
-                  },
+                  india: { type: "array", items: { type: "object", properties: { name: { type: "string" }, country: { type: "string" }, city: { type: "string" }, website: { type: "string", nullable: true }, email: { type: "string", nullable: true }, phone: { type: "string", nullable: true }, whoGmp: { type: "boolean", description: "true if WHO-GMP certified, false if not, null if unknown" } }, required: ["name", "country", "city"] } },
+                  china: { type: "array", items: { type: "object", properties: { name: { type: "string" }, country: { type: "string" }, city: { type: "string" }, website: { type: "string", nullable: true }, email: { type: "string", nullable: true }, phone: { type: "string", nullable: true }, whoGmp: { type: "boolean" } }, required: ["name", "country", "city"] } },
+                  global: { type: "array", items: { type: "object", properties: { name: { type: "string" }, country: { type: "string" }, city: { type: "string" }, website: { type: "string", nullable: true }, email: { type: "string", nullable: true }, phone: { type: "string", nullable: true }, whoGmp: { type: "boolean" } }, required: ["name", "country", "city"] } },
                 },
                 required: ["india", "china", "global"],
-                additionalProperties: false,
               },
             },
           },
