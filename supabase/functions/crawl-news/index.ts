@@ -1262,11 +1262,21 @@ serve(async (req) => {
       }
 
       if (dedupedResults.length > 0) {
-        const { error } = await supabase.from("news_articles").insert(dedupedResults);
-        if (error) {
-          console.error("DB insert error:", error);
-          throw error;
+        // Insert one by one to skip DB-level duplicates (unique index on title+source)
+        let insertedCount = 0;
+        for (const article of dedupedResults) {
+          const { error } = await supabase.from("news_articles").insert(article);
+          if (error) {
+            if (error.code === "23505") {
+              console.log(`Skipped DB duplicate: ${article.title}`);
+              continue;
+            }
+            console.error("DB insert error:", error);
+          } else {
+            insertedCount++;
+          }
         }
+        console.log(`DB inserted ${insertedCount}/${dedupedResults.length}`);
       }
       console.log(`Inserted ${dedupedResults.length} new articles (${recentResults.length - dedupedResults.length} duplicates skipped)`);
     }
