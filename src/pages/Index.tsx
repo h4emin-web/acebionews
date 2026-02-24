@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pill, Clock, Search, CalendarDays, Flag, FlaskConical } from "lucide-react";
+import { Pill, Clock, Search, CalendarDays, Globe, Flag, FlaskConical } from "lucide-react";
 import { PillLoader } from "@/components/PillLoader";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,8 +15,7 @@ import { NcePatentModal } from "@/components/NcePatentModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
-import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports, useManufacturers } from "@/hooks/useNewsData";
-import { ManufacturersPanel } from "@/components/ManufacturersPanel";
+import { useNewsArticles, useAllApiKeywords, useSearchNews, useExternalNewsSearch, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports } from "@/hooks/useNewsData";
 import type { NewsItem } from "@/data/mockNews";
 import { deduplicateNews } from "@/utils/deduplicateNews";
 
@@ -74,7 +73,7 @@ const Index = () => {
     },
   });
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
-  const { data: manufacturerData, isLoading: manufacturersLoading } = useManufacturers(debouncedSearch);
+  const { data: externalNews = [], isLoading: externalNewsLoading } = useExternalNewsSearch(debouncedSearch);
   const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
   const { data: mfdsIngredient } = useMfdsIngredientLookup(debouncedSearch);
 
@@ -190,11 +189,39 @@ const Index = () => {
             ) : regionFilter === "리포트" ? (
               <IndustryReportsSection />
             ) : isSearching ? (
-              <ManufacturersPanel
-                keyword={debouncedSearch || search}
-                data={manufacturerData}
-                loading={manufacturersLoading}
-              />
+              /* When searching: show external news in main area */
+              externalNewsLoading ? (
+                <div className="card-elevated rounded-lg">
+                  <PillLoader text="관련 뉴스 검색중..." />
+                </div>
+              ) : externalNews.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Globe className="w-4 h-4" />
+                    <span>관련 뉴스 {externalNews.length}건</span>
+                  </div>
+                  {externalNews.map((news: any, i: number) => (
+                    <a
+                      key={i}
+                      href={news.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-card border border-border rounded-lg p-4 hover:bg-muted/40 transition-colors"
+                    >
+                      <h3 className="text-sm font-medium text-foreground line-clamp-2">{news.title}</h3>
+                      {news.description && (
+                        <p className="text-xs text-muted-foreground mt-1.5 line-clamp-3">{news.description}</p>
+                      )}
+                      <span className="text-[11px] text-muted-foreground/70 mt-2 block">{news.source}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 card-elevated rounded-lg">
+                  <Globe className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
+                  <p className="text-muted-foreground text-sm">관련 뉴스가 없습니다</p>
+                </div>
+              )
             ) : (
               /* When not searching: show DB news */
               isLoading ? (

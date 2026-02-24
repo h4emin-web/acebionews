@@ -32,6 +32,3 @@ verify_jwt = false
 
 [functions.translate-news]
 verify_jwt = false
-
-[functions.search-manufacturers]
-verify_jwt = false
