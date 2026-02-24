@@ -79,17 +79,10 @@ const Index = () => {
   const { data: mfdsIngredient } = useMfdsIngredientLookup(debouncedSearch);
 
   // Priority: MFDS ingredient lookup → AI profile → raw search keyword
-  // But skip ingredient lookup if the result is clearly wrong (e.g., shorter/unrelated to search)
-  const isValidIngredient = mfdsIngredient?.nameKo && 
-    mfdsIngredient.nameKo.length >= 2 &&
-    mfdsIngredient.nameKo !== "원료" &&
-    mfdsIngredient.nameKo !== "수출용" &&
-    mfdsIngredient.nameKo !== "완제";
-  
-  const ingredientKeyword = isValidIngredient
+  const ingredientKeyword = mfdsIngredient?.nameKo
     ? mfdsIngredient.nameEn
       ? `${mfdsIngredient.nameKo} (${mfdsIngredient.nameEn})`
-      : mfdsIngredient.nameKo!
+      : mfdsIngredient.nameKo
     : drugInfo?.nameKo
       ? `${drugInfo.nameKo} (${drugInfo.nameEn})`
       : debouncedSearch;
@@ -105,7 +98,7 @@ const Index = () => {
   const isProductSearch = drugInfo?.searchedAsProduct === true;
 
   const allNews = deduplicateNews(
-    (search ? searchResults : newsArticles)
+    (search ? searchResults : newsArticles).filter((n) => n.api_keywords && n.api_keywords.length > 0)
   );
   const displayNews = allNews.filter((n) => regionFilter === "all" || regionFilter === "리포트" || n.region === regionFilter);
   const isLoading = search ? searchLoading : newsLoading;

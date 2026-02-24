@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX IF NOT EXISTS idx_news_articles_url_unique ON public.news_articles (url);
