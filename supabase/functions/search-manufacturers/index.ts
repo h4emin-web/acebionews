@@ -37,15 +37,18 @@ Deno.serve(async (req) => {
 Given an API ingredient name, provide REAL manufacturer information organized by region.
 
 ## RULES
-- Only return REAL, verified manufacturers that actually produce the given API ingredient.
-- Prioritize WHO-GMP certified facilities when possible.
-- For each manufacturer provide: company name, country, city, WHO-GMP status (true/false), website URL, email, phone number.
-- If you cannot find verified info for a field, set it to null. Do NOT make up contact details.
-- Return exactly 3 manufacturers per region when possible. If fewer exist, return what you can.
+- ONLY return manufacturers you are CONFIDENT actually produce this specific API ingredient. Do NOT guess or fabricate.
+- If you are not sure a company manufactures this ingredient, DO NOT include it.
+- It is better to return fewer (or zero) manufacturers than to include unverified ones.
+- For each manufacturer provide: company name, country, city, website URL, email, phone number.
+- If you cannot find verified info for a field, set it to null. Do NOT make up contact details, URLs, emails, or phone numbers.
+- If a website/email/phone is not publicly known, set it to null.
+- Return UP TO 3 manufacturers per region. Return fewer if you cannot verify 3.
 - Regions: India (인도), China (중국), Global (해외 - Japan, Europe, USA, etc.)
 - For the "global" region, prefer diverse countries (e.g. one from Japan, one from Europe, one from USA).
 - Company names should be in English.
-- If the ingredient is not a real pharmaceutical API, return empty arrays.`,
+- If the ingredient is not a real pharmaceutical API, return empty arrays.
+- If you don't know any verified manufacturers for a region, return an empty array for that region.`,
           },
           {
             role: "user",
@@ -69,12 +72,11 @@ Given an API ingredient name, provide REAL manufacturer information organized by
                         name: { type: "string" },
                         country: { type: "string" },
                         city: { type: "string" },
-                        whoGmp: { type: "boolean" },
                         website: { type: "string" },
                         email: { type: "string" },
                         phone: { type: "string" },
                       },
-                      required: ["name", "country", "city", "whoGmp"],
+                      required: ["name", "country", "city"],
                       additionalProperties: false,
                     },
                   },
@@ -86,12 +88,11 @@ Given an API ingredient name, provide REAL manufacturer information organized by
                         name: { type: "string" },
                         country: { type: "string" },
                         city: { type: "string" },
-                        whoGmp: { type: "boolean" },
                         website: { type: "string" },
                         email: { type: "string" },
                         phone: { type: "string" },
                       },
-                      required: ["name", "country", "city", "whoGmp"],
+                      required: ["name", "country", "city"],
                       additionalProperties: false,
                     },
                   },
@@ -103,12 +104,11 @@ Given an API ingredient name, provide REAL manufacturer information organized by
                         name: { type: "string" },
                         country: { type: "string" },
                         city: { type: "string" },
-                        whoGmp: { type: "boolean" },
                         website: { type: "string" },
                         email: { type: "string" },
                         phone: { type: "string" },
                       },
-                      required: ["name", "country", "city", "whoGmp"],
+                      required: ["name", "country", "city"],
                       additionalProperties: false,
                     },
                   },

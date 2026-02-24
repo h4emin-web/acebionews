@@ -287,7 +287,6 @@ export type Manufacturer = {
   name: string;
   country: string;
   city: string;
-  whoGmp: boolean;
   website: string | null;
   email: string | null;
   phone: string | null;
