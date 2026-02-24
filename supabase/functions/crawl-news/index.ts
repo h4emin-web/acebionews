@@ -30,7 +30,7 @@ const HTML_SOURCES = [
 
 // Firecrawl sources — SPA sites that need JS rendering
 const FIRECRAWL_SOURCES = [
-  { url: "https://news.yaozh.com/archivelist/24", name: "药智新闻", region: "해외", country: "CN", parser: "yaozh" },
+  { url: "https://bydrug.pharmcube.com/news", name: "医药新闻", region: "해외", country: "CN", parser: "By Drug" },
   { url: "https://www.rttnews.com/content/industrynews.aspx?industry=biotechnology+%26+drugs", name: "RTTNews Biotech", region: "해외", country: "US", parser: "rttnews" },
   { url: "https://www.asahi.com/apital/medicalnews/?iref=pc_apital_top", name: "朝日新聞 Apital", region: "해외", country: "JP", parser: "asahi" },
   { url: "https://news.web.nhk.or.jp/newsweb/pl/news-nwa-topic-nationwide-0000414", name: "NHK 医療", region: "해외", country: "JP", parser: "nhk" },
@@ -313,12 +313,12 @@ function parseIyakuNews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
-// Parse 药智新闻 (yaozh.com) from Firecrawl markdown
+// Parse 医药新闻 (bydrug.pharmcube.com/news) from Firecrawl markdown
 function parseYaozh(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   const lines = markdown.split("\n");
   
-  // Current date for filtering - only accept articles from last 30 days (exclude old like January if now is Feb+)
+  // Current date for filtering - only accept articles from last 2 days (exclude old like January if now is Feb+)
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 30);
   const cutoffStr = cutoff.toISOString().split("T")[0];
