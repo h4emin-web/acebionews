@@ -96,13 +96,11 @@ async function scrapeProducts(keyword: string) {
   const isEnglish = /^[a-zA-Z\s\-]+$/.test(keyword.trim());
   
   // Try multiple search strategies
-  const searchStrategies = [];
+  const searchStrategies: Record<string, string>[] = [];
   if (isEnglish) {
     searchStrategies.push({ ingrEngName: keyword });
-    // Also try with ingrName1 in case of mixed content
   } else {
     searchStrategies.push({ ingrName1: keyword });
-    // Also try English name if available (extracted from parentheses)
     const enMatch = keyword.match(/\(([^)]+)\)/);
     if (enMatch) {
       searchStrategies.push({ ingrEngName: enMatch[1].trim() });
@@ -208,7 +206,7 @@ async function scrapeDmf(keyword: string) {
   const isEnglish = /^[a-zA-Z\s\-]+$/.test(keyword.trim());
   
   // Try multiple search strategies
-  const searchStrategies = [];
+  const searchStrategies: Record<string, string>[] = [];
   if (isEnglish) {
     searchStrategies.push({ searchIngrEngName: keyword });
   } else {
