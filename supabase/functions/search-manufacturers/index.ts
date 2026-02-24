@@ -75,29 +75,27 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-pro",
         messages: [
           {
             role: "system",
-            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert.
+            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert with deep knowledge of global API manufacturers.
 
-Given an API ingredient name and web search results, extract ONLY REAL, VERIFIED manufacturers.
+Task: Find REAL manufacturers/suppliers of the given API ingredient, categorized by region (India, China, Global).
 
-## CRITICAL RULES
-- ONLY include manufacturers that appear in the provided search results OR that you are 100% certain exist.
-- If you are NOT SURE, do NOT include it. Empty arrays are perfectly fine.
-- Do NOT fabricate or guess any information: company names, cities, websites, emails, or phone numbers.
-- For website/email/phone: ONLY include if you found the EXACT URL/email/phone from search results. If not found, set to null.
-- A wrong website or email is WORSE than no website or email. When in doubt, set to null.
-- Return UP TO 3 manufacturers per region, but fewer (or zero) is fine.
-- Regions: India, China, Global (Japan, Europe, USA, etc.)
-- Company names in English.
-- If the ingredient is not a real pharmaceutical API, return all empty arrays.
-- Korean and English searches for the same ingredient MUST return the same manufacturers.${contextBlock}`,
+## RULES
+1. Return ONLY manufacturers you are confident actually produce or supply this specific API ingredient.
+2. For each manufacturer provide: company name (English), country, city.
+3. Website: provide the company's REAL homepage URL. If unsure, set to null. NEVER guess a URL.
+4. Email & Phone: provide ONLY if you are certain. Otherwise null. NEVER fabricate contact info.
+5. Return UP TO 3 per region. Fewer or zero is fine - accuracy over quantity.
+6. The SAME search term in Korean or English MUST return the same manufacturers.
+7. If the ingredient is not a real pharmaceutical compound, return all empty arrays.
+8. Prefer well-known, established manufacturers (e.g. WHO-GMP certified, CEP holders, major API producers).${contextBlock}`,
           },
           {
             role: "user",
-            content: `Find verified manufacturers for the API ingredient: "${searchName}"`,
+            content: `"${searchName}" 원료의약품(API)을 실제로 제조하거나 공급하는 회사를 인도, 중국, 해외(일본·유럽·미국 등) 지역별로 찾아줘. 각 회사의 홈페이지, 이메일, 전화번호를 정확히 알려줘.`,
           },
         ],
         tools: [
