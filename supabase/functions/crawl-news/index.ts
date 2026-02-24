@@ -760,6 +760,12 @@ async function extractKeywordsAndTranslate(
 - 이미 요약만으로 내용이 충분히 이해되면 추가 설명 불필요.
 - 핵심: 요약을 읽는 것만으로 "이게 뭐고, 어디에 쓰이는지" 바로 알 수 있어야 합니다.
 
+## TASK 4: RELEVANCE FILTERING (CRITICAL)
+- You MUST evaluate whether each article is relevant to the pharmaceutical/biotech/healthcare industry.
+- Set is_relevant to true ONLY for articles about: drugs, medicines, APIs, biotech, clinical trials, FDA/regulatory, healthcare policy, medical devices, pharmaceutical companies, hospitals, diseases/treatments.
+- Set is_relevant to false for articles about: food companies (Domino's, McDonald's etc.), general business/finance unrelated to pharma, sports, entertainment, politics (unless health policy), technology (unless biotech/medtech), retail, real estate, automotive, energy (unless related to pharma).
+- When in doubt, set is_relevant to false. We only want pharmaceutical/biotech/healthcare news.
+
 ## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
 - category: 규제/시장/공급망/R&D/임상/허가`,
           },
@@ -785,10 +791,11 @@ async function extractKeywordsAndTranslate(
                         index: { type: "number" },
                         apiKeywords: { type: "array", items: { type: "string" } },
                         category: { type: "string" },
+                        is_relevant: { type: "boolean", description: "true if article is about pharma/biotech/healthcare, false otherwise" },
                         translated_title: { type: "string", description: "Korean translated title. REQUIRED for all articles." },
                         translated_summary: { type: "string", description: "Korean summary. REQUIRED for all articles." },
                       },
-                      required: ["index", "apiKeywords", "category", "translated_title", "translated_summary"],
+                      required: ["index", "apiKeywords", "category", "is_relevant", "translated_title", "translated_summary"],
                       additionalProperties: false,
                     },
                   },
@@ -821,6 +828,12 @@ async function extractKeywordsAndTranslate(
     for (const r of parsed.results || []) {
       const article = articles[r.index];
       if (!article) continue;
+
+      // Skip irrelevant articles (e.g., Domino's Pizza, non-pharma news)
+      if (r.is_relevant === false) {
+        console.log(`Skipping irrelevant article: ${article.title}`);
+        continue;
+      }
 
       const isForeign = article.region === "해외";
       const langMap: Record<string, string> = { JP: "ja", CN: "zh", IN: "en", US: "en", EU: "en" };
@@ -1142,14 +1155,21 @@ serve(async (req) => {
     const allFetched = (await Promise.all([...rssPromises, ...htmlPromises, ...firecrawlPromises])).flat();
     console.log(`Total fetched articles: ${allFetched.length}`);
 
-    // 2. Enrich ALL foreign articles with full body text via Firecrawl
-    await enrichForeignArticles(allFetched);
+    // 2a. Pre-filter: remove articles whose URL already exists in DB (BEFORE translation)
+    // This prevents the same foreign article from being re-translated with slightly different wording each crawl
+    const { data: existingInDb } = await supabase.from("news_articles").select("url");
+    const existingUrlSet = new Set((existingInDb || []).map((e: any) => e.url));
+    const newFetched = allFetched.filter(a => !existingUrlSet.has(a.url));
+    console.log(`Pre-filtered to ${newFetched.length} new articles (${allFetched.length - newFetched.length} already in DB)`);
+
+    // 2b. Enrich ALL foreign articles with full body text via Firecrawl
+    await enrichForeignArticles(newFetched);
 
     // 3. Extract keywords + translate foreign articles using Gemini
     const batchSize = 25;
     const allResults: any[] = [];
-    for (let i = 0; i < allFetched.length; i += batchSize) {
-      const batch = allFetched.slice(i, i + batchSize);
+    for (let i = 0; i < newFetched.length; i += batchSize) {
+      const batch = newFetched.slice(i, i + batchSize);
       const results = await extractKeywordsAndTranslate(batch, GOOGLE_GEMINI_API_KEY);
 
       // Fallback: include any articles the AI missed
@@ -1172,7 +1192,7 @@ serve(async (req) => {
         }
       }
       allResults.push(...results);
-      if (i + batchSize < allFetched.length) {
+      if (i + batchSize < newFetched.length) {
         await new Promise((r) => setTimeout(r, 2000));
       }
     }
