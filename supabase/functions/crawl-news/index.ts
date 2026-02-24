@@ -1115,7 +1115,6 @@ serve(async (req) => {
     const yesterdayStr = kstYesterday.toISOString().split("T")[0];
 
     const recentResults = allResults.filter((r) => {
-      if (r.region === "해외") return r.date >= yesterdayStr;
       return r.date >= threeDaysAgoStr;
     });
     console.log(`Filtered to ${recentResults.length} recent articles (${allResults.length - recentResults.length} old articles skipped)`);
