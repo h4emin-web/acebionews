@@ -5,6 +5,77 @@ const corsHeaders = {
 
 const empty = { india: [], china: [], global: [] };
 
+// Firecrawl search to verify a manufacturer actually produces the given API ingredient
+async function verifyManufacturer(
+  manufacturer: { name: string; country: string; city: string },
+  ingredient: string,
+  apiKey: string
+): Promise<{ verified: boolean; website: string | null }> {
+  try {
+    // Search specifically for this manufacturer + ingredient combination
+    const query = `"${manufacturer.name}" "${ingredient}" API pharmaceutical manufacturer site:${guessDomain(manufacturer.name)}`;
+    const fallbackQuery = `"${manufacturer.name}" "${ingredient}" API active pharmaceutical ingredient manufacturer`;
+
+    let results = await firecrawlSearch(query, apiKey);
+    if (results.length === 0) {
+      results = await firecrawlSearch(fallbackQuery, apiKey);
+    }
+    if (results.length === 0) {
+      // Try with just company name to at least find the website
+      results = await firecrawlSearch(`"${manufacturer.name}" pharmaceutical API manufacturer official website`, apiKey);
+    }
+
+    let website: string | null = null;
+    let verified = false;
+
+    for (const r of results) {
+      const url = r.url || "";
+      const text = ((r.markdown || "") + " " + (r.description || "") + " " + (r.title || "")).toLowerCase();
+      const lowerUrl = url.toLowerCase();
+
+      // Skip directory/social sites
+      if (isDirectorySite(lowerUrl)) continue;
+
+      // Check if the result mentions both the company and the ingredient
+      const companyWords = manufacturer.name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const mentionsCompany = companyWords.some(w => text.includes(w));
+      const mentionsIngredient = text.includes(ingredient.toLowerCase());
+
+      if (mentionsCompany && !website) {
+        website = url;
+      }
+      if (mentionsCompany && mentionsIngredient) {
+        verified = true;
+        if (!website) website = url;
+        break;
+      }
+    }
+
+    return { verified, website };
+  } catch {
+    return { verified: false, website: null };
+  }
+}
+
+function guessDomain(companyName: string): string {
+  // Try to create a plausible domain from company name
+  const clean = companyName.toLowerCase()
+    .replace(/\s*(pvt|ltd|limited|inc|corp|co|pharma|pharmaceutical|chemicals|labs|laboratories)\s*/gi, "")
+    .trim()
+    .replace(/\s+/g, "");
+  return `${clean}.com`;
+}
+
+function isDirectorySite(url: string): boolean {
+  const directories = [
+    "linkedin.com", "wikipedia.org", "bloomberg.com", "crunchbase.com",
+    "dnb.com", "zoominfo.com", "facebook.com", "twitter.com", "x.com",
+    "youtube.com", "amazon.com", "alibaba.com", "indiamart.com",
+    "tradeindia.com", "justdial.com", "glassdoor.com", "indeed.com",
+  ];
+  return directories.some(d => url.includes(d));
+}
+
 async function firecrawlSearch(query: string, apiKey: string): Promise<any[]> {
   try {
     const resp = await fetch("https://api.firecrawl.dev/v1/search", {
@@ -13,7 +84,7 @@ async function firecrawlSearch(query: string, apiKey: string): Promise<any[]> {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ query, limit: 3 }),
+      body: JSON.stringify({ query, limit: 5 }),
     });
     if (!resp.ok) return [];
     const data = await resp.json();
@@ -21,90 +92,6 @@ async function firecrawlSearch(query: string, apiKey: string): Promise<any[]> {
   } catch {
     return [];
   }
-}
-
-async function verifyAndEnrich(
-  manufacturers: { name: string; country: string; city: string }[],
-  firecrawlKey: string
-): Promise<any[]> {
-  const results = await Promise.all(
-    manufacturers.map(async (m) => {
-      // Search for the manufacturer's official website
-      const searchResults = await firecrawlSearch(
-        `${m.name} ${m.country} pharmaceutical API manufacturer official website contact`,
-        firecrawlKey
-      );
-
-      let website: string | null = null;
-      let email: string | null = null;
-      let phone: string | null = null;
-
-      if (searchResults.length > 0) {
-        // Use the first result's URL as the website
-        const topResult = searchResults[0];
-        const candidateUrl = topResult.url || null;
-
-        // Validate: URL should look like a real company site (not a directory listing)
-        if (candidateUrl) {
-          const lowerUrl = candidateUrl.toLowerCase();
-          const isDirectory =
-            lowerUrl.includes("linkedin.com") ||
-            lowerUrl.includes("wikipedia.org") ||
-            lowerUrl.includes("bloomberg.com") ||
-            lowerUrl.includes("crunchbase.com") ||
-            lowerUrl.includes("dnb.com") ||
-            lowerUrl.includes("zoominfo.com");
-          if (!isDirectory) {
-            website = candidateUrl;
-          }
-        }
-
-        // Try to extract email and phone from the search results' markdown/description
-        for (const r of searchResults) {
-          const text = (r.markdown || r.description || "").slice(0, 3000);
-          if (!email) {
-            const emailMatch = text.match(
-              /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/
-            );
-            if (emailMatch) email = emailMatch[0];
-          }
-          if (!phone) {
-            const phoneMatch = text.match(
-              /(?:\+?\d{1,3}[\s\-]?)?(?:\(?\d{2,5}\)?[\s\-]?){1,3}\d{3,4}[\s\-]?\d{3,4}/
-            );
-            if (phoneMatch && phoneMatch[0].replace(/\D/g, "").length >= 8) {
-              phone = phoneMatch[0].trim();
-            }
-          }
-        }
-
-        // If no website from search, try to find one in the text
-        if (!website) {
-          for (const r of searchResults) {
-            const text = r.markdown || r.description || "";
-            const urlMatch = text.match(
-              /https?:\/\/(?:www\.)?[a-zA-Z0-9\-]+\.[a-zA-Z]{2,}(?:\/[^\s)]*)?/
-            );
-            if (urlMatch) {
-              website = urlMatch[0];
-              break;
-            }
-          }
-        }
-      }
-
-      return {
-        name: m.name,
-        country: m.country,
-        city: m.city,
-        website,
-        email,
-        phone,
-        whoGmp: null, // Can't verify WHO-GMP from web search
-      };
-    })
-  );
-  return results;
 }
 
 Deno.serve(async (req) => {
@@ -133,7 +120,7 @@ Deno.serve(async (req) => {
 
     console.log(`[Step 1] Gemini: identifying manufacturers for "${searchName}"`);
 
-    // Step 1: Use Gemini ONLY for identifying manufacturer NAMES (no URLs/contacts)
+    // Step 1: Use Gemini to identify manufacturer NAMES
     const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
@@ -145,18 +132,25 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert. Your job is to identify REAL manufacturer names only. Do NOT make up names. If you are not sure, return fewer results.
+            content: `You are a pharmaceutical API (Active Pharmaceutical Ingredient) sourcing expert. Identify REAL, well-known API manufacturers only.
 
-IMPORTANT: The user may provide Korean or English name. "아토르바스타틴" and "Atorvastatin" are the same ingredient - return the SAME manufacturers.`,
+RULES:
+- Only list companies that are WIDELY KNOWN to manufacture this specific API ingredient.
+- Prefer companies with CEP (Certificate of Suitability), US DMF, KDMF, or WHO prequalification for this ingredient.
+- Do NOT guess or hallucinate. If unsure, return fewer results or empty arrays.
+- For India: focus on major API exporters (e.g., Dr. Reddy's, Aurobindo, Hetero, MSN Labs, Laurus Labs, etc.)
+- For China: focus on major API producers (e.g., Zhejiang Huahai, Apeloa, Zhejiang Hisun, etc.)
+- For Global: Japan, Europe, US manufacturers
+- Return at most 3 per region. Quality over quantity.`,
           },
           {
             role: "user",
-            content: `"${searchName}"${koreanName !== searchName ? ` (한국어명: ${koreanName})` : ""}의 원료의약품(API) 제조원을 인도, 중국, 해외(일본·유럽·미국 등) 지역별로 최대 3개씩 알려줘.
+            content: `"${searchName}"${koreanName !== searchName ? ` (한국어명: ${koreanName})` : ""}의 원료의약품(API) 제조원을 인도, 중국, 해외(일본·유럽·미국 등) 지역별로 알려줘.
 
 조건:
-1. 실제로 존재하는 회사만 알려줘. 확실하지 않으면 적게 알려줘.
-2. 각 제조원에 대해: 회사명, 국가, 도시만 알려줘.
-3. 해당 원료가 실제 의약품 성분이 아니면 모두 빈 배열로 반환해.`,
+1. 해당 성분의 API를 실제로 상업적으로 제조·판매하는 것으로 널리 알려진 회사만.
+2. CEP, US DMF, WHO PQ 등 인증을 보유한 회사 우선.
+3. 확실하지 않으면 빈 배열로.`,
           },
         ],
         tools: [
@@ -164,7 +158,7 @@ IMPORTANT: The user may provide Korean or English name. "아토르바스타틴" 
             type: "function",
             function: {
               name: "provide_manufacturers",
-              description: "Provide manufacturer names for an API ingredient by region",
+              description: "Provide verified manufacturer names for an API ingredient by region",
               parameters: {
                 type: "object",
                 properties: {
@@ -199,16 +193,30 @@ IMPORTANT: The user may provide Korean or English name. "아토르바스타틴" 
     const parsed = JSON.parse(toolCall.function.arguments);
     console.log(`[Step 1] Found: India=${parsed.india?.length || 0}, China=${parsed.china?.length || 0}, Global=${parsed.global?.length || 0}`);
 
-    // Step 2: Use Firecrawl to verify and enrich each manufacturer with real data
-    console.log(`[Step 2] Firecrawl: verifying websites and contacts...`);
+    // Step 2: Verify each manufacturer with Firecrawl and find real websites
+    console.log(`[Step 2] Firecrawl: verifying manufacturers...`);
+
+    const verifyRegion = async (manufacturers: any[]) => {
+      const results = await Promise.all(
+        manufacturers.map(async (m: any) => {
+          const { verified, website } = await verifyManufacturer(m, searchName, FIRECRAWL_API_KEY);
+          console.log(`  ${m.name}: verified=${verified}, website=${website || "none"}`);
+          return { ...m, website, verified };
+        })
+      );
+      // Return all but sort verified ones first
+      return results
+        .sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0))
+        .map(({ verified, ...rest }) => rest);
+    };
 
     const [india, china, global] = await Promise.all([
-      verifyAndEnrich(parsed.india || [], FIRECRAWL_API_KEY),
-      verifyAndEnrich(parsed.china || [], FIRECRAWL_API_KEY),
-      verifyAndEnrich(parsed.global || [], FIRECRAWL_API_KEY),
+      verifyRegion(parsed.india || []),
+      verifyRegion(parsed.china || []),
+      verifyRegion(parsed.global || []),
     ]);
 
-    console.log(`[Step 2] Enrichment complete`);
+    console.log(`[Step 2] Verification complete`);
 
     return new Response(JSON.stringify({ manufacturers: { india, china, global } }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
