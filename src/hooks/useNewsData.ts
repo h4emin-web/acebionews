@@ -282,3 +282,33 @@ export function useIndustryReports() {
     },
   });
 }
+
+export type Manufacturer = {
+  name: string;
+  country: string;
+  city: string;
+  website: string | null;
+  email: string | null;
+  phone: string | null;
+};
+
+export type ManufacturerData = {
+  india: Manufacturer[];
+  china: Manufacturer[];
+  global: Manufacturer[];
+};
+
+export function useManufacturers(keyword: string) {
+  return useQuery({
+    queryKey: ["manufacturers", keyword],
+    enabled: !!keyword && keyword.length >= 2,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("search-manufacturers", {
+        body: { keyword },
+      });
+      if (error) throw error;
+      return (data?.manufacturers || { india: [], china: [], global: [] }) as ManufacturerData;
+    },
+  });
+}

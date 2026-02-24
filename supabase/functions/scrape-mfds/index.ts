@@ -84,10 +84,11 @@ function isRelevantDmf(record: any, keyword: string): boolean {
   if (kw.length < 2) return false;
   const fields = [
     record.ingredientName,
+    record.ingredientNameEn,
   ].filter(Boolean).map((f: string) => f.toLowerCase().replace(/\s/g, ""));
   
   for (const field of fields) {
-    if (field.includes(kw)) return true;
+    if (field.includes(kw) || kw.includes(field)) return true;
   }
   return false;
 }
@@ -218,12 +219,12 @@ async function scrapeDmf(keyword: string) {
   }
 
   for (const strategy of searchStrategies) {
-    const result = await scrapeDmfWithParams(strategy);
+    const result = await scrapeDmfWithParams(strategy, keyword);
     if (result.totalCount > 0 && result.records.length > 0) {
       const searchTerm = isEnglish ? keyword : keyword.replace(/\s*\([^)]*\)\s*/g, "").trim();
       const relevant = result.records.filter((r: any) => isRelevantDmf(r, searchTerm));
       if (relevant.length > 0) {
-        return { records: relevant, totalCount: result.totalCount };
+        return { records: relevant, totalCount: relevant.length };
       }
       // If Korean name didn't match records but totalCount > 0, try English
       if (!isEnglish) {
@@ -231,19 +232,20 @@ async function scrapeDmf(keyword: string) {
         if (enMatch) {
           const enRelevant = result.records.filter((r: any) => isRelevantDmf(r, enMatch[1].trim()));
           if (enRelevant.length > 0) {
-            return { records: enRelevant, totalCount: result.totalCount };
+            return { records: enRelevant, totalCount: enRelevant.length };
           }
         }
       }
-      // If totalCount matched but validation failed, still return (MFDS matched it)
-      return result;
+      // Validation failed - don't return irrelevant results
+      console.log(`DMF: ${result.records.length} records fetched but none matched keyword "${keyword}", returning empty`);
+      return { records: [], totalCount: 0 };
     }
   }
 
   return { records: [], totalCount: 0 };
 }
 
-async function scrapeDmfWithParams(searchParams: Record<string, string>) {
+async function scrapeDmfWithParams(searchParams: Record<string, string>, keyword?: string) {
   const params = new URLSearchParams();
   for (const [key, val] of Object.entries(searchParams)) {
     params.set(key, val);
@@ -252,7 +254,8 @@ async function scrapeDmfWithParams(searchParams: Record<string, string>) {
   const allRecords: any[] = [];
   let totalCount = 0;
   let page = 1;
-  const maxPages = 10;
+  // If the search returns too many results, limit pages to avoid fetching irrelevant data
+  let maxPages = 10;
 
   while (page <= maxPages) {
     params.set("page", String(page));
@@ -272,6 +275,11 @@ async function scrapeDmfWithParams(searchParams: Record<string, string>) {
       totalCount = countMatch ? parseInt(countMatch[1].replace(/,/g, ""), 10) : 0;
       console.log(`DMF total count: ${totalCount}`);
       if (totalCount === 0) break;
+      // If total is very high, it's likely a broad/unrelated search - limit to 1 page for filtering
+      if (totalCount > 200) {
+        console.log(`DMF total too high (${totalCount}), limiting to 1 page for relevance check`);
+        maxPages = 1;
+      }
     }
 
     const pageRecords = parseDmfHtml(html, false);
