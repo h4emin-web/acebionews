@@ -69,12 +69,14 @@ export function useSearchNews(keyword: string) {
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       const startDate = sixMonthsAgo.toISOString().split("T")[0];
 
+      // Search by title and summary using partial text match
       const { data, error } = await supabase
         .from("news_articles")
         .select("*")
         .gte("date", startDate)
-        .contains("api_keywords", [keyword])
-        .order("date", { ascending: false });
+        .or(`title.ilike.%${keyword}%,summary.ilike.%${keyword}%`)
+        .order("date", { ascending: false })
+        .limit(30);
 
       if (error) throw error;
       return (data || []) as NewsArticle[];
