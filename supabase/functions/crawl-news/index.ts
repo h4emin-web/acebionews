@@ -24,9 +24,7 @@ const HTML_SOURCES = [
   { url: "https://www.hitnews.co.kr/news/articleList.html?view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
-  { url: "https://www.thebionews.net/news/articleList.html?sc_section_code=S1N3&view_type=sm", name: "더바이오(주요질환)", region: "국내", country: "KR", parser: "thebionews" },
-  { url: "https://www.thebionews.net/news/articleList.html?sc_section_code=S1N1&view_type=sm", name: "더바이오(제약산업)", region: "국내", country: "KR", parser: "thebionews" },
-  { url: "https://www.thebionews.net/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "더바이오(바이오)", region: "국내", country: "KR", parser: "thebionews" },
+  { url: "https://www.thebionews.net/news/articleList.html?view_type=sm", name: "더바이오", region: "국내", country: "KR", parser: "thebionews" },
 
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
   { url: "https://www.yakuji.co.jp/entrycategory/6", name: "薬事日報", region: "해외", country: "JP", parser: "yakuji" },
