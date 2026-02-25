@@ -54,7 +54,7 @@ export const BigDealsSection = () => {
       const { data, error } = await supabase
         .from("biotech_deals")
         .select("*")
-        .order("total_m", { ascending: false });
+        .order("date", { ascending: false });
       if (error) throw error;
       return (data || []) as Deal[];
     },
