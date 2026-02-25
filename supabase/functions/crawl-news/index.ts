@@ -149,11 +149,11 @@ function parseYakup(html: string): Array<{ title: string; summary: string; url: 
 function parseDailypharm(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   
-  // Try multiple split patterns for robustness
-  const liParts = html.split(/<li\s+class="[^"]*"\s*>/gi);
+  // Primary: match <li> blocks containing dailypharm news links
+  const liParts = html.split(/<li\s[^>]*>/gi);
   for (let i = 1; i < liParts.length && articles.length < 30; i++) {
     const block = liParts[i];
-    // Broader URL match - also catch relative URLs
+    // Match any dailypharm news URL
     const urlMatch = block.match(/<a\s+href="((?:https:\/\/www\.dailypharm\.com)?\/user\/news\/\d+)"/i);
     if (!urlMatch) continue;
     let url = urlMatch[1];
@@ -173,6 +173,7 @@ function parseDailypharm(html: string): Array<{ title: string; summary: string; 
   
   // Fallback: try anchor tag pattern directly
   if (articles.length === 0) {
+    console.log(`[데일리팜] Primary parser found 0 articles, trying fallback. HTML length: ${html.length}`);
     const linkRegex = /<a\s+href="((?:https:\/\/www\.dailypharm\.com)?\/user\/news\/\d+)"[^>]*>([\s\S]*?)<\/a>/gi;
     let m;
     while ((m = linkRegex.exec(html)) !== null && articles.length < 30) {
@@ -185,6 +186,7 @@ function parseDailypharm(html: string): Array<{ title: string; summary: string; 
     }
   }
   
+  console.log(`[데일리팜] Extracted ${articles.length} articles`);
   return articles;
 }
 
@@ -1173,10 +1175,30 @@ serve(async (req) => {
       const batch = newFetched.slice(i, i + batchSize);
       const results = await extractKeywordsAndTranslate(batch, GOOGLE_GEMINI_API_KEY);
 
-      // Fallback: include any articles the AI missed
+      // Fallback: collect articles the AI missed for a second translation pass
       const returnedUrls = new Set(results.map((r: any) => r.url));
+      const missedArticles: typeof batch = [];
       for (const article of batch) {
         if (!returnedUrls.has(article.url)) {
+          missedArticles.push(article);
+        }
+      }
+      allResults.push(...results);
+
+      // Second pass: translate missed foreign articles individually
+      if (missedArticles.length > 0) {
+        console.log(`AI missed ${missedArticles.length} articles, attempting second translation pass`);
+        const retryResults = await extractKeywordsAndTranslate(missedArticles, GOOGLE_GEMINI_API_KEY);
+        const retryUrls = new Set(retryResults.map((r: any) => r.url));
+        allResults.push(...retryResults);
+        
+        // For any still-missed articles: only insert Korean ones as-is, skip foreign
+        for (const article of missedArticles) {
+          if (retryUrls.has(article.url)) continue;
+          if (article.region === "해외") {
+            console.log(`Skipping untranslated foreign article: ${article.title.slice(0, 50)}`);
+            continue; // Do NOT insert untranslated foreign articles
+          }
           const langMap: Record<string, string> = { JP: "ja", CN: "zh", IN: "en", US: "en", EU: "en" };
           allResults.push({
             title: article.title,
@@ -1192,7 +1214,7 @@ serve(async (req) => {
           });
         }
       }
-      allResults.push(...results);
+
       if (i + batchSize < newFetched.length) {
         await new Promise((r) => setTimeout(r, 2000));
       }
