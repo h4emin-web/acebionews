@@ -146,7 +146,7 @@ export const IndApprovalModal = ({ open, onClose, onKeywordClick }: Props) => {
                       )}
                     </td>
                     <td className="px-3 py-2.5">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.phase}</Badge>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">{item.phase}</Badge>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
