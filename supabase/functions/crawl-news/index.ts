@@ -775,7 +775,18 @@ async function extractKeywordsAndTranslate(
 - You MUST evaluate whether each article is relevant to the pharmaceutical/biotech/healthcare industry.
 - Set is_relevant to true ONLY for articles about: drugs, medicines, APIs, biotech, clinical trials, FDA/regulatory, healthcare policy, medical devices, pharmaceutical companies, hospitals, diseases/treatments.
 - Set is_relevant to false for articles about: food companies (Domino's, McDonald's etc.), general business/finance unrelated to pharma, sports, entertainment, politics (unless health policy), technology (unless biotech/medtech), retail, real estate, automotive, energy (unless related to pharma).
+- **CRITICAL: Set is_relevant to false for articles that are merely image/photo/logo descriptions** — e.g., "GSK 로고", "노보 노디스크 로고", "CDC 건물", "차량 소독 모습" etc. These are NOT news articles, they are photo captions. ALWAYS reject them.
+- **Set is_relevant to false for articles with vague/empty summaries** that don't contain any substantive information — e.g., "구체적인 뉴스 내용은 포함되어 있지 않습니다", "별도의 뉴스 내용은 포함되어 있지 않습니다".
 - When in doubt, set is_relevant to false. We only want pharmaceutical/biotech/healthcare news.
+
+## TASK 5: SUMMARY DEPTH (CRITICAL)
+- **Summaries MUST contain ALL specific details from the article body text.** Do NOT write lazy/vague summaries.
+- If the article mentions a list (e.g., "10대 신약", "top 5 drugs"), you MUST list ALL items with their names, companies, and indications.
+- If the article contains numbers (revenue, market size, clinical trial results), include ALL of them.
+- If the article mentions multiple companies or drugs, name EVERY one of them.
+- Example of BAD summary: "2026년에 출시될 것으로 기대되는 혁신적인 신약 10가지에 대한 소개입니다." — This is USELESS. What are the 10 drugs?
+- Example of GOOD summary: "2026년 기대 신약으로 ①릴리의 도나네맙(알츠하이머), ②화이자의 다르보포에틴(빈혈)..." — Lists every item with company and indication.
+- translated_summary should be 3-6 sentences when the source article has rich content. Use MORE sentences for content-rich articles.
 
 ## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
 - category: 규제/시장/공급망/R&D/임상/허가`,
@@ -840,9 +851,26 @@ async function extractKeywordsAndTranslate(
       const article = articles[r.index];
       if (!article) continue;
 
-      // Skip irrelevant articles (e.g., Domino's Pizza, non-pharma news)
+      // Skip irrelevant articles (e.g., Domino's Pizza, non-pharma news, photo captions)
       if (r.is_relevant === false) {
         console.log(`Skipping irrelevant article: ${article.title}`);
+        continue;
+      }
+
+      // Skip articles with empty/useless summaries (photo captions, logo descriptions)
+      const summary = r.translated_summary || "";
+      const uselessPatterns = [
+        /포함되어 있지 않습니다/,
+        /내용은 없습니다/,
+        /이미지에 대한/,
+        /로고에 대한/,
+        /사진에 대한/,
+        /건물에 대한/,
+        /모습입니다/,
+        /^.{0,50}$/,  // Summary too short (under 50 chars)
+      ];
+      if (uselessPatterns.some(p => p.test(summary))) {
+        console.log(`Skipping content-less article: ${article.title}`);
         continue;
       }
 
