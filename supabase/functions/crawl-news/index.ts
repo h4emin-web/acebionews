@@ -24,6 +24,9 @@ const HTML_SOURCES = [
   { url: "https://www.hitnews.co.kr/news/articleList.html?view_type=sm", name: "히트뉴스", region: "국내", country: "KR", parser: "hitnews" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
+  { url: "https://www.thebionews.net/news/articleList.html?sc_section_code=S1N3&view_type=sm", name: "더바이오(주요질환)", region: "국내", country: "KR", parser: "thebionews" },
+  { url: "https://www.thebionews.net/news/articleList.html?sc_section_code=S1N1&view_type=sm", name: "더바이오(제약산업)", region: "국내", country: "KR", parser: "thebionews" },
+  { url: "https://www.thebionews.net/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "더바이오(바이오)", region: "국내", country: "KR", parser: "thebionews" },
 
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
   { url: "https://www.yakuji.co.jp/entrycategory/6", name: "薬事日報", region: "해외", country: "JP", parser: "yakuji" },
@@ -379,6 +382,28 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
+// Parse 더바이오 (thebionews.net) HTML
+function parseThebionews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const liParts = html.split(/<li>/gi);
+  for (let i = 1; i < liParts.length && articles.length < 20; i++) {
+    const block = liParts[i];
+    const titleMatch = block.match(/<h2 class="titles">\s*<a\s+href="([^"]*)"[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
+    if (!titleMatch) continue;
+    let url = titleMatch[1].trim();
+    if (!url.startsWith("http")) url = `https://www.thebionews.net${url}`;
+    const title = stripHtml(titleMatch[2]).trim();
+    const summaryMatch = block.match(/<p class="lead[^"]*">\s*<a[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
+    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const dateMatch = block.match(/(\d{4}\.\d{2}\.\d{2})\s+\d{2}:\d{2}/);
+    const dateStr = dateMatch ? dateMatch[1].replace(/\./g, "-") : "";
+    if (title.length > 5) {
+      articles.push({ title, summary, url, date: normalizeDate(dateStr) });
+    }
+  }
+  return articles;
+}
+
 // Parse 薬事日報 (yakuji.co.jp) HTML
 function parseYakuji(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
@@ -632,6 +657,8 @@ async function fetchHtml(
       articles = parseKpanews(html);
     } else if (source.parser === "pharmnews") {
       articles = parsePharmnews(html);
+    } else if (source.parser === "thebionews") {
+      articles = parseThebionews(html);
     } else if (source.parser === "answersnews" || source.parser === "iyakunews") {
       articles = parseIyakuNews(html);
     } else if (source.parser === "yakuji") {
