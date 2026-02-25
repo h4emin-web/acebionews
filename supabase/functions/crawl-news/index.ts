@@ -382,9 +382,12 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
-// Parse 더바이오 (thebionews.net) HTML
+// Parse 더바이오 (thebionews.net) HTML — only today's articles (KST)
 function parseThebionews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  // Get today's date in KST
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const todayStr = kstNow.toISOString().split("T")[0]; // "YYYY-MM-DD"
   const liParts = html.split(/<li>/gi);
   for (let i = 1; i < liParts.length && articles.length < 20; i++) {
     const block = liParts[i];
@@ -397,8 +400,11 @@ function parseThebionews(html: string): Array<{ title: string; summary: string; 
     const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
     const dateMatch = block.match(/(\d{4}\.\d{2}\.\d{2})\s+\d{2}:\d{2}/);
     const dateStr = dateMatch ? dateMatch[1].replace(/\./g, "-") : "";
+    const normalizedDate = normalizeDate(dateStr);
+    // Only include today's articles
+    if (normalizedDate !== todayStr) continue;
     if (title.length > 5) {
-      articles.push({ title, summary, url, date: normalizeDate(dateStr) });
+      articles.push({ title, summary, url, date: normalizedDate });
     }
   }
   return articles;
@@ -807,10 +813,12 @@ async function extractKeywordsAndTranslate(
 - **Set is_relevant to false for ALL of these categories (even if a pharma company is mentioned):**
   - Company history, founder biographies, memorial books, 평전 출간 (e.g., "활명수로 독립자금 댄 동화약품 창업주 평전 출간")
   - Health supplements (건강기능식품), consumer wellness products, OTC lifestyle products (e.g., "꿀잠샷 올리브영 입점", "에너지 드링크 출시")
-  - Aesthetic/cosmetic symposiums, beauty product launches, 에스테틱 제품군 학술 조명
+  - Aesthetic/cosmetic symposiums, beauty product launches, 에스테틱 제품군 학술 조명, 미용기기 (레이저 미용, 초음파 미용 등)
+  - Health supplements (건강기능식품/건기식): 키성장, 수면, 다이어트 건기식, 올리브영 입점 등
+  - Events/conferences with no specific drug/API content: 시상식 개최, 심포지엄 개최, 설명회 개최, 토론회, 포럼, 시사회 개최 등 (단, 특정 신약/파이프라인 임상결과 발표는 허용)
   - General corporate events: 시무식, 신년사, 사옥 이전, 인사 발령, 채용 공고, 후원/기부, CSR 활동
   - Consumer product launches unrelated to prescription drugs (e.g., 배란 테스트기, 체온계, 마스크팩)
-  - Regulatory science conferences/forums that are purely academic without specific drug/API implications
+  - K-뷰티, 화장품, 뷰티 원료, 뉴로코스메틱, 화장품 규제 등 cosmetics/beauty industry
   - Food/beverage companies, general retail, sports, entertainment, politics (unless directly about drug policy)
   - Photo captions, logo descriptions, building photos
   - Articles with vague/empty summaries
