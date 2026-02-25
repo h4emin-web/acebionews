@@ -48,7 +48,7 @@ export const StatsBar = ({ news, totalReports, totalBioWeekly, totalIbricReports
       </div>
 
       {/* Mobile layout - compact horizontal */}
-      <div className="flex md:hidden gap-1.5 overflow-x-auto">
+      <div className="flex md:hidden gap-1.5 overflow-x-auto scrollbar-hide">
         {stats.map((s) => {
           const isActive = regionFilter === s.filter;
           return (
