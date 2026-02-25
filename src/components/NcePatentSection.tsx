@@ -78,16 +78,19 @@ export const NcePatentSection = ({ onKeywordClick }: Props) => {
                     <span className="text-[11px] font-semibold text-foreground group-hover:text-primary transition-colors truncate">
                       {item.product_name}
                     </span>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex flex-col items-end shrink-0">
                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded whitespace-nowrap ${getUrgencyColor(item.expiry_date)}`}>
                         {item.expiry_date.slice(2)}
                       </span>
-                      <span className="text-[9px] text-muted-foreground whitespace-nowrap">
+                      <span className="text-[9px] text-muted-foreground">
                         {remaining.text}
                       </span>
                     </div>
                   </div>
                   <p className="text-[9px] text-muted-foreground truncate">{item.api_name}</p>
+                  {item.indication && (
+                    <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">{item.indication}</p>
+                  )}
                 </div>
               );
             })}
