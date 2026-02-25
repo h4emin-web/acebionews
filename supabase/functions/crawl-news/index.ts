@@ -1271,6 +1271,16 @@ serve(async (req) => {
       console.log(`Cleaned up ${deletedCount} articles older than 3 days`);
     }
 
+    // 3b. Clean up expired NCE patents
+    const todayStr = new Date().toISOString().split("T")[0];
+    const { count: expiredNce } = await supabase
+      .from("nce_patent_expiry")
+      .delete({ count: "exact" })
+      .lt("expiry_date", todayStr);
+    if (expiredNce && expiredNce > 0) {
+      console.log(`Cleaned up ${expiredNce} expired NCE patents`);
+    }
+
     // 4. Filter by recency: domestic=last 3 days, foreign=yesterday+ (KST)
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
