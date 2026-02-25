@@ -31,7 +31,9 @@ const HTML_SOURCES = [
 
 // Firecrawl sources — SPA sites that need JS rendering
 const FIRECRAWL_SOURCES = [
-  { url: "https://bydrug.pharmcube.com/news", name: "医药新闻", region: "해외", country: "CN", parser: "bydrug" },
+  { url: "https://bydrug.pharmcube.com/news/summary/source/%E8%8D%AF%E6%B8%A1", name: "药渡", region: "해외", country: "CN", parser: "bydrug" },
+  { url: "https://bydrug.pharmcube.com/news/summary/source/%E5%8C%BB%E8%8D%AF%E7%AC%94%E8%AE%B0", name: "医药笔记", region: "해외", country: "CN", parser: "bydrug" },
+  { url: "https://bydrug.pharmcube.com/news/summary/source/%E8%8D%AF%E4%BA%8B%E7%BA%B5%E6%A8%AA", name: "药事纵横", region: "해외", country: "CN", parser: "bydrug" },
   { url: "https://www.reuters.com/business/healthcare-pharmaceuticals/", name: "Reuters Healthcare", region: "해외", country: "US", parser: "reuters" },
   { url: "https://www.asahi.com/apital/medicalnews/?iref=pc_apital_top", name: "朝日新聞 Apital", region: "해외", country: "JP", parser: "asahi" },
   { url: "https://news.web.nhk.or.jp/newsweb/pl/news-nwa-topic-nationwide-0000414", name: "NHK 医療", region: "해외", country: "JP", parser: "nhk" },
@@ -252,10 +254,14 @@ function parseReuters(markdown: string): Array<{ title: string; summary: string;
     const title = linkMatch[1].replace(/\*\*/g, "").trim();
     const url = linkMatch[2].trim();
 
-    // Skip non-article links (events, tags, categories, images, differentiator)
+    // Skip non-article links (events, tags, categories, images, differentiator, photos)
     if (url.includes("/tags/") || url.includes("/events/") || url.includes("/differentiator") 
-        || url.includes("reutersevents.com") || title.includes("category") || title.length < 15
-        || title.startsWith("Skip to") || title.includes("Reuters logo")) continue;
+        || url.includes("reutersevents.com") || url.includes("/pictures/") || url.includes("/graphics/")
+        || url.includes("/slideshow/") || url.includes("/video/") || url.includes("/media/")
+        || url.match(/\/\d{4}\/\d{2}\/\d{2}\/[^/]*photo[^/]*\//i)
+        || title.includes("category") || title.length < 15
+        || title.startsWith("Skip to") || title.includes("Reuters logo")
+        || title.match(/^(Photo|Image|Picture|Gallery|Slideshow)/i)) continue;
 
     // Already have this URL?
     if (articles.some(a => a.url === url)) continue;
@@ -414,6 +420,8 @@ function parseBydrug(markdown: string): Array<{ title: string; summary: string; 
       if (dm) return `${dm[1]}-${dm[2]}-${dm[3]}`;
       const cnDate = lines[j].match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
       if (cnDate) return `${cnDate[1]}-${cnDate[2].padStart(2, "0")}-${cnDate[3].padStart(2, "0")}`;
+      // Relative time: "8小时前", "30分钟前" → today
+      if (/\d+\s*小时前|\d+\s*分钟前/.test(lines[j])) return normalizeDate("");
     }
     return normalizeDate("");
   };
