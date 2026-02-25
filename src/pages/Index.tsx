@@ -12,6 +12,7 @@ import { UsDmfSection } from "@/components/UsDmfSection";
 import { BioWeeklySection } from "@/components/BioWeeklySection";
 import { IbricReportsSection } from "@/components/IbricReportsSection";
 import { NcePatentModal } from "@/components/NcePatentModal";
+import { NcePatentSection } from "@/components/NcePatentSection";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
@@ -235,6 +236,7 @@ const Index = () => {
             <aside className="space-y-4 min-w-0 overflow-hidden">
               <MfdsSection onKeywordClick={handleKeywordClick} />
               <FdaSection onKeywordClick={handleKeywordClick} />
+              <NcePatentSection onKeywordClick={handleKeywordClick} />
               <UsDmfSection onKeywordClick={handleKeywordClick} />
             </aside>
           </div>
