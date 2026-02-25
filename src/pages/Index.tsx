@@ -188,8 +188,8 @@ const Index = () => {
             />
         )}
 
-        <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
-          <div className="space-y-4">
+        <div className="grid gap-5 lg:grid-cols-[1fr_340px] min-w-0">
+          <div className="space-y-4 min-w-0 overflow-hidden">
             {regionFilter === "동향리포트" ? (
               <IbricReportsSection />
             ) : regionFilter === "바이오위클리" ? (
@@ -228,7 +228,7 @@ const Index = () => {
             )}
           </div>
 
-          <aside className="space-y-4">
+          <aside className="space-y-4 min-w-0 overflow-hidden">
             {isSearching ? (
               <SearchSidebarPanel
                 keyword={search}
