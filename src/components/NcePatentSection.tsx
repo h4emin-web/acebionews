@@ -54,7 +54,7 @@ export const NcePatentSection = ({ onKeywordClick }: Props) => {
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
         <FlaskConical className="w-4 h-4 text-primary" />
         <h2 className="text-sm font-semibold text-foreground">물질 특허 만료 NCE</h2>
-        <Badge variant="secondary" className="text-[10px] ml-auto mr-2">{patents.length}건</Badge>
+        <span className="text-[10px] text-muted-foreground ml-auto mr-2">{patents.length}건</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
       <CollapsibleContent>
