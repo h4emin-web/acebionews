@@ -260,7 +260,9 @@ function parseReuters(markdown: string): Array<{ title: string; summary: string;
         || url.match(/\/\d{4}\/\d{2}\/\d{2}\/[^/]*photo[^/]*\//i)
         || title.includes("category") || title.length < 15
         || title.startsWith("Skip to") || title.includes("Reuters logo")
-        || title.match(/^(Photo|Image|Picture|Gallery|Slideshow)/i)) continue;
+        || title.match(/^(Photo|Image|Picture|Gallery|Slideshow|로이터\s*이벤트)/i)
+        || title.match(/이미지입니다|관련\s*이미지|사용은.*에서만/i)
+        || title.match(/^Reuters Events/i)) continue;
 
     // Already have this URL?
     if (articles.some(a => a.url === url)) continue;
@@ -292,6 +294,10 @@ function parseReuters(markdown: string): Array<{ title: string; summary: string;
         break;
       }
     }
+
+    // Skip image-only / event-only content with no real article substance
+    if (title.match(/이벤트|이미지|사진|photo|image|gallery|slideshow/i) && (!summary || summary.length < 50)) continue;
+    if (summary && summary.match(/이미지입니다|사용은.*에서만|관련\s*이미지|사진입니다/i)) continue;
 
     articles.push({ title, summary, url, date: dateStr });
   }
