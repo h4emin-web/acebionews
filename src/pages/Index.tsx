@@ -169,7 +169,8 @@ const Index = () => {
       </header>
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
-        <div className="flex items-center gap-3">
+        {/* Search + IND button: hidden on mobile */}
+        <div className="hidden md:flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
           </div>
@@ -236,7 +237,8 @@ const Index = () => {
               )}
             </div>
 
-            <aside className="space-y-4 min-w-0 overflow-hidden">
+            {/* Sidebar: hidden on mobile */}
+            <aside className="hidden lg:block space-y-4 min-w-0 overflow-hidden">
               <MfdsSection onKeywordClick={handleKeywordClick} />
               <BigDealsSection />
               <NcePatentSection onKeywordClick={handleKeywordClick} />
