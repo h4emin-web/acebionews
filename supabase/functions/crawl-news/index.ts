@@ -818,6 +818,10 @@ async function extractKeywordsAndTranslate(
   - Health supplements (건강기능식품/건기식): 키성장, 수면, 다이어트 건기식, 올리브영 입점 등
   - Events/conferences with no specific drug/API content: 시상식 개최, 심포지엄 개최, 설명회 개최, 토론회, 포럼, 시사회 개최 등 (단, 특정 신약/파이프라인 임상결과 발표는 허용)
   - General corporate events: 시무식, 신년사, 사옥 이전, 인사 발령, 채용 공고, 후원/기부, CSR 활동
+  - **Personnel/HR news: 영입, 인사, 위촉, 선임, 취임, 임명, 부임 등 인사 동정 기사 (단, CEO 교체가 파이프라인/전략에 직접 영향을 미치는 경우는 허용)**
+  - **Product launches of NON-innovative drugs: 출시, 론칭, 런칭, 발매, 시판 등 제네릭/OTC/건기식/소비재 출시 기사 (단, FDA/EMA 승인된 신약의 최초 출시는 허용)**
+  - **Award ceremonies: 수상, 시상, 표창, 공로상, 감사패, 올해의 XX상 등 모든 수상 관련 기사**
+  - **Event hosting without drug data: 개최, 심포지엄 개최, 학술대회 개최, 세미나 개최, 포럼 개최, 설명회 개최, 론칭 행사 등 (단, 임상결과 발표가 포함된 학술대회는 허용)**
   - Consumer product launches unrelated to prescription drugs (e.g., 배란 테스트기, 체온계, 마스크팩)
   - K-뷰티, 화장품, 뷰티 원료, 뉴로코스메틱, 화장품 규제 등 cosmetics/beauty industry
   - Food/beverage companies, general retail, sports, entertainment, politics (unless directly about drug policy)
@@ -901,6 +905,20 @@ async function extractKeywordsAndTranslate(
       // Skip irrelevant articles (e.g., Domino's Pizza, non-pharma news, photo captions)
       if (r.is_relevant === false) {
         console.log(`Skipping irrelevant article: ${article.title}`);
+        continue;
+      }
+
+      // Hard-coded title keyword filter (safety net — catches what AI misses)
+      const titleForFilter = (r.translated_title || article.title || "");
+      const blockedTitlePatterns = [
+        /영입/, /위촉/, /선임/, /취임/, /임명/, /부임/,
+        /수상/, /시상/, /표창/, /공로상/, /감사패/,
+        /개최(?!.*임상|.*결과|.*데이터|.*승인)/, // 개최 but allow if 임상/결과/데이터/승인 also present
+        /론칭/, /런칭/,
+        /출시(?!.*FDA|.*EMA|.*MFDS|.*승인|.*허가|.*신약)/, // 출시 but allow if regulatory approval context
+      ];
+      if (blockedTitlePatterns.some(p => p.test(titleForFilter))) {
+        console.log(`Skipping blocked-keyword article: ${titleForFilter}`);
         continue;
       }
 
