@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      clinical_trial_approvals: {
+        Row: {
+          approval_date: string
+          created_at: string
+          dev_region: string | null
+          id: string
+          phase: string
+          product_name: string
+          seq_number: number
+          sponsor: string
+          trial_title: string
+        }
+        Insert: {
+          approval_date: string
+          created_at?: string
+          dev_region?: string | null
+          id?: string
+          phase: string
+          product_name: string
+          seq_number: number
+          sponsor: string
+          trial_title: string
+        }
+        Update: {
+          approval_date?: string
+          created_at?: string
+          dev_region?: string | null
+          id?: string
+          phase?: string
+          product_name?: string
+          seq_number?: number
+          sponsor?: string
+          trial_title?: string
+        }
+        Relationships: []
+      }
       ibric_reports: {
         Row: {
           affiliation: string | null

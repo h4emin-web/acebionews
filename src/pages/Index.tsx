@@ -13,6 +13,8 @@ import { BioWeeklySection } from "@/components/BioWeeklySection";
 import { IbricReportsSection } from "@/components/IbricReportsSection";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { NcePatentSection } from "@/components/NcePatentSection";
+import { IndApprovalSection } from "@/components/IndApprovalSection";
+import { IndApprovalModal } from "@/components/IndApprovalModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
@@ -31,6 +33,7 @@ const Index = () => {
   const [regionFilter, setRegionFilter] = useState<"all" | "국내" | "해외" | "리포트" | "바이오위클리" | "동향리포트">("all");
   
   const [nceModalOpen, setNceModalOpen] = useState(false);
+  const [indModalOpen, setIndModalOpen] = useState(false);
 
   // Debounce search for external API calls (Korean IME sends many partial chars)
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -171,11 +174,11 @@ const Index = () => {
             <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
           </div>
           <button
-            onClick={() => setNceModalOpen(true)}
+            onClick={() => setIndModalOpen(true)}
             className="flex items-center gap-1.5 px-4 py-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap shrink-0"
           >
             <FlaskConical className="w-4 h-4" />
-            물질 특허 만료 NCE
+            국내 IND 승인
           </button>
         </div>
         {!search && <StatsBar news={allNews} totalReports={reports.length} totalBioWeekly={bioWeeklyPosts.length} totalIbricReports={ibricReports.length} regionFilter={regionFilter} onRegionFilterChange={setRegionFilter} />}
@@ -237,6 +240,7 @@ const Index = () => {
               <MfdsSection onKeywordClick={handleKeywordClick} />
               <FdaSection onKeywordClick={handleKeywordClick} />
               <NcePatentSection onKeywordClick={handleKeywordClick} />
+              <IndApprovalSection onKeywordClick={handleKeywordClick} />
               <UsDmfSection onKeywordClick={handleKeywordClick} />
             </aside>
           </div>
@@ -248,6 +252,14 @@ const Index = () => {
         onKeywordClick={(kw) => {
           setSearch(kw);
           setNceModalOpen(false);
+        }}
+      />
+      <IndApprovalModal
+        open={indModalOpen}
+        onClose={() => setIndModalOpen(false)}
+        onKeywordClick={(kw) => {
+          setSearch(kw);
+          setIndModalOpen(false);
         }}
       />
     </div>);
