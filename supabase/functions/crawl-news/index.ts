@@ -12,7 +12,6 @@ const RSS_SOURCES = [
   { rss: "https://www.pharmaceutical-technology.com/feed/", name: "Pharma Technology", region: "해외", country: "EU" },
   { rss: "https://www.expresspharma.in/feed/", name: "Express Pharma", region: "해외", country: "IN" },
   { rss: "https://www.biopharmadive.com/feeds/news/", name: "BioPharma Dive", region: "해외", country: "US" },
-  { rss: "https://endpts.com/feed/", name: "Endpoints News", region: "해외", country: "US" },
   { rss: "https://www.pharmatimes.com/rss", name: "PharmaTimes", region: "해외", country: "US" },
 ];
 
@@ -32,9 +31,8 @@ const HTML_SOURCES = [
 
 // Firecrawl sources — SPA sites that need JS rendering
 const FIRECRAWL_SOURCES = [
-  // ✅ parser 이름을 "bydrug"으로 통일 (이전 "By Drug"은 fetchWithFirecrawl에서 매칭 안 됨)
   { url: "https://bydrug.pharmcube.com/news", name: "医药新闻", region: "해외", country: "CN", parser: "bydrug" },
-  { url: "https://www.rttnews.com/content/industrynews.aspx?industry=biotechnology+%26+drugs", name: "RTTNews Biotech", region: "해외", country: "US", parser: "rttnews" },
+  { url: "https://www.reuters.com/business/healthcare-pharmaceuticals/", name: "Reuters Healthcare", region: "해외", country: "US", parser: "reuters" },
   { url: "https://www.asahi.com/apital/medicalnews/?iref=pc_apital_top", name: "朝日新聞 Apital", region: "해외", country: "JP", parser: "asahi" },
   { url: "https://news.web.nhk.or.jp/newsweb/pl/news-nwa-topic-nationwide-0000414", name: "NHK 医療", region: "해외", country: "JP", parser: "nhk" },
 ];
@@ -233,31 +231,64 @@ function parseHitnews(html: string): Array<{ title: string; summary: string; url
   return articles;
 }
 
-// Parse RTTNews Biotech HTML
-function parseRttnewsHtml(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+// Parse Reuters Healthcare (from Firecrawl markdown)
+function parseReuters(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  const linkRegex = /<a[^>]*class="[^"]*lnkr[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-  let m;
-  while ((m = linkRegex.exec(html)) !== null && articles.length < 25) {
-    let url = m[1].trim();
-    const title = stripHtml(m[2]).trim();
-    if (title.length < 10) continue;
-    if (!url.startsWith("http")) {
-      url = `https://www.rttnews.com${url}`;
-    }
-    articles.push({ title, summary: "", url, date: normalizeDate("") });
-  }
-  if (articles.length === 0) {
-    const fallbackRegex = /<a[^>]*href="(\/\d+\/[^"]+\.aspx)"[^>]*>([\s\S]*?)<\/a>/gi;
-    let fm;
-    while ((fm = fallbackRegex.exec(html)) !== null && articles.length < 25) {
-      const url = `https://www.rttnews.com${fm[1].trim()}`;
-      const title = stripHtml(fm[2]).trim();
-      if (title.length > 10 && !title.includes("RTTNews") && !articles.some(a => a.url === url)) {
-        articles.push({ title, summary: "", url, date: normalizeDate("") });
+  const lines = markdown.split("\n");
+
+  const monthMap: Record<string, string> = {
+    January: "01", February: "02", March: "03", April: "04", May: "05", June: "06",
+    July: "07", August: "08", September: "09", October: "10", November: "11", December: "12",
+  };
+
+  for (let i = 0; i < lines.length && articles.length < 25; i++) {
+    const line = lines[i].trim();
+
+    // Match markdown links to reuters articles: [Title](url)
+    const linkMatch = line.match(/\[([^\]]{10,})\]\((https:\/\/www\.reuters\.com\/[^)]+)\)/);
+    if (!linkMatch) continue;
+    const title = linkMatch[1].replace(/\*\*/g, "").trim();
+    const url = linkMatch[2].trim();
+
+    // Skip non-article links (events, tags, categories, images, differentiator)
+    if (url.includes("/tags/") || url.includes("/events/") || url.includes("/differentiator") 
+        || url.includes("reutersevents.com") || title.includes("category") || title.length < 15
+        || title.startsWith("Skip to") || title.includes("Reuters logo")) continue;
+
+    // Already have this URL?
+    if (articles.some(a => a.url === url)) continue;
+
+    // Look for date in nearby lines
+    let dateStr = "";
+    for (let j = Math.max(0, i - 3); j <= Math.min(lines.length - 1, i + 5); j++) {
+      const dl = lines[j].trim();
+      // "February 23, 2026" format
+      const fullDate = dl.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/);
+      if (fullDate) {
+        dateStr = `${fullDate[3]}-${monthMap[fullDate[1]]}-${fullDate[2].padStart(2, "0")}`;
+        break;
+      }
+      // "X hours ago", "X mins ago" → today
+      if (/\d+\s+(hours?|mins?|minutes?)\s+ago/i.test(dl)) {
+        dateStr = normalizeDate("");
+        break;
       }
     }
+    if (!dateStr) dateStr = normalizeDate("");
+
+    // Look for summary in nearby lines (paragraph text, not links)
+    let summary = "";
+    for (let j = i + 1; j <= Math.min(lines.length - 1, i + 4); j++) {
+      const sl = lines[j].trim();
+      if (sl.length > 40 && !sl.startsWith("[") && !sl.startsWith("!") && !sl.startsWith("http") && !sl.includes("category")) {
+        summary = sl.slice(0, 300);
+        break;
+      }
+    }
+
+    articles.push({ title, summary, url, date: dateStr });
   }
+  console.log(`parseReuters: extracted ${articles.length} articles`);
   return articles;
 }
 
@@ -440,34 +471,6 @@ function parseBydrug(markdown: string): Array<{ title: string; summary: string; 
   return articles;
 }
 
-// Parse RTTNews Biotech (from Firecrawl markdown)
-function parseRttnews(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
-  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
-  const lines = markdown.split("\n");
-
-  const monthMap: Record<string, string> = {
-    January: "01", February: "02", March: "03", April: "04", May: "05", June: "06",
-    July: "07", August: "08", September: "09", October: "10", November: "11", December: "12",
-  };
-
-  for (const line of lines) {
-    if (articles.length >= 25) break;
-    const match = line.match(
-      /^\s*-\s*\[([^\]]+)\]\((https:\/\/www\.rttnews\.com\/\d+\/[^)]+)\)\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})\s+\d{2}:\d{2}\s+ET/
-    );
-    if (!match) continue;
-    const title = match[1].trim();
-    const url = match[2].trim();
-    const month = monthMap[match[3]] || "01";
-    const day = match[4].padStart(2, "0");
-    const year = match[5];
-    const date = `${year}-${month}-${day}`;
-    if (title.length > 10) {
-      articles.push({ title, summary: "", url, date });
-    }
-  }
-  return articles;
-}
 
 // Parse 朝日新聞 Apital (from Firecrawl markdown)
 function parseAsahi(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
@@ -565,8 +568,8 @@ async function fetchWithFirecrawl(
     if (source.parser === "bydrug") {
       // ✅ "By Drug" → "bydrug"으로 통일됨
       articles = parseBydrug(markdown);
-    } else if (source.parser === "rttnews") {
-      articles = parseRttnews(markdown);
+    } else if (source.parser === "reuters") {
+      articles = parseReuters(markdown);
     } else if (source.parser === "asahi") {
       articles = parseAsahi(markdown);
     } else if (source.parser === "nhk") {
@@ -616,8 +619,6 @@ async function fetchHtml(
       articles = parseKpanews(html);
     } else if (source.parser === "pharmnews") {
       articles = parsePharmnews(html);
-    } else if (source.parser === "rttnews-html") {
-      articles = parseRttnewsHtml(html);
     } else if (source.parser === "answersnews" || source.parser === "iyakunews") {
       articles = parseIyakuNews(html);
     } else if (source.parser === "yakuji") {
