@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pill, Clock, Search, CalendarDays, Flag, FlaskConical } from "lucide-react";
+import { BigDealsSection } from "@/components/BigDealsSection";
 import { PillLoader } from "@/components/PillLoader";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -237,10 +238,10 @@ const Index = () => {
 
             <aside className="space-y-4 min-w-0 overflow-hidden">
               <MfdsSection onKeywordClick={handleKeywordClick} />
-              <FdaSection onKeywordClick={handleKeywordClick} />
+              <BigDealsSection />
               <NcePatentSection onKeywordClick={handleKeywordClick} />
-              
               <UsDmfSection onKeywordClick={handleKeywordClick} />
+              <FdaSection onKeywordClick={handleKeywordClick} />
             </aside>
           </div>
         )}
