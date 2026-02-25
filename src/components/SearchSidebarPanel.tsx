@@ -11,6 +11,7 @@ type Props = {
   dmfLoading: boolean;
   dmfTotalCount: number;
   isProductSearch: boolean;
+  fullWidth?: boolean;
 };
 
 export const SearchSidebarPanel = ({
@@ -22,6 +23,7 @@ export const SearchSidebarPanel = ({
   dmfLoading,
   dmfTotalCount,
   isProductSearch,
+  fullWidth,
 }: Props) => {
   // 제품명 검색 시 국내 등록 제품/DMF 패널 숨김
   if (isProductSearch) {
@@ -29,7 +31,7 @@ export const SearchSidebarPanel = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={fullWidth ? "grid gap-5 md:grid-cols-2" : "space-y-4"}>
       {/* 국내 등록 제품 */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-border bg-primary/5">
@@ -43,7 +45,7 @@ export const SearchSidebarPanel = ({
             )}
           </div>
         </div>
-        <div className="max-h-[300px] overflow-y-auto">
+        <div className={fullWidth ? "max-h-[600px] overflow-y-auto" : "max-h-[300px] overflow-y-auto"}>
           {productsLoading ? (
             <PillLoader text="의약품안전나라 조회중..." />
           ) : products.length > 0 ? (
@@ -87,7 +89,7 @@ export const SearchSidebarPanel = ({
             )}
           </div>
         </div>
-        <div className="max-h-[300px] overflow-y-auto">
+        <div className={fullWidth ? "max-h-[600px] overflow-y-auto" : "max-h-[300px] overflow-y-auto"}>
           {dmfLoading ? (
             <PillLoader text="의약품안전나라 조회중..." />
           ) : dmfRecords.length > 0 ? (
