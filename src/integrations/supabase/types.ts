@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      biotech_deals: {
+        Row: {
+          created_at: string
+          date: string
+          deal_type: string
+          id: string
+          indication: string
+          payee: string
+          payee_country: string
+          payer: string
+          payer_country: string
+          technology: string
+          total_m: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          deal_type?: string
+          id?: string
+          indication?: string
+          payee: string
+          payee_country?: string
+          payer: string
+          payer_country?: string
+          technology?: string
+          total_m?: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          deal_type?: string
+          id?: string
+          indication?: string
+          payee?: string
+          payee_country?: string
+          payer?: string
+          payer_country?: string
+          technology?: string
+          total_m?: number
+        }
+        Relationships: []
+      }
       clinical_trial_approvals: {
         Row: {
           approval_date: string
