@@ -197,11 +197,25 @@ const Index = () => {
             ) : regionFilter === "리포트" ? (
               <IndustryReportsSection />
             ) : isSearching ? (
-              <ManufacturersPanel
-                keyword={debouncedSearch || search}
-                data={manufacturerData}
-                loading={manufacturersLoading}
-              />
+              <>
+                <ManufacturersPanel
+                  keyword={debouncedSearch || search}
+                  data={manufacturerData}
+                  loading={manufacturersLoading}
+                />
+                {isLoading ? (
+                  <div className="card-elevated rounded-lg">
+                    <PillLoader text="관련 기사 검색 중..." />
+                  </div>
+                ) : displayNews.length > 0 ? (
+                  displayNews.slice(0, 10).map((news, i) => {
+                    const item = toNewsItem(news);
+                    return (
+                      <NewsCard key={news.id} news={item} index={i} onKeywordClick={handleKeywordClick} />
+                    );
+                  })
+                ) : null}
+              </>
             ) : (
               /* When not searching: show DB news */
               isLoading ? (
