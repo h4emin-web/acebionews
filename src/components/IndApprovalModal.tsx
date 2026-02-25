@@ -13,6 +13,7 @@ type Trial = {
   phase: string;
   approval_date: string;
   dev_region: string | null;
+  summary: string | null;
 };
 
 const isNew = (approvalDate: string) => {
@@ -139,7 +140,10 @@ export const IndApprovalModal = ({ open, onClose, onKeywordClick }: Props) => {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 max-w-[400px]">
-                      <span className="text-[11px] text-muted-foreground line-clamp-2">{item.trial_title}</span>
+                      <span className="text-[11px] text-foreground font-medium">{item.summary || ""}</span>
+                      {item.trial_title && (
+                        <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{item.trial_title}</p>
+                      )}
                     </td>
                     <td className="px-3 py-2.5">
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.phase}</Badge>
