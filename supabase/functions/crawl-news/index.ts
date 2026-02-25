@@ -811,7 +811,8 @@ async function extractKeywordsAndTranslate(
 - You MUST evaluate whether each article is relevant to the pharmaceutical/biotech/healthcare industry's CORE activities.
 - Set is_relevant to true ONLY for articles about: new drug development, clinical trials, FDA/EMA/MFDS regulatory approvals/rejections, drug safety alerts, API/원료의약품 supply chain, biotech R&D breakthroughs, pharmaceutical M&A/licensing deals, drug pricing/reimbursement policy, medical device innovation, disease treatment advances, pharmacovigilance.
 - **Set is_relevant to false for ALL of these categories (even if a pharma company is mentioned):**
-  - Company history, founder biographies, memorial books, 평전 출간 (e.g., "활명수로 독립자금 댄 동화약품 창업주 평전 출간")
+  - Company history, founder biographies, memorial books, 평전 출간
+  - Awards/수상/시상/표창/공로상/명예 펠로우십/올해의 XX상/존경받는 CEO 등 수상 관련 기사
   - Health supplements (건강기능식품), consumer wellness products, OTC lifestyle products (e.g., "꿀잠샷 올리브영 입점", "에너지 드링크 출시")
   - Aesthetic/cosmetic symposiums, beauty product launches, 에스테틱 제품군 학술 조명, 미용기기 (레이저 미용, 초음파 미용 등)
   - Health supplements (건강기능식품/건기식): 키성장, 수면, 다이어트 건기식, 올리브영 입점 등
