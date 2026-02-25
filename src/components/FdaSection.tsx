@@ -26,7 +26,7 @@ type Props = {
 
 export const FdaSection = ({ onKeywordClick }: Props) => {
   const { data: notices = [], isLoading } = useRegulatoryNotices("FDA");
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
