@@ -422,6 +422,8 @@ function parseBydrug(markdown: string): Array<{ title: string; summary: string; 
       if (cnDate) return `${cnDate[1]}-${cnDate[2].padStart(2, "0")}-${cnDate[3].padStart(2, "0")}`;
       // Relative time: "8小时前", "30分钟前" → today
       if (/\d+\s*小时前|\d+\s*分钟前/.test(lines[j])) return normalizeDate("");
+      // "1天前", "2天前" etc. → skip (not today)
+      if (/\d+\s*天前/.test(lines[j])) return "__OLD__";
     }
     return normalizeDate("");
   };
@@ -429,6 +431,7 @@ function parseBydrug(markdown: string): Array<{ title: string; summary: string; 
   const addArticle = (title: string, summary: string, url: string, dateStr: string) => {
     if (title.length < 5) return;
     if (!BYDRUG_URL_RE.test(url)) return;
+    if (dateStr === "__OLD__") return; // Skip articles older than today (天前)
     if (articles.some(a => a.url === url)) return;
     // 제목에서 불필요한 마크다운/이모지 제거
     title = title.replace(/\\/g, "").replace(/\*\*/g, "").replace(/^【[^】]*】/, "").trim();
@@ -1256,16 +1259,16 @@ serve(async (req) => {
       }
     }
 
-    // 3. Clean up old articles (older than 7 days)
+    // 3. Clean up old articles (older than 3 days)
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 7);
+    cutoffDate.setDate(cutoffDate.getDate() - 3);
     const cutoffStr = cutoffDate.toISOString().split("T")[0];
     const { count: deletedCount } = await supabase
       .from("news_articles")
       .delete({ count: "exact" })
       .lt("date", cutoffStr);
     if (deletedCount && deletedCount > 0) {
-      console.log(`Cleaned up ${deletedCount} articles older than 7 days`);
+      console.log(`Cleaned up ${deletedCount} articles older than 3 days`);
     }
 
     // 4. Filter by recency: domestic=last 3 days, foreign=yesterday+ (KST)
