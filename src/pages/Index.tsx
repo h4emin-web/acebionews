@@ -188,37 +188,28 @@ const Index = () => {
             />
         )}
 
-        <div className="grid gap-5 lg:grid-cols-[1fr_340px] min-w-0">
-          <div className="space-y-4 min-w-0 overflow-hidden">
-            {regionFilter === "동향리포트" ? (
-              <IbricReportsSection />
-            ) : regionFilter === "바이오위클리" ? (
-              <BioWeeklySection />
-            ) : regionFilter === "리포트" ? (
-              <IndustryReportsSection />
-            ) : isSearching ? (
-              <>
-                {isLoading ? (
-                  <div className="card-elevated rounded-lg">
-                    <PillLoader text="관련 기사 검색 중..." />
-                  </div>
-                ) : displayNews.length > 0 ? (
-                  displayNews.slice(0, 10).map((news, i) => {
-                    const item = toNewsItem(news);
-                    return (
-                      <NewsCard key={news.id} news={item} index={i} onKeywordClick={handleKeywordClick} />
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-16 card-elevated rounded-lg">
-                    <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-                    <p className="text-muted-foreground text-sm">관련 기사가 없습니다</p>
-                  </div>
-                )}
-              </>
-            ) : (
-              /* When not searching: show DB news */
-              isLoading ? (
+        {isSearching ? (
+          <SearchSidebarPanel
+            keyword={search}
+            products={mfdsProducts}
+            productsLoading={mfdsProductsLoading}
+            productsTotalCount={mfdsProductsTotalCount}
+            dmfRecords={mfdsDmf}
+            dmfLoading={mfdsDmfLoading}
+            dmfTotalCount={mfdsDmfTotalCount}
+            isProductSearch={isProductSearch}
+            fullWidth
+          />
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-[1fr_340px] min-w-0">
+            <div className="space-y-4 min-w-0 overflow-hidden">
+              {regionFilter === "동향리포트" ? (
+                <IbricReportsSection />
+              ) : regionFilter === "바이오위클리" ? (
+                <BioWeeklySection />
+              ) : regionFilter === "리포트" ? (
+                <IndustryReportsSection />
+              ) : isLoading ? (
                 <div className="card-elevated rounded-lg">
                   <PillLoader text="뉴스 불러오는 중..." />
                 </div>
@@ -238,31 +229,16 @@ const Index = () => {
                       : "검색 결과가 없습니다"}
                   </p>
                 </div>
-              )
-            )}
-          </div>
+              )}
+            </div>
 
-          <aside className="space-y-4 min-w-0 overflow-hidden">
-            {isSearching ? (
-              <SearchSidebarPanel
-                keyword={search}
-                products={mfdsProducts}
-                productsLoading={mfdsProductsLoading}
-                productsTotalCount={mfdsProductsTotalCount}
-                dmfRecords={mfdsDmf}
-                dmfLoading={mfdsDmfLoading}
-                dmfTotalCount={mfdsDmfTotalCount}
-                isProductSearch={isProductSearch}
-              />
-            ) : (
-              <>
-                <UsDmfSection onKeywordClick={handleKeywordClick} />
-                <MfdsSection onKeywordClick={handleKeywordClick} />
-                <FdaSection onKeywordClick={handleKeywordClick} />
-              </>
-            )}
-          </aside>
-        </div>
+            <aside className="space-y-4 min-w-0 overflow-hidden">
+              <UsDmfSection onKeywordClick={handleKeywordClick} />
+              <MfdsSection onKeywordClick={handleKeywordClick} />
+              <FdaSection onKeywordClick={handleKeywordClick} />
+            </aside>
+          </div>
+        )}
       </main>
       <NcePatentModal
         open={nceModalOpen}
