@@ -233,9 +233,9 @@ const Index = () => {
             </div>
 
             <aside className="space-y-4 min-w-0 overflow-hidden">
-              <UsDmfSection onKeywordClick={handleKeywordClick} />
               <MfdsSection onKeywordClick={handleKeywordClick} />
               <FdaSection onKeywordClick={handleKeywordClick} />
+              <UsDmfSection onKeywordClick={handleKeywordClick} />
             </aside>
           </div>
         )}

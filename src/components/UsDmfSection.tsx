@@ -68,7 +68,7 @@ type Props = {
 };
 
 export const UsDmfSection = ({ onKeywordClick }: Props) => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   return (

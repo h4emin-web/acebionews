@@ -29,7 +29,7 @@ type Props = {
 
 export const MfdsSection = ({ onKeywordClick }: Props) => {
   const { data: notices = [], isLoading } = useRegulatoryNotices("의약품안전나라");
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
