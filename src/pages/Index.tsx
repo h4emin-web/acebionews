@@ -13,7 +13,6 @@ import { BioWeeklySection } from "@/components/BioWeeklySection";
 import { IbricReportsSection } from "@/components/IbricReportsSection";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { NcePatentSection } from "@/components/NcePatentSection";
-import { IndApprovalSection } from "@/components/IndApprovalSection";
 import { IndApprovalModal } from "@/components/IndApprovalModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
@@ -240,7 +239,7 @@ const Index = () => {
               <MfdsSection onKeywordClick={handleKeywordClick} />
               <FdaSection onKeywordClick={handleKeywordClick} />
               <NcePatentSection onKeywordClick={handleKeywordClick} />
-              <IndApprovalSection onKeywordClick={handleKeywordClick} />
+              
               <UsDmfSection onKeywordClick={handleKeywordClick} />
             </aside>
           </div>
@@ -257,10 +256,6 @@ const Index = () => {
       <IndApprovalModal
         open={indModalOpen}
         onClose={() => setIndModalOpen(false)}
-        onKeywordClick={(kw) => {
-          setSearch(kw);
-          setIndModalOpen(false);
-        }}
       />
     </div>);
 
