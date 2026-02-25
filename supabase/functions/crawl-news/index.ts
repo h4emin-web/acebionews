@@ -802,12 +802,20 @@ async function extractKeywordsAndTranslate(
 - 핵심: 요약을 읽는 것만으로 "이게 뭐고, 어디에 쓰이는지" 바로 알 수 있어야 합니다.
 
 ## TASK 4: RELEVANCE FILTERING (CRITICAL)
-- You MUST evaluate whether each article is relevant to the pharmaceutical/biotech/healthcare industry.
-- Set is_relevant to true ONLY for articles about: drugs, medicines, APIs, biotech, clinical trials, FDA/regulatory, healthcare policy, medical devices, pharmaceutical companies, hospitals, diseases/treatments.
-- Set is_relevant to false for articles about: food companies (Domino's, McDonald's etc.), general business/finance unrelated to pharma, sports, entertainment, politics (unless health policy), technology (unless biotech/medtech), retail, real estate, automotive, energy (unless related to pharma).
-- **CRITICAL: Set is_relevant to false for articles that are merely image/photo/logo descriptions** — e.g., "GSK 로고", "노보 노디스크 로고", "CDC 건물", "차량 소독 모습" etc. These are NOT news articles, they are photo captions. ALWAYS reject them.
-- **Set is_relevant to false for articles with vague/empty summaries** that don't contain any substantive information — e.g., "구체적인 뉴스 내용은 포함되어 있지 않습니다", "별도의 뉴스 내용은 포함되어 있지 않습니다".
-- When in doubt, set is_relevant to false. We only want pharmaceutical/biotech/healthcare news.
+- You MUST evaluate whether each article is relevant to the pharmaceutical/biotech/healthcare industry's CORE activities.
+- Set is_relevant to true ONLY for articles about: new drug development, clinical trials, FDA/EMA/MFDS regulatory approvals/rejections, drug safety alerts, API/원료의약품 supply chain, biotech R&D breakthroughs, pharmaceutical M&A/licensing deals, drug pricing/reimbursement policy, medical device innovation, disease treatment advances, pharmacovigilance.
+- **Set is_relevant to false for ALL of these categories (even if a pharma company is mentioned):**
+  - Company history, founder biographies, memorial books, 평전 출간 (e.g., "활명수로 독립자금 댄 동화약품 창업주 평전 출간")
+  - Health supplements (건강기능식품), consumer wellness products, OTC lifestyle products (e.g., "꿀잠샷 올리브영 입점", "에너지 드링크 출시")
+  - Aesthetic/cosmetic symposiums, beauty product launches, 에스테틱 제품군 학술 조명
+  - General corporate events: 시무식, 신년사, 사옥 이전, 인사 발령, 채용 공고, 후원/기부, CSR 활동
+  - Consumer product launches unrelated to prescription drugs (e.g., 배란 테스트기, 체온계, 마스크팩)
+  - Regulatory science conferences/forums that are purely academic without specific drug/API implications
+  - Food/beverage companies, general retail, sports, entertainment, politics (unless directly about drug policy)
+  - Photo captions, logo descriptions, building photos
+  - Articles with vague/empty summaries
+- **KEY PRINCIPLE: If the article is about a pharma company but NOT about its drugs, pipelines, clinical data, or regulatory actions, set is_relevant to false.**
+- When in doubt, set is_relevant to false. We only want substantive pharmaceutical/biotech/healthcare news that professionals need to know.
 
 ## TASK 5: SUMMARY DEPTH (CRITICAL)
 - **Summaries MUST contain ALL specific details from the article body text.** Do NOT write lazy/vague summaries.
