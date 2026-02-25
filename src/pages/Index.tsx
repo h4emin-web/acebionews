@@ -198,11 +198,6 @@ const Index = () => {
               <IndustryReportsSection />
             ) : isSearching ? (
               <>
-                <ManufacturersPanel
-                  keyword={debouncedSearch || search}
-                  data={manufacturerData}
-                  loading={manufacturersLoading}
-                />
                 {isLoading ? (
                   <div className="card-elevated rounded-lg">
                     <PillLoader text="관련 기사 검색 중..." />
@@ -214,7 +209,12 @@ const Index = () => {
                       <NewsCard key={news.id} news={item} index={i} onKeywordClick={handleKeywordClick} />
                     );
                   })
-                ) : null}
+                ) : (
+                  <div className="text-center py-16 card-elevated rounded-lg">
+                    <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
+                    <p className="text-muted-foreground text-sm">관련 기사가 없습니다</p>
+                  </div>
+                )}
               </>
             ) : (
               /* When not searching: show DB news */
