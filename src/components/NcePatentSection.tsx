@@ -87,7 +87,7 @@ export const NcePatentSection = ({ onKeywordClick }: Props) => {
                       </span>
                     </div>
                   </div>
-                  <p className="text-[9px] text-muted-foreground truncate">{item.api_name}</p>
+                  <p className="text-[9px] text-muted-foreground truncate -mt-0.5">{item.api_name}</p>
                   {item.indication && (
                     <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">{item.indication}</p>
                   )}
