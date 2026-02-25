@@ -25,7 +25,7 @@ export const IndApprovalSection = ({ onKeywordClick }: Props) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinical_trial_approvals")
-        .select("id, sponsor, product_name, trial_title, phase, approval_date")
+        .select("id, sponsor, product_name, trial_title, phase, approval_date, summary")
         .order("approval_date", { ascending: false })
         .limit(50);
       if (error) throw error;
@@ -75,9 +75,11 @@ export const IndApprovalSection = ({ onKeywordClick }: Props) => {
                   </span>
                 </div>
                 <p className="text-[9px] text-muted-foreground truncate -mt-0.5">{item.sponsor}</p>
-                {item.trial_title && (
+                {(item as any).summary ? (
+                  <p className="text-[10px] text-foreground/80 mt-0.5 line-clamp-1">{(item as any).summary}</p>
+                ) : item.trial_title ? (
                   <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">{item.trial_title}</p>
-                )}
+                ) : null}
               </div>
             ))}
           </div>

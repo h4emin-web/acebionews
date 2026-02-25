@@ -78,6 +78,51 @@ serve(async (req) => {
       );
     }
 
+    // Generate AI summaries for trials without summaries
+    const GEMINI_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (GEMINI_KEY) {
+      // Batch summarize in groups of 10
+      for (let i = 0; i < allTrials.length; i += 10) {
+        const batch = allTrials.slice(i, i + 10);
+        try {
+          const prompt = `아래 임상시험 목록을 각각 1줄(30자 이내)로 핵심만 요약해줘.
+형식: 번호|요약
+규칙:
+- 적응증 + 핵심 디자인만 (예: "주요우울장애 대상 보조치료 유효성·안전성 비교")
+- 생동시험은 "XX vs YY 생물학적 동등성 평가"
+- 불필요한 수식어(다기관, 무작위배정 등) 제외
+- 약물명은 제외 (이미 별도 표시됨)
+
+${batch.map((t: any, idx: number) => `${idx + 1}. ${t.trial_title}`).join("\n")}`;
+
+          const geminiResp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            }
+          );
+          if (geminiResp.ok) {
+            const geminiData = await geminiResp.json();
+            const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            const lines = text.split("\n").filter((l: string) => l.trim());
+            for (const line of lines) {
+              const match = line.match(/^(\d+)\|(.+)/);
+              if (match) {
+                const idx = parseInt(match[1]) - 1;
+                if (idx >= 0 && idx < batch.length) {
+                  batch[idx].summary = match[2].trim();
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Summary generation error:", e);
+        }
+      }
+    }
+
     // Upsert into DB
     let inserted = 0;
     for (const trial of allTrials) {

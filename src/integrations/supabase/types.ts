@@ -66,6 +66,7 @@ export type Database = {
           product_name: string
           seq_number: number
           sponsor: string
+          summary: string | null
           trial_title: string
         }
         Insert: {
@@ -77,6 +78,7 @@ export type Database = {
           product_name: string
           seq_number: number
           sponsor: string
+          summary?: string | null
           trial_title: string
         }
         Update: {
@@ -88,6 +90,7 @@ export type Database = {
           product_name?: string
           seq_number?: number
           sponsor?: string
+          summary?: string | null
           trial_title?: string
         }
         Relationships: []

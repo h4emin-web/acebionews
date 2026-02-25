@@ -1,0 +1,1 @@
+ALTER TABLE public.clinical_trial_approvals ADD COLUMN IF NOT EXISTS summary text;
