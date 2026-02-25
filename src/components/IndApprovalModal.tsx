@@ -126,8 +126,7 @@ export const IndApprovalModal = ({ open, onClose, onKeywordClick }: Props) => {
                 {filtered.map((item, i) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-muted/40 transition-colors cursor-pointer"
-                    onClick={() => onKeywordClick?.(item.product_name)}
+                    className="hover:bg-muted/40 transition-colors"
                   >
                     <td className="px-3 py-2.5 text-[11px] text-muted-foreground font-mono">{i + 1}</td>
                     <td className="px-3 py-2.5 text-xs text-foreground whitespace-nowrap">{item.sponsor}</td>
