@@ -33,7 +33,7 @@ const FIRECRAWL_SOURCES = [
   { url: "https://bydrug.pharmcube.com/news/summary/source/%E8%8D%AF%E6%B8%A1", name: "药渡", region: "해외", country: "CN", parser: "bydrug" },
   { url: "https://bydrug.pharmcube.com/news/summary/source/%E5%8C%BB%E8%8D%AF%E7%AC%94%E8%AE%B0", name: "医药笔记", region: "해외", country: "CN", parser: "bydrug" },
   { url: "https://bydrug.pharmcube.com/news/summary/source/%E8%8D%AF%E4%BA%8B%E7%BA%B5%E6%A8%AA", name: "药事纵横", region: "해외", country: "CN", parser: "bydrug" },
-  { url: "https://www.reuters.com/business/healthcare-pharmaceuticals/", name: "Reuters Healthcare", region: "해외", country: "US", parser: "reuters" },
+  { url: "https://www.biospace.com/latest-news-press-releases", name: "BioSpace", region: "해외", country: "US", parser: "biospace" },
   { url: "https://www.asahi.com/apital/medicalnews/?iref=pc_apital_top", name: "朝日新聞 Apital", region: "해외", country: "JP", parser: "asahi" },
   { url: "https://news.web.nhk.or.jp/newsweb/pl/news-nwa-topic-nationwide-0000414", name: "NHK 医療", region: "해외", country: "JP", parser: "nhk" },
 ];
@@ -234,8 +234,8 @@ function parseHitnews(html: string): Array<{ title: string; summary: string; url
   return articles;
 }
 
-// Parse Reuters Healthcare (from Firecrawl markdown)
-function parseReuters(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
+// Parse BioSpace (from Firecrawl markdown)
+function parseBiospace(markdown: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
   const lines = markdown.split("\n");
 
@@ -247,61 +247,51 @@ function parseReuters(markdown: string): Array<{ title: string; summary: string;
   for (let i = 0; i < lines.length && articles.length < 25; i++) {
     const line = lines[i].trim();
 
-    // Match markdown links to reuters articles: [Title](url)
-    const linkMatch = line.match(/\[([^\]]{10,})\]\((https:\/\/www\.reuters\.com\/[^)]+)\)/);
+    // Match markdown links: [Title](https://www.biospace.com/...)
+    const linkMatch = line.match(/\[([^\]]{10,})\]\((https:\/\/www\.biospace\.com\/[^)]+)\)/);
     if (!linkMatch) continue;
     const title = linkMatch[1].replace(/\*\*/g, "").trim();
     const url = linkMatch[2].trim();
 
-    // Skip non-article links (events, tags, categories, images, differentiator, photos)
-    if (url.includes("/tags/") || url.includes("/events/") || url.includes("/differentiator") 
-        || url.includes("reutersevents.com") || url.includes("/pictures/") || url.includes("/graphics/")
-        || url.includes("/slideshow/") || url.includes("/video/") || url.includes("/media/")
-        || url.match(/\/\d{4}\/\d{2}\/\d{2}\/[^/]*photo[^/]*\//i)
-        || title.includes("category") || title.length < 15
-        || title.startsWith("Skip to") || title.includes("Reuters logo")
-        || title.match(/^(Photo|Image|Picture|Gallery|Slideshow|로이터\s*이벤트)/i)
-        || title.match(/이미지입니다|관련\s*이미지|사용은.*에서만/i)
-        || title.match(/^Reuters Events/i)) continue;
+    // Skip non-article links
+    if (url.endsWith("/latest-news-press-releases") || url.endsWith("/subscribe-to-newsletters")
+        || url.includes("/search?") || title.length < 15
+        || title.startsWith("Search") || title.startsWith("Subscribe")
+        || /^(BioSpace|Menu|Show)/.test(title)) continue;
+
+    // Skip category-only links (single word like "Vaccines", "Startups")
+    if (title.split(/\s+/).length <= 2 && !title.includes("'")) continue;
 
     // Already have this URL?
     if (articles.some(a => a.url === url)) continue;
 
-    // Look for date in nearby lines
+    // Look for date in nearby lines: "February 25, 2026"
     let dateStr = "";
-    for (let j = Math.max(0, i - 3); j <= Math.min(lines.length - 1, i + 5); j++) {
+    for (let j = i + 1; j <= Math.min(lines.length - 1, i + 10); j++) {
       const dl = lines[j].trim();
-      // "February 23, 2026" format
-      const fullDate = dl.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/);
+      const fullDate = dl.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})$/);
       if (fullDate) {
         dateStr = `${fullDate[3]}-${monthMap[fullDate[1]]}-${fullDate[2].padStart(2, "0")}`;
-        break;
-      }
-      // "X hours ago", "X mins ago" → today
-      if (/\d+\s+(hours?|mins?|minutes?)\s+ago/i.test(dl)) {
-        dateStr = normalizeDate("");
         break;
       }
     }
     if (!dateStr) dateStr = normalizeDate("");
 
-    // Look for summary in nearby lines (paragraph text, not links)
+    // Look for summary: paragraph text after the title link
     let summary = "";
-    for (let j = i + 1; j <= Math.min(lines.length - 1, i + 4); j++) {
+    for (let j = i + 1; j <= Math.min(lines.length - 1, i + 6); j++) {
       const sl = lines[j].trim();
-      if (sl.length > 40 && !sl.startsWith("[") && !sl.startsWith("!") && !sl.startsWith("http") && !sl.includes("category")) {
+      if (sl.length > 40 && !sl.startsWith("[") && !sl.startsWith("!") && !sl.startsWith("http")
+          && !sl.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)/)
+          && !sl.match(/^\d+ min read/) && sl !== "·") {
         summary = sl.slice(0, 300);
         break;
       }
     }
 
-    // Skip image-only / event-only content with no real article substance
-    if (title.match(/이벤트|이미지|사진|photo|image|gallery|slideshow/i) && (!summary || summary.length < 50)) continue;
-    if (summary && summary.match(/이미지입니다|사용은.*에서만|관련\s*이미지|사진입니다/i)) continue;
-
     articles.push({ title, summary, url, date: dateStr });
   }
-  console.log(`parseReuters: extracted ${articles.length} articles`);
+  console.log(`parseBiospace: extracted ${articles.length} articles`);
   return articles;
 }
 
@@ -614,8 +604,8 @@ async function fetchWithFirecrawl(
     if (source.parser === "bydrug") {
       // ✅ "By Drug" → "bydrug"으로 통일됨
       articles = parseBydrug(markdown);
-    } else if (source.parser === "reuters") {
-      articles = parseReuters(markdown);
+    } else if (source.parser === "biospace") {
+      articles = parseBiospace(markdown);
     } else if (source.parser === "asahi") {
       articles = parseAsahi(markdown);
     } else if (source.parser === "nhk") {
