@@ -262,6 +262,10 @@ function parseBiospace(markdown: string): Array<{ title: string; summary: string
     // Skip category-only links (single word like "Vaccines", "Startups")
     if (title.split(/\s+/).length <= 2 && !title.includes("'")) continue;
 
+    // Skip author profile pages (e.g., /nick-paul-taylor) and event/webinar pages
+    if (/^\/[a-z-]+$/.test(new URL(url).pathname) && title.split(/\s+/).length <= 3) continue;
+    if (url.includes("/webinar") || url.includes("/register") || url.includes("/events")) continue;
+
     // Already have this URL?
     if (articles.some(a => a.url === url)) continue;
 
