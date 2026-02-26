@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { FlaskConical, ChevronDown } from "lucide-react";
+import { useState, useMemo } from "react";
+import { FlaskConical, ChevronDown, Search } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,7 @@ type Props = {
 
 export const NcePatentSection = ({ onKeywordClick }: Props) => {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: patents = [], isLoading } = useQuery({
     queryKey: ["nce-patent-sidebar"],
@@ -41,13 +42,25 @@ export const NcePatentSection = ({ onKeywordClick }: Props) => {
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("nce_patent_expiry")
-        .select("id, product_name, api_name, expiry_date, indication")
+        .select("id, product_name, api_name, api_name_ko, expiry_date, indication")
         .gte("expiry_date", today)
         .order("expiry_date", { ascending: true });
       if (error) throw error;
       return data || [];
     },
   });
+
+  const filtered = useMemo(() => {
+    if (!searchQuery) return patents;
+    const q = searchQuery.toLowerCase();
+    return patents.filter(
+      (d) =>
+        d.product_name.toLowerCase().includes(q) ||
+        d.api_name.toLowerCase().includes(q) ||
+        (d.api_name_ko && d.api_name_ko.toLowerCase().includes(q)) ||
+        (d.indication && d.indication.toLowerCase().includes(q))
+    );
+  }, [patents, searchQuery]);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
@@ -58,15 +71,30 @@ export const NcePatentSection = ({ onKeywordClick }: Props) => {
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
       <CollapsibleContent>
+        <div className="px-4 pt-3 pb-2">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="품명, 원료명, 적응증 검색..."
+              className="w-full pl-8 pr-3 py-1.5 rounded-md bg-muted/50 border border-border text-[11px] text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary transition-all"
+            />
+          </div>
+          {searchQuery && (
+            <p className="text-[10px] text-muted-foreground mt-1.5">{filtered.length}건 검색됨</p>
+          )}
+        </div>
         {isLoading ? (
           <div className="px-5 py-6 text-center text-xs text-muted-foreground">검색중...</div>
-        ) : patents.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="px-5 py-6 text-center text-xs text-muted-foreground">
-            데이터가 없습니다
+            {searchQuery ? "검색 결과가 없습니다" : "데이터가 없습니다"}
           </div>
         ) : (
           <div className="divide-y divide-border max-h-[350px] overflow-y-auto">
-            {patents.map((item) => {
+            {filtered.map((item) => {
               const remaining = getTimeRemaining(item.expiry_date);
               return (
                 <div
