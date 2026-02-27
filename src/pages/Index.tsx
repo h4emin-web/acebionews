@@ -20,6 +20,7 @@ import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports, useManufacturers } from "@/hooks/useNewsData";
 import { ManufacturersPanel } from "@/components/ManufacturersPanel";
+import { ExcelUploadPanel } from "@/components/ExcelUploadPanel";
 import type { NewsItem } from "@/data/mockNews";
 import { deduplicateNews } from "@/utils/deduplicateNews";
 
@@ -192,6 +193,8 @@ const Index = () => {
               onRelatedClick={handleKeywordClick}
             />
         )}
+
+        <ExcelUploadPanel />
 
         {isSearching ? (
           <SearchSidebarPanel
