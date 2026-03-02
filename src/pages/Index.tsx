@@ -8,6 +8,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { NewsCard } from "@/components/NewsCard";
 import { StatsBar } from "@/components/StatsBar";
 import { MfdsSection } from "@/components/MfdsSection";
+import { MfdsRecallSection } from "@/components/MfdsRecallSection";
 import { FdaSection } from "@/components/FdaSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
 import { BioWeeklySection } from "@/components/BioWeeklySection";
@@ -240,6 +241,7 @@ const Index = () => {
             {/* Sidebar: hidden on mobile */}
             <aside className="hidden lg:block space-y-4 min-w-0 overflow-hidden">
               <MfdsSection onKeywordClick={handleKeywordClick} />
+              <MfdsRecallSection />
               <BigDealsSection />
               <NcePatentSection onKeywordClick={handleKeywordClick} />
               <UsDmfSection onKeywordClick={handleKeywordClick} />
