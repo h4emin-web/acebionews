@@ -170,6 +170,36 @@ export type Database = {
         }
         Relationships: []
       }
+      mfds_recalls: {
+        Row: {
+          company: string
+          created_at: string
+          id: string
+          order_date: string
+          product_name: string
+          recall_reason: string
+          url: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          id?: string
+          order_date: string
+          product_name: string
+          recall_reason: string
+          url?: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          id?: string
+          order_date?: string
+          product_name?: string
+          recall_reason?: string
+          url?: string
+        }
+        Relationships: []
+      }
       nce_patent_expiry: {
         Row: {
           api_name: string
