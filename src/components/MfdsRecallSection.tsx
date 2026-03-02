@@ -23,7 +23,7 @@ export const MfdsRecallSection = () => {
         .from("mfds_recalls")
         .select("*")
         .order("order_date", { ascending: false })
-        .limit(15);
+        .limit(10);
       if (error) throw error;
       return (data || []) as MfdsRecall[];
     },
