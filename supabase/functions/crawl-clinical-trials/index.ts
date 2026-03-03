@@ -35,7 +35,7 @@ serve(async (req) => {
     );
 
     let allTrials: any[] = [];
-    const maxPages = 5; // Only check first 5 pages for recent updates
+    const maxPages = 1; // 1페이지만 확인 (신규 건수가 적으므로 충분)
 
     for (let page = 1; page <= maxPages; page++) {
       const url = `https://nedrug.mfds.go.kr/searchClinic?page=${page}&searchYn=true&approvalStart=&approvalEnd=&searchType=ST3&searchKeyword=&approvalDtStart=${startDate}&approvalDtEnd=${endDate}&clinicStepCode=&examFinish=%EC%8A%B9%EC%9D%B8%EC%99%84%EB%A3%8C&domestic=&gender=&age=&localList=000&localList2=`;
