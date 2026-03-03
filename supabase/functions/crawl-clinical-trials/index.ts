@@ -18,19 +18,29 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Build date range: from 2026-01-01 to today
+    // Only scrape recent data: last 14 days to today
     const now = new Date();
     const endDate = now.toISOString().split("T")[0];
-    const startDate = "2026-01-01";
+    const startD = new Date(now);
+    startD.setDate(startD.getDate() - 14);
+    const startDate = startD.toISOString().split("T")[0];
+
+    // Get existing seq_numbers for dedup
+    const { data: existing } = await supabase
+      .from("clinical_trial_approvals")
+      .select("seq_number, approval_date")
+      .gte("approval_date", startDate);
+    const existingKeys = new Set(
+      (existing || []).map((e: any) => `${e.seq_number}_${e.approval_date}`)
+    );
 
     let allTrials: any[] = [];
-    let page = 1;
-    const maxPages = 30;
+    const maxPages = 5; // Only check first 5 pages for recent updates
 
-    while (page <= maxPages) {
+    for (let page = 1; page <= maxPages; page++) {
       const url = `https://nedrug.mfds.go.kr/searchClinic?page=${page}&searchYn=true&approvalStart=&approvalEnd=&searchType=ST3&searchKeyword=&approvalDtStart=${startDate}&approvalDtEnd=${endDate}&clinicStepCode=&examFinish=%EC%8A%B9%EC%9D%B8%EC%99%84%EB%A3%8C&domestic=&gender=&age=&localList=000&localList2=`;
 
-      console.log(`Fetching page ${page}...`);
+      console.log(`Fetching page ${page} (${startDate} ~ ${endDate})...`);
 
       const scrapeResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
         method: "POST",
@@ -42,8 +52,8 @@ serve(async (req) => {
           url,
           formats: ["markdown"],
           onlyMainContent: true,
-          waitFor: 5000,
-          timeout: 60000,
+          waitFor: 3000,
+          timeout: 30000,
         }),
       });
 
@@ -56,34 +66,43 @@ serve(async (req) => {
       const scrapeData = await scrapeResp.json();
       const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
 
-      // Parse table rows from markdown
       const trials = parseTrialsFromMarkdown(markdown);
       console.log(`Page ${page}: found ${trials.length} trials`);
 
       if (trials.length === 0) break;
 
-      allTrials = allTrials.concat(trials);
-      page++;
+      // Filter out already existing
+      const newTrials = trials.filter(
+        (t: any) => !existingKeys.has(`${t.seq_number}_${t.approval_date}`)
+      );
+      console.log(`Page ${page}: ${newTrials.length} new trials`);
 
-      // Small delay between pages
-      await new Promise((r) => setTimeout(r, 1000));
+      allTrials = allTrials.concat(newTrials);
+
+      // If all trials on page already exist, no need to check more pages
+      if (newTrials.length === 0) {
+        console.log("All trials on this page already exist, stopping.");
+        break;
+      }
+
+      await new Promise((r) => setTimeout(r, 500));
     }
 
-    console.log(`Total trials scraped: ${allTrials.length}`);
+    console.log(`Total new trials: ${allTrials.length}`);
 
     if (allTrials.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: "No trials found", inserted: 0 }),
+        JSON.stringify({ success: true, message: "No new trials", inserted: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Generate AI summaries for trials without summaries
+    // Generate AI summaries
     const GEMINI_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     if (GEMINI_KEY) {
-      // Batch summarize in groups of 10
-      for (let i = 0; i < allTrials.length; i += 10) {
-        const batch = allTrials.slice(i, i + 10);
+      // Summarize all at once (max ~50 new trials expected)
+      const batch = allTrials.filter((t: any) => t.trial_title);
+      if (batch.length > 0) {
         try {
           const prompt = `아래 임상시험 목록을 각각 1줄(30자 이내)로 핵심만 요약해줘.
 형식: 번호|요약
@@ -151,12 +170,9 @@ ${batch.map((t: any, idx: number) => `${idx + 1}. ${t.trial_title}`).join("\n")}
 
 function parseTrialsFromMarkdown(markdown: string): any[] {
   const trials: any[] = [];
-
-  // Split into lines and find table rows
   const lines = markdown.split("\n");
-  
+
   for (const line of lines) {
-    // Look for rows with bold field markers like **순번** N | **진행현황** ...
     if (!line.includes("**순번**") || !line.includes("**승인일**")) continue;
 
     try {
