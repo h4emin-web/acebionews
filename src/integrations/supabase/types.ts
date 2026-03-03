@@ -170,6 +170,30 @@ export type Database = {
         }
         Relationships: []
       }
+      intelligence_summaries: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          section: string
+          summary_date: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          section: string
+          summary_date: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          section?: string
+          summary_date?: string
+        }
+        Relationships: []
+      }
       mfds_recalls: {
         Row: {
           company: string

@@ -19,6 +19,7 @@ import { IndApprovalModal } from "@/components/IndApprovalModal";
 import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
+import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySection";
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports, useManufacturers } from "@/hooks/useNewsData";
 import { ManufacturersPanel } from "@/components/ManufacturersPanel";
 import type { NewsItem } from "@/data/mockNews";
@@ -240,6 +241,7 @@ const Index = () => {
 
             {/* Sidebar: hidden on mobile */}
             <aside className="hidden lg:block space-y-4 min-w-0 overflow-hidden">
+              <IntelligenceSummarySection />
               <MfdsSection onKeywordClick={handleKeywordClick} />
               <MfdsRecallSection />
               <BigDealsSection />
