@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Pill, Clock, Search, CalendarDays, Flag, FlaskConical, LogIn, LogOut, User } from "lucide-react";
 import { BigDealsSection } from "@/components/BigDealsSection";
 import { PillLoader } from "@/components/PillLoader";
@@ -23,6 +23,7 @@ import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySect
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports, useManufacturers } from "@/hooks/useNewsData";
 import { ManufacturersPanel } from "@/components/ManufacturersPanel";
 import { useAuth } from "@/hooks/useAuth";
+import { LoginDialog } from "@/components/LoginDialog";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import type { NewsItem } from "@/data/mockNews";
 import { deduplicateNews } from "@/utils/deduplicateNews";
@@ -40,23 +41,20 @@ const Index = () => {
   const [nceModalOpen, setNceModalOpen] = useState(false);
   const [indModalOpen, setIndModalOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
-  const [loginName, setLoginName] = useState("");
 
   // Auth & Bookmarks
   const { user, login, logout } = useAuth();
   const { bookmarkIds, bookmarkedArticles, toggleBookmark, isBookmarked } = useBookmarks(user);
 
-  const handleLogin = async () => {
-    if (!loginName.trim()) return;
-    const result = await login(loginName.trim());
+  const handleLogin = useCallback(async (name: string) => {
+    const result = await login(name);
     if (result.success) {
-      toast.success(`${loginName}님 환영합니다!`);
+      toast.success(`${name}님 환영합니다!`);
       setLoginDialogOpen(false);
-      setLoginName("");
     } else {
       toast.error(result.error || "로그인 실패");
     }
-  };
+  }, [login]);
 
   const handleToggleBookmark = (articleId: string) => {
     if (!user) {
@@ -152,7 +150,6 @@ const Index = () => {
     category: news.category
   });
 
-  // For scrap tab, convert bookmarked articles to NewsItem
   const bookmarkedNewsItems: NewsItem[] = bookmarkedArticles.map((a: any) => ({
     id: a.id,
     title: a.title,
@@ -175,7 +172,6 @@ const Index = () => {
             <span className="text-2xl font-semibold tracking-tight text-foreground">news</span>
           </button>
           <div className="flex items-center gap-2">
-            {/* Login/Logout button */}
             {user ? (
               <button
                 onClick={logout}
@@ -214,41 +210,13 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Login Dialog */}
-      {loginDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setLoginDialogOpen(false)}>
-          <div className="bg-card border border-border rounded-xl p-6 w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-foreground mb-4">로그인</h3>
-            <input
-              type="text"
-              placeholder="이름을 입력하세요"
-              value={loginName}
-              onChange={(e) => setLoginName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-3"
-              autoFocus
-            />
-            <p className="text-[10px] text-muted-foreground mb-4">이름을 입력하면 자동으로 접속됩니다</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setLoginDialogOpen(false)}
-                className="flex-1 px-3 py-2 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleLogin}
-                className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                접속
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LoginDialog
+        open={loginDialogOpen}
+        onClose={() => setLoginDialogOpen(false)}
+        onLogin={handleLogin}
+      />
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
-        {/* Search + IND button: hidden on mobile */}
         <div className="hidden md:flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
@@ -354,7 +322,6 @@ const Index = () => {
               )}
             </div>
 
-            {/* Sidebar: hidden on mobile */}
             <aside className="hidden lg:block space-y-4 min-w-0 overflow-hidden">
               <IntelligenceSummarySection />
               <MfdsSection onKeywordClick={handleKeywordClick} />
