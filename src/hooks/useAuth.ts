@@ -26,10 +26,17 @@ export function useAuth() {
     const password = `bio_${sanitized}_pass`;
     // Try sign in first
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (!signInError) return { success: true };
+    if (!signInError) {
+      await supabase.auth.updateUser({ data: { display_name: name } });
+      return { success: true };
+    }
     // If user doesn't exist, sign up
     if (signInError.message.includes("Invalid login")) {
-      const { error: signUpError } = await supabase.auth.signUp({ email, password });
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: name } },
+      });
       if (signUpError) return { success: false, error: signUpError.message };
       return { success: true };
     }
@@ -40,5 +47,7 @@ export function useAuth() {
     await supabase.auth.signOut();
   };
 
-  return { user, loading, login, logout };
+  const displayName = user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "";
+
+  return { user, loading, login, logout, displayName };
 }
