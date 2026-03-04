@@ -43,6 +43,7 @@ const Index = () => {
   const [nceModalOpen, setNceModalOpen] = useState(false);
   const [indModalOpen, setIndModalOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [memoExpanded, setMemoExpanded] = useState(false);
 
   // Auth & Bookmarks
   const { user, login, logout, displayName } = useAuth();
@@ -266,8 +267,8 @@ const Index = () => {
             fullWidth
           />
         ) : (
-          <div className="grid gap-5 lg:grid-cols-[1fr_340px] min-w-0">
-            <div className="space-y-4 min-w-0 overflow-hidden">
+          <div className={`grid gap-5 min-w-0 ${memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
+            <div className={`space-y-4 min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "hidden lg:hidden" : ""}`}>
               {regionFilter === "스크랩" ? (
                 bookmarkedNewsItems.length > 0 ? (
                   bookmarkedNewsItems.map((news, i) => (
@@ -324,12 +325,14 @@ const Index = () => {
               )}
             </div>
 
-            <aside className="hidden lg:block space-y-4 min-w-0 overflow-hidden">
+            <aside className={`hidden lg:block min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "col-span-full" : "space-y-4"}`}>
               {user && (
                 <MemoSection
                   user={user}
                   bookmarkedArticles={bookmarkedArticles}
                   memoMap={memoMap}
+                  expanded={memoExpanded}
+                  onExpand={setMemoExpanded}
                   onNewsClick={(articleId) => {
                     setRegionFilter("스크랩");
                     setTimeout(() => {
