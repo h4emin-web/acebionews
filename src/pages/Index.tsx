@@ -62,9 +62,7 @@ const Index = () => {
       toast.error("로그인 후 스크랩할 수 있습니다");
       return;
     }
-    const wasBookmarked = isBookmarked(articleId);
     toggleBookmark(articleId);
-    if (!wasBookmarked) setRegionFilter("스크랩");
   };
 
   // Debounce search
