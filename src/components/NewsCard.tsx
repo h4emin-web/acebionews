@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { ExternalLink, Globe, MapPin, Star } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
 import { countryFlagCodes } from "@/data/mockNews";
@@ -21,7 +21,6 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
   const handleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isBookmarked) {
-      // 커졌다 작아지는 애니메이션 - scale만 조작, 색은 항상 노란색 유지
       setScale(1.7);
       setTimeout(() => setScale(0.85), 150);
       setTimeout(() => setScale(1), 300);
@@ -38,7 +37,6 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
       className="card-3d rounded-xl p-5 group animate-fade-in relative overflow-hidden"
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      {/* Gradient shimmer on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-primary/[0.03] via-transparent to-accent/[0.03]" />
       {ripples.map((r) => (
         <span
@@ -85,7 +83,6 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
       <h3 className="text-base font-semibold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors break-words overflow-hidden">
         {news.title}
       </h3>
-
       <p className="text-[13px] text-muted-foreground leading-relaxed mb-3 break-words overflow-hidden">{news.summary}</p>
 
       <div className="flex items-center justify-between gap-2">
@@ -93,7 +90,8 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
           {news.apiKeywords.map((kw) => (
             <span
               key={kw}
-              className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-primary/8 text-primary border border-primary/10"
+              onClick={(e) => { e.stopPropagation(); onKeywordClick(kw); }}
+              className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-primary/8 text-primary border border-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
             >
               {kw}
             </span>
