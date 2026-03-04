@@ -1,4 +1,4 @@
-import { ExternalLink, Globe, MapPin } from "lucide-react";
+import { ExternalLink, Globe, MapPin, Star } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
 import { countryFlagCodes } from "@/data/mockNews";
 import { useCardEffects } from "@/hooks/useCardEffects";
@@ -7,9 +7,12 @@ type Props = {
   news: NewsItem;
   index: number;
   onKeywordClick: (kw: string) => void;
+  isBookmarked?: boolean;
+  onToggleBookmark?: (id: string) => void;
+  showBookmark?: boolean;
 };
 
-export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
+export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBookmark, showBookmark }: Props) => {
   const flagCode = countryFlagCodes[news.country] || null;
   const { ref, ripples, handlePointerMove, handlePointerLeave, handleClick } = useCardEffects();
 
@@ -45,7 +48,27 @@ export const NewsCard = ({ news, index, onKeywordClick }: Props) => {
           </span>
           <span className="text-xs text-muted-foreground">{news.source}</span>
         </div>
-        <span className="text-xs text-muted-foreground font-mono shrink-0">{news.date}</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs text-muted-foreground font-mono">{news.date}</span>
+          {showBookmark && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleBookmark?.(news.id);
+              }}
+              className="p-0.5 transition-colors hover:scale-110"
+              title={isBookmarked ? "스크랩 해제" : "스크랩"}
+            >
+              <Star
+                className={`w-4 h-4 transition-colors ${
+                  isBookmarked
+                    ? "fill-amber-400 text-amber-400"
+                    : "text-muted-foreground hover:text-amber-400"
+                }`}
+              />
+            </button>
+          )}
+        </div>
       </div>
 
       <h3 className="text-base font-semibold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors break-words overflow-hidden">
