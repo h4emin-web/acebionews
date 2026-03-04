@@ -13,7 +13,7 @@ type Summary = {
 };
 
 export const IntelligenceSummarySection = () => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const { data: summaries = [], isLoading } = useQuery({
     queryKey: ["intelligence-summaries"],
