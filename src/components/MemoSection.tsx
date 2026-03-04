@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { NotebookPen, ChevronDown, FileText, StickyNote } from "lucide-react";
+import { NotebookPen, ChevronDown, FileText, StickyNote, Maximize2, Minimize2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 type NewsItem = {
@@ -15,24 +14,23 @@ type Props = {
   bookmarkedArticles: any[];
   memoMap: Record<string, string>;
   onNewsClick: (articleId: string) => void;
+  expanded: boolean;
+  onExpand: (v: boolean) => void;
 };
 
-export const MemoSection = ({ user, bookmarkedArticles, memoMap, onNewsClick }: Props) => {
+export const MemoSection = ({ user, bookmarkedArticles, memoMap, onNewsClick, expanded, onExpand }: Props) => {
   const [open, setOpen] = useState(false);
   const [newsMemosOpen, setNewsMemosOpen] = useState(false);
   const [freeMemosOpen, setFreeMemosOpen] = useState(false);
   const [freeMemo, setFreeMemo] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // 자유 메모 불러오기
   useEffect(() => {
     if (!user) return;
-    const key = `free_memo_${user.id}`;
-    const saved = localStorage.getItem(key);
+    const saved = localStorage.getItem(`free_memo_${user.id}`);
     if (saved) setFreeMemo(saved);
   }, [user]);
 
-  // 자유 메모 자동저장 (1초 debounce, localStorage)
   useEffect(() => {
     if (!user) return;
     const timer = setTimeout(() => {
@@ -43,11 +41,42 @@ export const MemoSection = ({ user, bookmarkedArticles, memoMap, onNewsClick }: 
     return () => clearTimeout(timer);
   }, [freeMemo, user]);
 
-  // 메모 있는 스크랩 뉴스만 필터
   const newsWithMemos: NewsItem[] = bookmarkedArticles
-    .map((a: any) => ({ id: a.id, title: a.title, memo: memoMap[a.id] || "" }))
+    .map((a: any) => ({ id: a.id, title: a.title, memo: memoMap[a.id] || a.memo || "" }))
     .filter((a) => a.memo.trim() !== "");
 
+  // 확장 모드 - 메모장만 전체 공간 차지
+  if (expanded) {
+    return (
+      <div className="card-elevated rounded-lg overflow-hidden flex flex-col" style={{ height: "calc(100vh - 180px)" }}>
+        <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
+          <NotebookPen className="w-4 h-4 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">일반 메모</h2>
+          <button
+            onClick={() => onExpand(false)}
+            className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted transition-colors text-[11px] text-muted-foreground hover:text-foreground"
+            title="원래대로"
+          >
+            <Minimize2 className="w-3.5 h-3.5" />
+            원래대로
+          </button>
+        </div>
+        <div className="flex-1 flex flex-col p-3">
+          <textarea
+            value={freeMemo}
+            onChange={(e) => setFreeMemo(e.target.value)}
+            placeholder="메모를 입력하세요"
+            className="flex-1 w-full resize-none rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary p-3"
+          />
+          <p className={`text-[10px] text-right mt-1 transition-opacity duration-300 ${saving ? "text-green-500 opacity-100" : "text-muted-foreground opacity-40"}`}>
+            {saving ? "저장됨 ✓" : "자동저장"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // 일반 모드
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
@@ -98,14 +127,20 @@ export const MemoSection = ({ user, bookmarkedArticles, memoMap, onNewsClick }: 
             <CollapsibleTrigger className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors">
               <StickyNote className="w-3.5 h-3.5 text-blue-500" />
               <span className="text-xs font-semibold text-foreground">일반 메모</span>
-              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform duration-200 ${freeMemosOpen ? "rotate-180" : ""}`} />
+              <button
+                onClick={(e) => { e.stopPropagation(); onExpand(true); }}
+                className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+                title="확장"
+              >
+                <Maximize2 className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+              </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="px-2 pt-1 pb-2">
                 <textarea
                   value={freeMemo}
                   onChange={(e) => setFreeMemo(e.target.value)}
-                  placeholder="자유롭게 메모하세요... (자동저장)"
+                  placeholder="메모를 입력하세요"
                   className="w-full resize-none rounded-lg border border-border bg-background text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary p-2.5 min-h-[120px]"
                 />
                 <p className={`text-[10px] text-right mt-1 transition-opacity duration-300 ${saving ? "text-green-500 opacity-100" : "text-muted-foreground opacity-40"}`}>
