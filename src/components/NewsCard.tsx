@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ExternalLink, Globe, MapPin, Star } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
 import { countryFlagCodes } from "@/data/mockNews";
@@ -16,13 +16,15 @@ type Props = {
 export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBookmark, showBookmark }: Props) => {
   const flagCode = countryFlagCodes[news.country] || null;
   const { ref, ripples, handlePointerMove, handlePointerLeave, handleClick } = useCardEffects();
-  const [bursting, setBursting] = useState(false);
+  const [scale, setScale] = useState(1);
 
   const handleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isBookmarked) {
-      setBursting(true);
-      setTimeout(() => setBursting(false), 500);
+      // 커졌다 작아지는 애니메이션 - scale만 조작, 색은 항상 노란색 유지
+      setScale(1.7);
+      setTimeout(() => setScale(0.85), 150);
+      setTimeout(() => setScale(1), 300);
     }
     onToggleBookmark?.(news.id);
   };
@@ -68,11 +70,12 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
               title={isBookmarked ? "스크랩 해제" : "스크랩"}
             >
               <Star
+                style={{ transform: `scale(${scale})`, transition: "transform 0.15s ease-out" }}
                 className={`w-4 h-4 ${
-                  bursting || isBookmarked
+                  isBookmarked
                     ? "fill-amber-400 text-amber-400"
                     : "text-muted-foreground hover:text-amber-400 transition-colors"
-                } ${bursting ? "animate-star-pop" : ""}`}
+                }`}
               />
             </button>
           )}
