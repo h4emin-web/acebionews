@@ -22,7 +22,7 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
     e.stopPropagation();
     if (!isBookmarked) {
       setBursting(true);
-      setTimeout(() => setBursting(false), 600);
+      setTimeout(() => setBursting(false), 500);
     }
     onToggleBookmark?.(news.id);
   };
