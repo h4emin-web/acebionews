@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ExternalLink, Globe, MapPin, Star, RotateCcw } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
 import { countryFlagCodes } from "@/data/mockNews";
@@ -15,14 +15,19 @@ type Props = {
 export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, memo, onMemoSave }: Props) => {
   const [flipped, setFlipped] = useState(false);
   const [localMemo, setLocalMemo] = useState(memo);
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const flagCode = countryFlagCodes[news.country] || null;
 
-  const handleSave = useCallback(() => {
-    onMemoSave(news.id, localMemo);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
-  }, [news.id, localMemo, onMemoSave]);
+  // 입력 후 1초 뒤 자동저장
+  useEffect(() => {
+    if (localMemo === memo) return;
+    const timer = setTimeout(() => {
+      onMemoSave(news.id, localMemo);
+      setSaving(true);
+      setTimeout(() => setSaving(false), 1000);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [localMemo]);
 
   return (
     <div
@@ -102,9 +107,9 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
           </div>
 
           {/* 메모 미리보기 */}
-          {memo && (
+          {localMemo && (
             <div className="mt-2 px-2 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 truncate">
-              📝 {memo}
+              📝 {localMemo}
             </div>
           )}
         </article>
@@ -132,18 +137,13 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
           <textarea
             value={localMemo}
             onChange={(e) => setLocalMemo(e.target.value)}
-            placeholder="메모를 입력하세요..."
+            placeholder="메모를 입력하세요... (자동저장)"
             className="flex-1 w-full resize-none rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary p-3 min-h-[90px]"
           />
 
-          <button
-            onClick={handleSave}
-            className={`mt-3 w-full py-2 rounded-lg text-xs font-semibold transition-colors ${
-              saved ? "bg-green-500 text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"
-            }`}
-          >
-            {saved ? "저장됨 ✓" : "저장"}
-          </button>
+          <p className={`mt-2 text-[10px] text-right transition-opacity duration-300 ${saving ? "text-green-500 opacity-100" : "text-muted-foreground opacity-50"}`}>
+            {saving ? "저장됨 ✓" : "입력 후 자동저장"}
+          </p>
         </div>
       </div>
     </div>
