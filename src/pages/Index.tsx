@@ -228,7 +228,7 @@ const Index = () => {
               className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-3"
               autoFocus
             />
-            <p className="text-[10px] text-muted-foreground mb-4">비밀번호: 1234 (자동)</p>
+            <p className="text-[10px] text-muted-foreground mb-4">이름을 입력하면 자동으로 접속됩니다</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setLoginDialogOpen(false)}

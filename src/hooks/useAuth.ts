@@ -22,12 +22,13 @@ export function useAuth() {
 
   const login = async (name: string) => {
     const email = `${name.toLowerCase().replace(/[^a-z0-9가-힣]/g, "")}@bionews.local`;
+    const password = `bio_${name.toLowerCase().replace(/[^a-z0-9가-힣]/g, "")}_pass`;
     // Try sign in first
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: "1234" });
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     if (!signInError) return { success: true };
     // If user doesn't exist, sign up
     if (signInError.message.includes("Invalid login")) {
-      const { error: signUpError } = await supabase.auth.signUp({ email, password: "1234" });
+      const { error: signUpError } = await supabase.auth.signUp({ email, password });
       if (signUpError) return { success: false, error: signUpError.message };
       return { success: true };
     }
