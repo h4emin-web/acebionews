@@ -44,6 +44,7 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
       >
         {/* 앞면 */}
         <article
+          id={`scrap-${news.id}`}
           className="card-3d rounded-xl p-5 group relative overflow-hidden w-full"
           style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
         >
@@ -137,7 +138,7 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
           <textarea
             value={localMemo}
             onChange={(e) => setLocalMemo(e.target.value)}
-            placeholder="메모를 입력하세요... (자동저장)"
+            placeholder="메모를 입력하세요"
             className="flex-1 w-full resize-none rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary p-3 min-h-[90px]"
           />
 
