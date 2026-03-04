@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Pill, Clock, CalendarDays, FlaskConical, LogIn, LogOut, User } from "lucide-react";
+import { Pill, Clock, Search, CalendarDays, Flag, FlaskConical, LogIn, LogOut, User } from "lucide-react";
 import { BigDealsSection } from "@/components/BigDealsSection";
 import { PillLoader } from "@/components/PillLoader";
 import { useQuery } from "@tanstack/react-query";
@@ -20,7 +20,8 @@ import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
 import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySection";
-import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports } from "@/hooks/useNewsData";
+import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports, useManufacturers } from "@/hooks/useNewsData";
+import { ManufacturersPanel } from "@/components/ManufacturersPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginDialog } from "@/components/LoginDialog";
 import { useBookmarks } from "@/hooks/useBookmarks";
@@ -36,12 +37,13 @@ const Index = () => {
   };
   const [todayOnly, setTodayOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
-
+  
   const [nceModalOpen, setNceModalOpen] = useState(false);
   const [indModalOpen, setIndModalOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
-  const { user, login, logout, displayName } = useAuth();
+  // Auth & Bookmarks
+  const { user, login, logout } = useAuth();
   const { bookmarkIds, bookmarkedArticles, toggleBookmark, isBookmarked } = useBookmarks(user);
 
   const handleLogin = useCallback(async (name: string) => {
@@ -62,6 +64,7 @@ const Index = () => {
     toggleBookmark(articleId);
   };
 
+  // Debounce search
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
     if (!search) { setDebouncedSearch(""); return; }
@@ -79,7 +82,7 @@ const Index = () => {
   const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: reports = [] } = useIndustryReports();
-
+  
   const { data: bioWeeklyPosts = [] } = useQuery({
     queryKey: ["substack-posts-count"],
     queryFn: async () => {
@@ -96,17 +99,17 @@ const Index = () => {
       return data || [];
     },
   });
-
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
+  const { data: manufacturerData, isLoading: manufacturersLoading } = useManufacturers(debouncedSearch);
   const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
   const { data: mfdsIngredient } = useMfdsIngredientLookup(debouncedSearch);
 
-  const isValidIngredient = mfdsIngredient?.nameKo &&
+  const isValidIngredient = mfdsIngredient?.nameKo && 
     mfdsIngredient.nameKo.length >= 2 &&
     mfdsIngredient.nameKo !== "원료" &&
     mfdsIngredient.nameKo !== "수출용" &&
     mfdsIngredient.nameKo !== "완제";
-
+  
   const ingredientKeyword = isValidIngredient
     ? mfdsIngredient.nameEn
       ? `${mfdsIngredient.nameKo} (${mfdsIngredient.nameEn})`
@@ -175,7 +178,7 @@ const Index = () => {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm"
               >
                 <User className="w-3.5 h-3.5" />
-                <span className="max-w-[80px] truncate">{displayName}님</span>
+                <span className="max-w-[60px] truncate">{user.email?.split("@")[0]}</span>
                 <LogOut className="w-3 h-3 text-muted-foreground" />
               </button>
             ) : (
@@ -240,12 +243,12 @@ const Index = () => {
         )}
 
         {search && (
-          <SearchResultsPanel
-            keyword={search}
-            profile={drugInfo}
-            loading={drugInfoLoading}
-            onRelatedClick={handleKeywordClick}
-          />
+            <SearchResultsPanel
+              keyword={search}
+              profile={drugInfo}
+              loading={drugInfoLoading}
+              onRelatedClick={handleKeywordClick}
+            />
         )}
 
         {isSearching ? (
@@ -343,8 +346,7 @@ const Index = () => {
         open={indModalOpen}
         onClose={() => setIndModalOpen(false)}
       />
-    </div>
-  );
+    </div>);
 };
 
 export default Index;
