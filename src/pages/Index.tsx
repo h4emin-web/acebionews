@@ -1,352 +1,220 @@
-import { useState, useEffect, useCallback } from "react";
-import { Pill, Clock, Search, CalendarDays, Flag, FlaskConical, LogIn, LogOut, User } from "lucide-react";
-import { BigDealsSection } from "@/components/BigDealsSection";
-import { PillLoader } from "@/components/PillLoader";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { SearchBar } from "@/components/SearchBar";
-import { NewsCard } from "@/components/NewsCard";
-import { StatsBar, type RegionFilter } from "@/components/StatsBar";
-import { MfdsSection } from "@/components/MfdsSection";
-import { MfdsRecallSection } from "@/components/MfdsRecallSection";
-import { FdaSection } from "@/components/FdaSection";
-import { UsDmfSection } from "@/components/UsDmfSection";
-import { BioWeeklySection } from "@/components/BioWeeklySection";
-import { IbricReportsSection } from "@/components/IbricReportsSection";
-import { NcePatentModal } from "@/components/NcePatentModal";
-import { NcePatentSection } from "@/components/NcePatentSection";
-import { IndApprovalModal } from "@/components/IndApprovalModal";
-import { SearchResultsPanel } from "@/components/SearchResultsPanel";
-import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
-import { IndustryReportsSection } from "@/components/IndustryReportsSection";
-import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySection";
-import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports, useManufacturers } from "@/hooks/useNewsData";
-import { ManufacturersPanel } from "@/components/ManufacturersPanel";
-import { useAuth } from "@/hooks/useAuth";
-import { LoginDialog } from "@/components/LoginDialog";
-import { useBookmarks } from "@/hooks/useBookmarks";
-import type { NewsItem } from "@/data/mockNews";
-import { deduplicateNews } from "@/utils/deduplicateNews";
-import { toast } from "sonner";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-const Index = () => {
-  const [search, setSearch] = useState("");
-  const handleSearchChange = (v: string) => {
-    setSearch(v);
-    if (v && (regionFilter === "리포트" || regionFilter === "바이오위클리" || regionFilter === "동향리포트" || regionFilter === "스크랩")) setRegionFilter("all");
-  };
-  const [todayOnly, setTodayOnly] = useState(false);
-  const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
-  
-  const [nceModalOpen, setNceModalOpen] = useState(false);
-  const [indModalOpen, setIndModalOpen] = useState(false);
-  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  // Auth & Bookmarks
-  const { user, login, logout, displayName } = useAuth();
-  const { bookmarkIds, bookmarkedArticles, toggleBookmark, isBookmarked } = useBookmarks(user);
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 20% 15%;
 
-  const handleLogin = useCallback(async (name: string) => {
-    const result = await login(name);
-    if (result.success) {
-      toast.success(`${name}님 환영합니다!`);
-      setLoginDialogOpen(false);
-    } else {
-      toast.error(result.error || "로그인 실패");
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 15%;
+
+    --primary: 210 90% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 20% 30%;
+
+    --muted: 220 10% 95%;
+    --muted-foreground: 220 12% 25%;
+
+    --accent: 174 60% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 210 90% 42%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 30%;
+    --sidebar-primary: 210 90% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 20% 30%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 210 90% 42%;
+
+    /* Custom tokens */
+    --pharma-blue: 210 90% 42%;
+    --pharma-teal: 174 60% 40%;
+    --pharma-amber: 38 92% 50%;
+    --pharma-rose: 350 72% 50%;
+    --pharma-violet: 260 55% 50%;
+    --pharma-green: 152 60% 38%;
+    --pharma-orange: 24 85% 52%;
+    --tag-bg: 210 80% 95%;
+    --tag-text: 210 80% 35%;
+    --shadow-card: 0 1px 2px hsl(220 10% 80% / 0.15), 0 2px 8px hsl(220 10% 80% / 0.08);
+    --shadow-card-hover: 0 2px 6px hsl(220 10% 80% / 0.2), 0 6px 16px hsl(220 10% 80% / 0.12);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  code, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .card-elevated {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-elevated:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .card-3d {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border) / 0.6);
+    box-shadow:
+      0 1px 2px hsl(220 10% 80% / 0.1),
+      0 4px 12px hsl(220 10% 80% / 0.08),
+      inset 0 1px 0 hsl(0 0% 100% / 0.8);
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+    will-change: transform;
+  }
+
+  .card-3d:hover {
+    border-color: hsl(var(--primary) / 0.15);
+    box-shadow:
+      0 2px 4px hsl(220 10% 80% / 0.12),
+      0 8px 24px hsl(220 10% 80% / 0.1),
+      0 16px 40px hsl(var(--primary) / 0.04),
+      inset 0 1px 0 hsl(0 0% 100% / 0.9);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(210 90% 42%), hsl(174 60% 40%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .region-badge-domestic {
+    background: hsl(210 80% 95%);
+    color: hsl(210 80% 35%);
+  }
+
+  .region-badge-overseas {
+    background: hsl(38 90% 94%);
+    color: hsl(38 70% 32%);
+  }
+
+  .region-badge-mfds {
+    background: hsl(152 50% 93%);
+    color: hsl(152 50% 28%);
+  }
+
+  @keyframes ripple {
+    0% {
+      transform: scale(0);
+      opacity: 0.5;
     }
-  }, [login]);
-
-  const handleToggleBookmark = (articleId: string) => {
-    if (!user) {
-      toast.error("로그인 후 스크랩할 수 있습니다");
-      return;
+    100% {
+      transform: scale(6);
+      opacity: 0;
     }
-    toggleBookmark(articleId);
-  };
+  }
 
-  // Debounce search
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  useEffect(() => {
-    if (!search) { setDebouncedSearch(""); return; }
-    const timer = setTimeout(() => setDebouncedSearch(search), 600);
-    return () => clearTimeout(timer);
-  }, [search]);
+  @keyframes pill-shake {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    10% { transform: rotate(-12deg) scale(1.05); }
+    20% { transform: rotate(12deg) scale(1.05); }
+    30% { transform: rotate(-14deg) scale(1.1); }
+    40% { transform: rotate(14deg) scale(1.1); }
+    50% { transform: rotate(-16deg) scale(1.15); }
+    60% { transform: rotate(16deg) scale(1.15); }
+    70% { transform: rotate(-18deg) scale(1.2); }
+    80% { transform: rotate(18deg) scale(1.2); }
+    90% { transform: rotate(-8deg) scale(1.25); }
+  }
 
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`;
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  const todayDay = now.getDate();
-  const selectedDay = todayOnly ? todayDay : null;
+  .animate-pill-shake {
+    animation: pill-shake 1.2s ease-in-out;
+  }
 
-  const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
-  const { data: allKeywords = [] } = useAllApiKeywords();
-  const { data: reports = [] } = useIndustryReports();
-  
-  const { data: bioWeeklyPosts = [] } = useQuery({
-    queryKey: ["substack-posts-count"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("substack_posts").select("id").eq("is_free", true);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-  const { data: ibricReports = [] } = useQuery({
-    queryKey: ["ibric-reports-count"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("ibric_reports").select("id");
-      if (error) throw error;
-      return data || [];
-    },
-  });
-  const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
-  const { data: manufacturerData, isLoading: manufacturersLoading } = useManufacturers(debouncedSearch);
-  const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
-  const { data: mfdsIngredient } = useMfdsIngredientLookup(debouncedSearch);
+  @keyframes pill-pop {
+    0% { transform: scale(1.25); opacity: 1; }
+    50% { transform: scale(1.8); opacity: 0.5; }
+    100% { transform: scale(0); opacity: 0; }
+  }
 
-  const isValidIngredient = mfdsIngredient?.nameKo && 
-    mfdsIngredient.nameKo.length >= 2 &&
-    mfdsIngredient.nameKo !== "원료" &&
-    mfdsIngredient.nameKo !== "수출용" &&
-    mfdsIngredient.nameKo !== "완제";
-  
-  const ingredientKeyword = isValidIngredient
-    ? mfdsIngredient.nameEn
-      ? `${mfdsIngredient.nameKo} (${mfdsIngredient.nameEn})`
-      : mfdsIngredient.nameKo!
-    : drugInfo?.nameKo
-      ? `${drugInfo.nameKo} (${drugInfo.nameEn})`
-      : debouncedSearch;
+  .animate-pill-pop {
+    animation: pill-pop 0.3s ease-out forwards;
+  }
 
-  const { data: mfdsProductsData, isLoading: mfdsProductsLoading } = useMfdsProducts(ingredientKeyword);
-  const { data: mfdsDmfData, isLoading: mfdsDmfLoading } = useMfdsDmf(ingredientKeyword);
+  @keyframes particle-burst {
+    0% {
+      transform: translate(0, 0) rotate(0deg) scale(1);
+      opacity: 1;
+    }
+    60% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--px), var(--py)) rotate(var(--pr)) scale(0);
+      opacity: 0;
+    }
+  }
 
-  const mfdsProducts = mfdsProductsData?.products || [];
-  const mfdsProductsTotalCount = mfdsProductsData?.totalCount || 0;
-  const mfdsDmf = mfdsDmfData?.records || [];
-  const mfdsDmfTotalCount = mfdsDmfData?.totalCount || 0;
-  const isProductSearch = drugInfo?.searchedAsProduct === true;
+  .animate-particle {
+    animation: particle-burst 0.8s ease-out forwards;
+  }
 
-  const allNews = deduplicateNews(search ? searchResults : newsArticles);
-  const displayNews = allNews.filter((n) => regionFilter === "all" || regionFilter === "리포트" || regionFilter === "스크랩" || n.region === regionFilter);
-  const isLoading = search ? searchLoading : newsLoading;
-  const isSearching = !!search;
+  @keyframes ping-once {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(3); opacity: 0; }
+  }
 
-  const handleKeywordClick = (kw: string) => {
-    setSearch(kw);
-    setRegionFilter("all");
-  };
+  .animate-ping-once {
+    animation: ping-once 0.6s ease-out forwards;
+  }
 
-  const toNewsItem = (news: typeof displayNews[number]): NewsItem => ({
-    id: news.id,
-    title: news.title,
-    summary: news.summary,
-    source: news.source,
-    region: news.region as "국내" | "해외",
-    country: news.country,
-    date: news.date,
-    url: news.url,
-    apiKeywords: news.api_keywords,
-    category: news.category
-  });
+  @keyframes star-pop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.7); }
+    60% { transform: scale(0.85); }
+    100% { transform: scale(1); }
+  }
 
-  const bookmarkedNewsItems: NewsItem[] = bookmarkedArticles.map((a: any) => ({
-    id: a.id,
-    title: a.title,
-    summary: a.summary,
-    source: a.source,
-    region: a.region as "국내" | "해외",
-    country: a.country,
-    date: a.date,
-    url: a.url,
-    apiKeywords: a.api_keywords || [],
-    category: a.category || "",
-  }));
+  .animate-star-pop {
+    animation: star-pop 0.4s ease-out forwards;
+    fill: #fbbf24 !important;
+    color: #fbbf24 !important;
+  }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-md">
-        <div className="container max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button onClick={() => { setSearch(""); setRegionFilter("all"); setTodayOnly(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex items-center gap-1 cursor-pointer">
-            <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-b from-primary to-teal-400 bg-clip-text text-transparent">Bio</span>
-            <span className="text-2xl font-semibold tracking-tight text-foreground">news</span>
-          </button>
-          <div className="flex items-center gap-2">
-            {user ? (
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm"
-              >
-                <User className="w-3.5 h-3.5" />
-                <span className="max-w-[60px] truncate">{displayName}님</span>
-                <LogOut className="w-3 h-3 text-muted-foreground" />
-              </button>
-            ) : (
-              <button
-                onClick={() => setLoginDialogOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                로그인
-              </button>
-            )}
 
-            <button
-              onClick={() => setTodayOnly(!todayOnly)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
-              todayOnly ?
-              "bg-primary text-primary-foreground border-primary" :
-              "bg-background text-foreground border-border hover:bg-muted"}`
-              }>
-              <CalendarDays className="w-3.5 h-3.5" />
-              오늘 뉴스
-            </button>
+}
 
-            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground shrink-0">
-              <Clock className="w-3.5 h-3.5" />
-              {todayStr} 기준
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <LoginDialog
-        open={loginDialogOpen}
-        onClose={() => setLoginDialogOpen(false)}
-        onLogin={handleLogin}
-      />
-
-      <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
-        <div className="hidden md:flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
-          </div>
-          <button
-            onClick={() => setIndModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap shrink-0"
-          >
-            <FlaskConical className="w-4 h-4" />
-            국내 IND 승인
-          </button>
-        </div>
-        {!search && (
-          <StatsBar
-            news={allNews}
-            totalReports={reports.length}
-            totalBioWeekly={bioWeeklyPosts.length}
-            totalIbricReports={ibricReports.length}
-            regionFilter={regionFilter}
-            onRegionFilterChange={setRegionFilter}
-            bookmarkCount={bookmarkIds.length}
-            isLoggedIn={!!user}
-          />
-        )}
-
-        {search && (
-            <SearchResultsPanel
-              keyword={search}
-              profile={drugInfo}
-              loading={drugInfoLoading}
-              onRelatedClick={handleKeywordClick}
-            />
-        )}
-
-        {isSearching ? (
-          <SearchSidebarPanel
-            keyword={search}
-            products={mfdsProducts}
-            productsLoading={mfdsProductsLoading}
-            productsTotalCount={mfdsProductsTotalCount}
-            dmfRecords={mfdsDmf}
-            dmfLoading={mfdsDmfLoading}
-            dmfTotalCount={mfdsDmfTotalCount}
-            isProductSearch={isProductSearch}
-            fullWidth
-          />
-        ) : (
-          <div className="grid gap-5 lg:grid-cols-[1fr_340px] min-w-0">
-            <div className="space-y-4 min-w-0 overflow-hidden">
-              {regionFilter === "스크랩" ? (
-                bookmarkedNewsItems.length > 0 ? (
-                  bookmarkedNewsItems.map((news, i) => (
-                    <NewsCard
-                      key={news.id}
-                      news={news}
-                      index={i}
-                      onKeywordClick={handleKeywordClick}
-                      isBookmarked={true}
-                      onToggleBookmark={handleToggleBookmark}
-                      showBookmark={!!user}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-16 card-elevated rounded-lg">
-                    <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-                    <p className="text-muted-foreground text-sm">스크랩한 뉴스가 없습니다</p>
-                  </div>
-                )
-              ) : regionFilter === "동향리포트" ? (
-                <IbricReportsSection />
-              ) : regionFilter === "바이오위클리" ? (
-                <BioWeeklySection />
-              ) : regionFilter === "리포트" ? (
-                <IndustryReportsSection />
-              ) : isLoading ? (
-                <div className="card-elevated rounded-lg">
-                  <PillLoader text="뉴스 불러오는 중..." />
-                </div>
-              ) : displayNews.length > 0 ? (
-                displayNews.map((news, i) => {
-                  const item = toNewsItem(news);
-                  return (
-                    <NewsCard
-                      key={news.id}
-                      news={item}
-                      index={i}
-                      onKeywordClick={handleKeywordClick}
-                      isBookmarked={isBookmarked(news.id)}
-                      onToggleBookmark={handleToggleBookmark}
-                      showBookmark={!!user}
-                    />
-                  );
-                })
-              ) : (
-                <div className="text-center py-16 card-elevated rounded-lg">
-                  <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-                  <p className="text-muted-foreground text-sm">
-                    {newsArticles.length === 0
-                      ? "아직 수집된 뉴스가 없습니다. 매일 자정에 자동 업데이트됩니다."
-                      : "검색 결과가 없습니다"}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <aside className="hidden lg:block space-y-4 min-w-0 overflow-hidden">
-              <IntelligenceSummarySection />
-              <MfdsSection onKeywordClick={handleKeywordClick} />
-              <MfdsRecallSection />
-              <BigDealsSection />
-              <NcePatentSection onKeywordClick={handleKeywordClick} />
-              <UsDmfSection onKeywordClick={handleKeywordClick} />
-              <FdaSection onKeywordClick={handleKeywordClick} />
-            </aside>
-          </div>
-        )}
-      </main>
-      <NcePatentModal
-        open={nceModalOpen}
-        onClose={() => setNceModalOpen(false)}
-        onKeywordClick={(kw) => {
-          setSearch(kw);
-          setNceModalOpen(false);
-        }}
-      />
-      <IndApprovalModal
-        open={indModalOpen}
-        onClose={() => setIndModalOpen(false)}
-      />
-    </div>);
-};
-
-export default Index;
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
