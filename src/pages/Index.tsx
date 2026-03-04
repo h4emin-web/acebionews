@@ -43,7 +43,7 @@ const Index = () => {
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
   // Auth & Bookmarks
-  const { user, login, logout } = useAuth();
+  const { user, login, logout, displayName } = useAuth();
   const { bookmarkIds, bookmarkedArticles, toggleBookmark, isBookmarked } = useBookmarks(user);
 
   const handleLogin = useCallback(async (name: string) => {
@@ -178,7 +178,7 @@ const Index = () => {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm"
               >
                 <User className="w-3.5 h-3.5" />
-                <span className="max-w-[60px] truncate">{user.email?.split("@")[0]}</span>
+                <span className="max-w-[60px] truncate">{displayName}님</span>
                 <LogOut className="w-3 h-3 text-muted-foreground" />
               </button>
             ) : (
