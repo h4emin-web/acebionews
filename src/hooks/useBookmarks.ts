@@ -5,18 +5,23 @@ import type { User } from "@supabase/supabase-js";
 export function useBookmarks(user: User | null) {
   const queryClient = useQueryClient();
 
-  const { data: bookmarkIds = [] } = useQuery({
+  const { data: bookmarks = [] } = useQuery({
     queryKey: ["bookmarks", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookmarks")
-        .select("article_id")
+        .select("article_id, memo")
         .eq("user_id", user!.id);
       if (error) throw error;
-      return (data || []).map((b: any) => b.article_id as string);
+      return (data || []) as { article_id: string; memo: string }[];
     },
   });
+
+  const bookmarkIds = bookmarks.map((b) => b.article_id);
+  const memoMap: Record<string, string> = Object.fromEntries(
+    bookmarks.map((b) => [b.article_id, b.memo || ""])
+  );
 
   const { data: bookmarkedArticles = [] } = useQuery({
     queryKey: ["bookmarked-articles", bookmarkIds],
@@ -39,7 +44,7 @@ export function useBookmarks(user: User | null) {
       if (isBookmarked) {
         await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("article_id", articleId);
       } else {
-        await supabase.from("bookmarks").insert({ user_id: user.id, article_id: articleId });
+        await supabase.from("bookmarks").insert({ user_id: user.id, article_id: articleId, memo: "" });
       }
     },
     onSuccess: () => {
@@ -48,10 +53,26 @@ export function useBookmarks(user: User | null) {
     },
   });
 
+  const saveMemo = useMutation({
+    mutationFn: async ({ articleId, memo }: { articleId: string; memo: string }) => {
+      if (!user) throw new Error("Not logged in");
+      await supabase
+        .from("bookmarks")
+        .update({ memo })
+        .eq("user_id", user.id)
+        .eq("article_id", articleId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookmarks", user?.id] });
+    },
+  });
+
   return {
     bookmarkIds,
     bookmarkedArticles,
+    memoMap,
     toggleBookmark: toggle.mutate,
     isBookmarked: (id: string) => bookmarkIds.includes(id),
+    saveMemo: (articleId: string, memo: string) => saveMemo.mutate({ articleId, memo }),
   };
 }
