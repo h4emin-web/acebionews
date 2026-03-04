@@ -1255,16 +1255,26 @@ serve(async (req) => {
       }
     }
 
-    // 3. Clean up old articles (older than 3 days)
+    // 3. Clean up old articles (older than 3 days) - 스크랩된 뉴스는 제외
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 3);
     const cutoffStr = cutoffDate.toISOString().split("T")[0];
-    const { count: deletedCount } = await supabase
+    // 스크랩된 article_id 목록 가져오기
+    const { data: bookmarkedIds } = await supabase
+      .from("bookmarks")
+      .select("article_id");
+    const safeIds = (bookmarkedIds || []).map((b: any) => b.article_id);
+    // 스크랩된 뉴스 제외하고 삭제
+    let deleteQuery = supabase
       .from("news_articles")
       .delete({ count: "exact" })
       .lt("date", cutoffStr);
+    if (safeIds.length > 0) {
+      deleteQuery = deleteQuery.not("id", "in", `(${safeIds.join(",")})`);
+    }
+    const { count: deletedCount } = await deleteQuery;
     if (deletedCount && deletedCount > 0) {
-      console.log(`Cleaned up ${deletedCount} articles older than 3 days`);
+      console.log(`Cleaned up ${deletedCount} articles older than 3 days (${safeIds.length} bookmarked articles preserved)`);
     }
 
     // 3b. Clean up expired NCE patents
