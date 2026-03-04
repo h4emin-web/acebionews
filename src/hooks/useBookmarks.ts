@@ -55,7 +55,23 @@ export function useBookmarks(user: User | null) {
         await supabase.from("bookmarks").insert({ user_id: user.id, article_id: articleId });
       }
     },
-    onSuccess: () => {
+    // DB 응답 전에 UI 먼저 업데이트 (낙관적 업데이트)
+    onMutate: async (articleId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["bookmarks", user?.id] });
+      const previous = queryClient.getQueryData(["bookmarks", user?.id]);
+      const isBookmarked = bookmarkIds.includes(articleId);
+      queryClient.setQueryData(["bookmarks", user?.id], (old: any[] = []) =>
+        isBookmarked
+          ? old.filter((b) => b.article_id !== articleId)
+          : [...old, { article_id: articleId, memo: "" }]
+      );
+      return { previous };
+    },
+    onError: (_err, _articleId, context: any) => {
+      // 실패시 원래대로 롤백
+      queryClient.setQueryData(["bookmarks", user?.id], context?.previous);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["bookmarks", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["bookmarked-articles"] });
     },
