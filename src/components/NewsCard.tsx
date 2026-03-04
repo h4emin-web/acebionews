@@ -38,9 +38,6 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
     >
       {/* Gradient shimmer on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-primary/[0.03] via-transparent to-accent/[0.03]" />
-      {bursting && (
-        <span className="absolute inset-0 rounded-xl pointer-events-none animate-border-sweep" />
-      )}
       {ripples.map((r) => (
         <span
           key={r.id}
@@ -71,12 +68,14 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
               title={isBookmarked ? "스크랩 해제" : "스크랩"}
             >
               <Star
-                className={`w-4 h-4 transition-all duration-200 ${
-                  bursting ? "animate-star-pop" : ""
+                className={`w-4 h-4 ${
+                  bursting ? "animate-star-pop fill-amber-400 text-amber-400" : ""
                 } ${
-                  isBookmarked
+                  !bursting && isBookmarked
                     ? "fill-amber-400 text-amber-400"
-                    : "text-muted-foreground hover:text-amber-400"
+                    : !bursting
+                    ? "text-muted-foreground hover:text-amber-400 transition-colors"
+                    : ""
                 }`}
               />
             </button>
