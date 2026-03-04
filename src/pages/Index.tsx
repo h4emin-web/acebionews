@@ -20,6 +20,7 @@ import { SearchResultsPanel } from "@/components/SearchResultsPanel";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { IndustryReportsSection } from "@/components/IndustryReportsSection";
 import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySection";
+import { MemoSection } from "@/components/MemoSection";
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports, useManufacturers } from "@/hooks/useNewsData";
 import { ManufacturersPanel } from "@/components/ManufacturersPanel";
 import { useAuth } from "@/hooks/useAuth";
@@ -324,6 +325,17 @@ const Index = () => {
             </div>
 
             <aside className="hidden lg:block space-y-4 min-w-0 overflow-hidden">
+              <MemoSection
+                user={user}
+                bookmarkedArticles={bookmarkedArticles}
+                memoMap={memoMap}
+                onNewsClick={(articleId) => {
+                  setRegionFilter("스크랩");
+                  setTimeout(() => {
+                    document.getElementById(`scrap-${articleId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }, 100);
+                }}
+              />
               <IntelligenceSummarySection />
               <MfdsSection onKeywordClick={handleKeywordClick} />
               <MfdsRecallSection />
