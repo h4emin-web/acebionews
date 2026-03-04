@@ -21,8 +21,9 @@ export function useAuth() {
   }, []);
 
   const login = async (name: string) => {
-    const email = `${name.toLowerCase().replace(/[^a-z0-9가-힣]/g, "")}@bionews.local`;
-    const password = `bio_${name.toLowerCase().replace(/[^a-z0-9가-힣]/g, "")}_pass`;
+    const sanitized = Array.from(name).map(c => c.charCodeAt(0)).join('');
+    const email = `u${sanitized}@bionews.local`;
+    const password = `bio_${sanitized}_pass`;
     // Try sign in first
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     if (!signInError) return { success: true };
