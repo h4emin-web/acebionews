@@ -69,14 +69,10 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
             >
               <Star
                 className={`w-4 h-4 ${
-                  bursting ? "animate-star-pop fill-amber-400 text-amber-400" : ""
-                } ${
-                  !bursting && isBookmarked
+                  bursting || isBookmarked
                     ? "fill-amber-400 text-amber-400"
-                    : !bursting
-                    ? "text-muted-foreground hover:text-amber-400 transition-colors"
-                    : ""
-                }`}
+                    : "text-muted-foreground hover:text-amber-400 transition-colors"
+                } ${bursting ? "animate-star-pop" : ""}`}
               />
             </button>
           )}
