@@ -23,7 +23,6 @@ import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySect
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports } from "@/hooks/useNewsData";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginDialog } from "@/components/LoginDialog";
-import { ScrapNewsCard } from "@/components/ScrapNewsCard";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import type { NewsItem } from "@/data/mockNews";
 import { deduplicateNews } from "@/utils/deduplicateNews";
@@ -37,14 +36,13 @@ const Index = () => {
   };
   const [todayOnly, setTodayOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
-  
+
   const [nceModalOpen, setNceModalOpen] = useState(false);
   const [indModalOpen, setIndModalOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
-  // Auth & Bookmarks
   const { user, login, logout, displayName } = useAuth();
-  const { bookmarkIds, bookmarkedArticles, memoMap, toggleBookmark, isBookmarked, saveMemo } = useBookmarks(user);
+  const { bookmarkIds, bookmarkedArticles, toggleBookmark, isBookmarked } = useBookmarks(user);
 
   const handleLogin = useCallback(async (name: string) => {
     const result = await login(name);
@@ -61,14 +59,9 @@ const Index = () => {
       toast.error("로그인 후 스크랩할 수 있습니다");
       return;
     }
-    const wasBookmarked = isBookmarked(articleId);
     toggleBookmark(articleId);
-    if (!wasBookmarked) {
-      setRegionFilter("스크랩");
-    }
   };
 
-  // Debounce search
   const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
     if (!search) { setDebouncedSearch(""); return; }
@@ -86,7 +79,7 @@ const Index = () => {
   const { data: newsArticles = [], isLoading: newsLoading } = useNewsArticles(currentYear, currentMonth, selectedDay);
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: reports = [] } = useIndustryReports();
-  
+
   const { data: bioWeeklyPosts = [] } = useQuery({
     queryKey: ["substack-posts-count"],
     queryFn: async () => {
@@ -103,16 +96,17 @@ const Index = () => {
       return data || [];
     },
   });
+
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
   const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(debouncedSearch);
   const { data: mfdsIngredient } = useMfdsIngredientLookup(debouncedSearch);
 
-  const isValidIngredient = mfdsIngredient?.nameKo && 
+  const isValidIngredient = mfdsIngredient?.nameKo &&
     mfdsIngredient.nameKo.length >= 2 &&
     mfdsIngredient.nameKo !== "원료" &&
     mfdsIngredient.nameKo !== "수출용" &&
     mfdsIngredient.nameKo !== "완제";
-  
+
   const ingredientKeyword = isValidIngredient
     ? mfdsIngredient.nameEn
       ? `${mfdsIngredient.nameKo} (${mfdsIngredient.nameEn})`
@@ -153,7 +147,6 @@ const Index = () => {
     category: news.category
   });
 
-  // For scrap tab, convert bookmarked articles to NewsItem
   const bookmarkedNewsItems: NewsItem[] = bookmarkedArticles.map((a: any) => ({
     id: a.id,
     title: a.title,
@@ -176,14 +169,13 @@ const Index = () => {
             <span className="text-2xl font-semibold tracking-tight text-foreground">news</span>
           </button>
           <div className="flex items-center gap-2">
-            {/* Login/Logout button */}
             {user ? (
               <button
                 onClick={logout}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm"
               >
                 <User className="w-3.5 h-3.5" />
-                <span className="max-w-[60px] truncate">{displayName}님</span>
+                <span className="max-w-[80px] truncate">{displayName}님</span>
                 <LogOut className="w-3 h-3 text-muted-foreground" />
               </button>
             ) : (
@@ -215,7 +207,6 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Login Dialog */}
       <LoginDialog
         open={loginDialogOpen}
         onClose={() => setLoginDialogOpen(false)}
@@ -223,7 +214,6 @@ const Index = () => {
       />
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
-        {/* Search + IND button: hidden on mobile */}
         <div className="hidden md:flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
@@ -250,12 +240,12 @@ const Index = () => {
         )}
 
         {search && (
-            <SearchResultsPanel
-              keyword={search}
-              profile={drugInfo}
-              loading={drugInfoLoading}
-              onRelatedClick={handleKeywordClick}
-            />
+          <SearchResultsPanel
+            keyword={search}
+            profile={drugInfo}
+            loading={drugInfoLoading}
+            onRelatedClick={handleKeywordClick}
+          />
         )}
 
         {isSearching ? (
@@ -276,14 +266,14 @@ const Index = () => {
               {regionFilter === "스크랩" ? (
                 bookmarkedNewsItems.length > 0 ? (
                   bookmarkedNewsItems.map((news, i) => (
-                    <ScrapNewsCard
+                    <NewsCard
                       key={news.id}
                       news={news}
                       index={i}
                       onKeywordClick={handleKeywordClick}
+                      isBookmarked={true}
                       onToggleBookmark={handleToggleBookmark}
-                      memo={memoMap[news.id] || ""}
-                      onMemoSave={saveMemo}
+                      showBookmark={!!user}
                     />
                   ))
                 ) : (
@@ -329,7 +319,6 @@ const Index = () => {
               )}
             </div>
 
-            {/* Sidebar: hidden on mobile */}
             <aside className="hidden lg:block space-y-4 min-w-0 overflow-hidden">
               <IntelligenceSummarySection />
               <MfdsSection onKeywordClick={handleKeywordClick} />
@@ -354,7 +343,8 @@ const Index = () => {
         open={indModalOpen}
         onClose={() => setIndModalOpen(false)}
       />
-    </div>);
+    </div>
+  );
 };
 
 export default Index;
