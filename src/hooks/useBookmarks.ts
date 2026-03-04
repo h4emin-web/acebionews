@@ -11,7 +11,7 @@ export function useBookmarks(user: User | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookmarks")
-        .select("article_id, memo")
+        .select("article_id")
         .eq("user_id", user!.id);
       if (error) throw error;
       return (data || []) as { article_id: string; memo: string }[];
