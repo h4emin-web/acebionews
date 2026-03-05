@@ -215,7 +215,7 @@ export const MemoSection = ({ user, bookmarkedArticles, memoMap, onNewsClick, ex
                       onClick={() => onNewsClick(item.id)}
                       className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted/60 transition-colors group"
                     >
-                      <p className="text-[11px] text-muted-foreground mb-0.5 group-hover:text-primary transition-colors break-words">
+                      <p className="text-[11px] font-bold text-muted-foreground mb-0.5 group-hover:text-primary transition-colors break-words">
                         {i + 1}. <Highlight text={item.title} query={newsSearch} />
                       </p>
                       <p className="text-[11px] text-foreground whitespace-pre-wrap break-words">
