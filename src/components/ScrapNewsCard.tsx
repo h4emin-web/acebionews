@@ -20,6 +20,11 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
   const flagCode = countryFlagCodes[news.country] || null;
   const queryClient = useQueryClient();
 
+  // DB에서 memo 불러왔을 때 localMemo 동기화
+  useEffect(() => {
+    if (memo && localMemo === "") setLocalMemo(memo);
+  }, [memo]);
+
   // 입력 후 1초 뒤 자동저장 + MemoSection 실시간 반영
   useEffect(() => {
     if (localMemo === memo) return;
