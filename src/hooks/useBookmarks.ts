@@ -72,11 +72,14 @@ export function useBookmarks(user: User | null) {
   const saveMemo = useMutation({
     mutationFn: async ({ articleId, memo }: { articleId: string; memo: string }) => {
       if (!user) throw new Error("Not logged in");
-      await supabase
+      const { data, error } = await supabase
         .from("bookmarks")
         .update({ memo })
         .eq("user_id", user.id)
-        .eq("article_id", articleId);
+        .eq("article_id", articleId)
+        .select();
+      console.log("[saveMemo] articleId:", articleId, "memo:", memo, "result:", data, "error:", error);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookmarks", user?.id] });
