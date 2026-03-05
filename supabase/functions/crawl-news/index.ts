@@ -878,8 +878,23 @@ async function extractKeywordsAndTranslate(
       const origLang = isForeign ? (langMap[article.country] || "en") : "ko";
       // Strip region tags from title
       const stripRegionTag = (t: string) => t.replace(/^\s*[\[\(](국내|해외)[\]\)]\s*/g, "").trim();
-      const finalTitle = stripRegionTag(r.translated_title || article.title);
-      const finalSummary = r.translated_summary || article.summary;
+
+      let finalTitle: string;
+      let finalSummary: string;
+
+      if (!isForeign) {
+        // 국내(Korean) articles: ALWAYS keep original Korean title
+        finalTitle = stripRegionTag(article.title);
+        // Only use AI summary if it's actually in Korean (>50% Korean chars)
+        const aiSummary = r.translated_summary || "";
+        const korChars = (aiSummary.match(/[가-힣]/g) || []).length;
+        const totalChars = aiSummary.replace(/\s/g, "").length;
+        const isKorean = totalChars > 0 && (korChars / totalChars) > 0.3;
+        finalSummary = isKorean ? aiSummary : (article.summary || "");
+      } else {
+        finalTitle = stripRegionTag(r.translated_title || article.title);
+        finalSummary = r.translated_summary || article.summary;
+      }
 
       results.push({
         title: finalTitle,
