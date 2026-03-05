@@ -9,19 +9,11 @@ export function useBookmarks(user: User | null) {
     queryKey: ["bookmarks", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      // memo 컬럼 있으면 같이 가져오고, 없으면(SQL 미실행) fallback
       const { data, error } = await supabase
         .from("bookmarks")
         .select("article_id, memo")
         .eq("user_id", user!.id);
-      if (error) {
-        const { data: fallback, error: fallbackError } = await supabase
-          .from("bookmarks")
-          .select("article_id")
-          .eq("user_id", user!.id);
-        if (fallbackError) throw fallbackError;
-        return (fallback || []).map((b: any) => ({ article_id: b.article_id, memo: "" }));
-      }
+      if (error) throw error;
       return (data || []).map((b: any) => ({ article_id: b.article_id, memo: b.memo || "" }));
     },
   });
