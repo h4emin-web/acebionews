@@ -33,6 +33,7 @@ import { toast } from "sonner";
 
 const Index = () => {
   const [search, setSearch] = useState("");
+  const [scrapSearch, setScrapSearch] = useState("");
   const handleSearchChange = (v: string) => {
     setSearch(v);
     if (v && (regionFilter === "리포트" || regionFilter === "바이오위클리" || regionFilter === "동향리포트" || regionFilter === "스크랩")) setRegionFilter("all");
@@ -270,24 +271,49 @@ const Index = () => {
           <div className={`grid gap-5 min-w-0 ${memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
             <div className={`space-y-4 min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "hidden lg:hidden" : ""}`}>
               {regionFilter === "스크랩" ? (
-                bookmarkedNewsItems.length > 0 ? (
-                  bookmarkedNewsItems.map((news, i) => (
-                    <ScrapNewsCard
-                      key={news.id}
-                      news={news}
-                      index={i}
-                      onKeywordClick={handleKeywordClick}
-                      onToggleBookmark={handleToggleBookmark}
-                      memo={memoMap[news.id] || ""}
-                      onMemoSave={saveMemo}
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="스크랩 내 검색..."
+                      value={scrapSearch}
+                      onChange={(e) => setScrapSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
-                  ))
-                ) : (
-                  <div className="text-center py-16 card-elevated rounded-lg">
-                    <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-                    <p className="text-muted-foreground text-sm">스크랩한 뉴스가 없습니다</p>
                   </div>
-                )
+                  {(() => {
+                    const q = scrapSearch.toLowerCase();
+                    const filtered = q
+                      ? bookmarkedNewsItems.filter(n =>
+                          n.title.toLowerCase().includes(q) ||
+                          n.summary.toLowerCase().includes(q) ||
+                          n.source.toLowerCase().includes(q) ||
+                          (n.apiKeywords || []).some(k => k.toLowerCase().includes(q))
+                        )
+                      : bookmarkedNewsItems;
+                    return filtered.length > 0 ? (
+                      filtered.map((news, i) => (
+                        <ScrapNewsCard
+                          key={news.id}
+                          news={news}
+                          index={i}
+                          onKeywordClick={handleKeywordClick}
+                          onToggleBookmark={handleToggleBookmark}
+                          memo={memoMap[news.id] || ""}
+                          onMemoSave={saveMemo}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center py-16 card-elevated rounded-lg">
+                        <Pill className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
+                        <p className="text-muted-foreground text-sm">
+                          {scrapSearch ? "검색 결과가 없습니다" : "스크랩한 뉴스가 없습니다"}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </>
               ) : regionFilter === "동향리포트" ? (
                 <IbricReportsSection />
               ) : regionFilter === "바이오위클리" ? (
