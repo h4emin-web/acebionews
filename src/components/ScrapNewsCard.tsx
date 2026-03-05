@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Globe, MapPin, Star, RotateCcw } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
 import { countryFlagCodes } from "@/data/mockNews";
@@ -17,14 +18,17 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
   const [localMemo, setLocalMemo] = useState(memo);
   const [saving, setSaving] = useState(false);
   const flagCode = countryFlagCodes[news.country] || null;
+  const queryClient = useQueryClient();
 
-  // 입력 후 1초 뒤 자동저장
+  // 입력 후 1초 뒤 자동저장 + MemoSection 실시간 반영
   useEffect(() => {
     if (localMemo === memo) return;
     const timer = setTimeout(() => {
       onMemoSave(news.id, localMemo);
       setSaving(true);
       setTimeout(() => setSaving(false), 1000);
+      // MemoSection 뉴스메모 목록 즉시 갱신
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
     }, 1000);
     return () => clearTimeout(timer);
   }, [localMemo]);
