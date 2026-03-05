@@ -33,6 +33,7 @@ import { toast } from "sonner";
 
 const Index = () => {
   const [search, setSearch] = useState("");
+  const [scrapSearch, setScrapSearch] = useState("");
   const handleSearchChange = (v: string) => {
     setSearch(v);
     if (v && (regionFilter === "리포트" || regionFilter === "바이오위클리" || regionFilter === "동향리포트" || regionFilter === "스크랩")) setRegionFilter("all");
