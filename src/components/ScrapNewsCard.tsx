@@ -118,7 +118,7 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
 
           {/* 메모 미리보기 */}
           {localMemo && (
-            <div className="mt-2 px-2 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 truncate">
+            <div className="mt-2 px-2 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 whitespace-pre-wrap break-words">
               📝 {localMemo}
             </div>
           )}
