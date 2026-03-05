@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { NotebookPen, ChevronDown, FileText, StickyNote, Maximize2, Minimize2 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 type NewsItem = {
@@ -24,28 +26,54 @@ export const MemoSection = ({ user, bookmarkedArticles, memoMap, onNewsClick, ex
   const [freeMemosOpen, setFreeMemosOpen] = useState(false);
   const [freeMemo, setFreeMemo] = useState("");
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!user) return;
-    const saved = localStorage.getItem(`free_memo_${user.id}`);
-    if (saved) setFreeMemo(saved);
-  }, [user]);
+  // DB에서 일반 메모 불러오기
+  useQuery({
+    queryKey: ["user-memo", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_memos")
+        .select("content")
+        .eq("user_id", user!.id)
+        .single();
+      if (error && error.code !== "PGRST116") throw error; // PGRST116 = 없는 row
+      const content = data?.content || "";
+      setFreeMemo(content);
+      return content;
+    },
+  });
 
+  // 일반 메모 DB 저장 (upsert)
+  const saveFreeMemoDB = useMutation({
+    mutationFn: async (content: string) => {
+      const { error } = await supabase
+        .from("user_memos")
+        .upsert({ user_id: user!.id, content, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-memo", user?.id] });
+    },
+  });
+
+  // 입력 후 1초 자동저장
   useEffect(() => {
     if (!user) return;
     const timer = setTimeout(() => {
-      localStorage.setItem(`free_memo_${user.id}`, freeMemo);
+      saveFreeMemoDB.mutate(freeMemo);
       setSaving(true);
       setTimeout(() => setSaving(false), 1000);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [freeMemo, user]);
+  }, [freeMemo]);
 
   const newsWithMemos: NewsItem[] = bookmarkedArticles
     .map((a: any) => ({ id: a.id, title: a.title, memo: memoMap[a.id] || a.memo || "" }))
     .filter((a) => a.memo.trim() !== "");
 
-  // 확장 모드 - 메모장만 전체 공간 차지
+  // 확장 모드
   if (expanded) {
     return (
       <div className="card-elevated rounded-lg overflow-hidden flex flex-col" style={{ height: "calc(100vh - 180px)" }}>
@@ -55,7 +83,6 @@ export const MemoSection = ({ user, bookmarkedArticles, memoMap, onNewsClick, ex
           <button
             onClick={() => onExpand(false)}
             className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted transition-colors text-[11px] text-muted-foreground hover:text-foreground"
-            title="원래대로"
           >
             <Minimize2 className="w-3.5 h-3.5" />
             원래대로
