@@ -61,18 +61,21 @@ export type Database = {
           article_id: string
           created_at: string
           id: string
+          memo: string | null
           user_id: string
         }
         Insert: {
           article_id: string
           created_at?: string
           id?: string
+          memo?: string | null
           user_id: string
         }
         Update: {
           article_id?: string
           created_at?: string
           id?: string
+          memo?: string | null
           user_id?: string
         }
         Relationships: []
