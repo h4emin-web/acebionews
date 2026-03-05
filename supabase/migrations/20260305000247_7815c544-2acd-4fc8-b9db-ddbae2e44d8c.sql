@@ -1,0 +1,1 @@
+ALTER TABLE public.bookmarks ADD COLUMN IF NOT EXISTS memo text DEFAULT '';
