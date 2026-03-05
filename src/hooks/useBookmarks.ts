@@ -11,19 +11,16 @@ export function useBookmarks(user: User | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookmarks")
-        .select("article_id, memo, updated_at")
+        .select("article_id, memo")
         .eq("user_id", user!.id);
       if (error) throw error;
-      return (data || []).map((b: any) => ({ article_id: b.article_id, memo: b.memo || "", updated_at: b.updated_at || "" }));
+      return (data || []).map((b: any) => ({ article_id: b.article_id, memo: b.memo || "" }));
     },
   });
 
   const bookmarkIds = bookmarks.map((b) => b.article_id);
   const memoMap: Record<string, string> = Object.fromEntries(
     bookmarks.map((b) => [b.article_id, b.memo || ""])
-  );
-  const memoDateMap: Record<string, string> = Object.fromEntries(
-    bookmarks.map((b) => [b.article_id, b.updated_at || ""])
   );
 
   const { data: bookmarkedArticles = [] } = useQuery({
@@ -93,7 +90,6 @@ export function useBookmarks(user: User | null) {
     bookmarkIds,
     bookmarkedArticles,
     memoMap,
-    memoDateMap,
     toggleBookmark: toggle.mutate,
     isBookmarked: (id: string) => bookmarkIds.includes(id),
     saveMemo: (articleId: string, memo: string) => saveMemo.mutate({ articleId, memo }),

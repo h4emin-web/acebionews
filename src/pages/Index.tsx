@@ -48,7 +48,7 @@ const Index = () => {
 
   // Auth & Bookmarks
   const { user, login, logout, displayName } = useAuth();
-  const { bookmarkIds, bookmarkedArticles, memoMap, memoDateMap, toggleBookmark, isBookmarked, saveMemo } = useBookmarks(user);
+  const { bookmarkIds, bookmarkedArticles, memoMap, toggleBookmark, isBookmarked, saveMemo } = useBookmarks(user);
 
   const handleLogin = useCallback(async (name: string) => {
     const result = await login(name);

@@ -10,16 +10,14 @@ type Props = {
   onKeywordClick: (kw: string) => void;
   onToggleBookmark?: (id: string) => void;
   memo: string;
-  memoDate: string;
   onMemoSave: (articleId: string, memo: string) => void;
 };
 
-export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, memo, memoDate, onMemoSave }: Props) => {
+export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, memo, onMemoSave }: Props) => {
   const [flipped, setFlipped] = useState(false);
   const [localMemo, setLocalMemo] = useState(memo);
   const [saving, setSaving] = useState(false);
   const flagCode = countryFlagCodes[news.country] || null;
-  const formattedDate = memoDate ? new Date(memoDate).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, "-").replace(".", "") : "";
   const queryClient = useQueryClient();
 
   // DB에서 memo 불러왔을 때 localMemo 동기화
@@ -120,11 +118,8 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
 
           {/* 메모 미리보기 */}
           {localMemo && (
-            <div className="mt-2 px-2 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
-              <div className="flex justify-between items-center mb-0.5">
-                {formattedDate && <span className="text-[10px] text-amber-600 opacity-70">{formattedDate}</span>}
-              </div>
-              <p className="whitespace-pre-wrap break-words">📝 {localMemo}</p>
+            <div className="mt-2 px-2 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 whitespace-pre-wrap break-words">
+              📝 {localMemo}
             </div>
           )}
         </article>
