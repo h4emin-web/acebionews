@@ -407,6 +407,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_memos: {
+        Row: {
+          content: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
