@@ -96,9 +96,10 @@ const KeywordPopover = ({ keywords, onAdd, onRemove, onKeywordClick }: {
   );
 };
 
-export const AppHeader = memo((({
+export const AppHeader = memo(({
   user, displayName, todayStr, todayOnly, showUnreadOnly,
-  onLogoClick, onLoginClick, onLogout, onTodayToggle, onUnreadToggle
+  onLogoClick, onLoginClick, onLogout, onTodayToggle, onUnreadToggle,
+  keywords, onAddKeyword, onRemoveKeyword, onAlertKeywordClick,
 }: Props) => {
   return (
     <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-md">
