@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FlaskConical, ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,9 +65,7 @@ export const NcePatentSection = ({ onKeywordClick }: Props) => {
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
-        <FlaskConical className="w-4 h-4 text-primary" />
         <h2 className="text-sm font-semibold text-foreground">물질 특허 만료 NCE</h2>
-        <span className="text-[10px] text-muted-foreground ml-auto mr-2">{patents.length}건</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
       <CollapsibleContent>
@@ -83,7 +81,6 @@ export const NcePatentSection = ({ onKeywordClick }: Props) => {
             />
           </div>
           {searchQuery && (
-            <p className="text-[10px] text-muted-foreground mt-1.5">{filtered.length}건 검색됨</p>
           )}
         </div>
         {isLoading ? (
