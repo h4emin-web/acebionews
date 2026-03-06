@@ -3,9 +3,7 @@ import { Pill, Search } from "lucide-react";
 import { NewsCard } from "@/components/NewsCard";
 import { ScrapNewsCard } from "@/components/ScrapNewsCard";
 import { PillLoader } from "@/components/PillLoader";
-import { IbricReportsSection } from "@/components/IbricReportsSection";
-import { BioWeeklySection } from "@/components/BioWeeklySection";
-import { IndustryReportsSection } from "@/components/IndustryReportsSection";
+import { ReportsSection } from "@/components/ReportsSection";
 import type { NewsItem } from "@/data/mockNews";
 import type { RegionFilter } from "@/components/StatsBar";
 
@@ -171,9 +169,7 @@ export const NewsList = memo(({
     );
   }
 
-  if (regionFilter === "동향리포트") return <IbricReportsSection />;
-  if (regionFilter === "바이오위클리") return <BioWeeklySection />;
-  if (regionFilter === "리포트") return <IndustryReportsSection />;
+  if (regionFilter === "리포트") return <ReportsSection />;
 
   if (isLoading) {
     return (
