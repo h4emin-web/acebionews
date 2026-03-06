@@ -22,9 +22,11 @@ export const AppHeader = memo(({
   return (
     <header className="border-b border-border sticky top-0 z-40 bg-background/90 backdrop-blur-md">
       <div className="container max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-        <button onClick={onLogoClick} className="flex items-center gap-1 cursor-pointer">
-          <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-b from-primary to-teal-400 bg-clip-text text-transparent">Bio</span>
-          <span className="text-2xl font-semibold tracking-tight text-foreground">news</span>
+        <button onClick={onLogoClick} className="flex items-center gap-2 cursor-pointer">
+          <div className="w-7 h-7 bg-foreground rounded-[5px] flex items-center justify-center shrink-0">
+            <span className="text-[12px] font-extrabold text-background tracking-tight">BN</span>
+          </div>
+          <span className="text-[17px] font-bold text-foreground tracking-tight">BioNews</span>
         </button>
         <div className="flex items-center gap-2">
           {user ? (
