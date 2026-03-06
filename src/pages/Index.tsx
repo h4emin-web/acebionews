@@ -5,8 +5,6 @@ import { NewsList } from "@/components/NewsList";
 import { Sidebar } from "@/components/Sidebar";
 import { StatsBar } from "@/components/StatsBar";
 import { SearchBar } from "@/components/SearchBar";
-import { SearchResultsPanel } from "@/components/SearchResultsPanel";
-import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { IndApprovalModal } from "@/components/IndApprovalModal";
 import { LoginDialog } from "@/components/LoginDialog";
@@ -15,7 +13,6 @@ import { useBookmarks } from "@/hooks/useBookmarks";
 import { useReadArticles } from "@/hooks/useReadArticles";
 import { useUserKeywords } from "@/hooks/useUserKeywords";
 import { useNewsFilters } from "@/hooks/useNewsFilters";
-import { useManufacturers } from "@/hooks/useNewsData";
 import type { NewsItem } from "@/data/mockNews";
 import { toast } from "sonner";
 
@@ -32,21 +29,16 @@ const Index = () => {
   const { keywords, addKeyword, removeKeyword, getMatchedKeywords } = useUserKeywords(user);
 
   const {
-    search, handleSearchChange, setNewsOnlySearch,
+    search, handleSearchChange,
+    keywordFilter, setNewsOnlySearch,
     regionFilter, setRegionFilter,
     todayOnly, setTodayOnly,
     showUnreadOnly, setShowUnreadOnly,
     allNews, newsArticles,
     allKeywords, reports,
     bioWeeklyPosts, ibricReports,
-    drugInfo, drugInfoLoading,
-    mfdsProductsData, mfdsProductsLoading,
-    mfdsDmfData, mfdsDmfLoading,
-    isProductSearch, isLoading, isSearching, todayStr,
-    debouncedSearch,
+    isLoading, todayStr,
   } = useNewsFilters();
-
-  const { data: manufacturerData } = useManufacturers(debouncedSearch);
 
   const handleLogin = useCallback(async (name: string) => {
     const result = await login(name);
@@ -68,7 +60,6 @@ const Index = () => {
     setRegionFilter("all");
   }, [handleSearchChange]);
 
-  // 스크랩 키워드 집합 (후속 뉴스 감지)
   const scrapKeywordSet = useMemo(() => new Set(
     bookmarkedArticles.flatMap((a: any) => a.api_keywords || []).map((k: string) => k.toLowerCase())
   ), [bookmarkedArticles]);
@@ -114,11 +105,6 @@ const Index = () => {
     [bookmarkedArticles]
   );
 
-  const mfdsProducts = mfdsProductsData?.products || [];
-  const mfdsProductsTotalCount = mfdsProductsData?.totalCount || 0;
-  const mfdsDmf = mfdsDmfData?.records || [];
-  const mfdsDmfTotalCount = mfdsDmfData?.totalCount || 0;
-
   return (
     <div className="min-h-screen bg-background">
       <AppHeader
@@ -150,7 +136,7 @@ const Index = () => {
           </button>
         </div>
 
-        {!search && (
+        {!search && !keywordFilter && (
           <StatsBar
             news={allNews}
             totalReports={reports.length}
@@ -163,72 +149,49 @@ const Index = () => {
           />
         )}
 
-        {search && (
-          <SearchResultsPanel
-            keyword={search}
-            profile={drugInfo}
-            loading={drugInfoLoading}
-            onRelatedClick={handleKeywordClick}
-          />
-        )}
-
-        {isSearching ? (
-          <SearchSidebarPanel
-            keyword={search}
-            products={mfdsProducts}
-            productsLoading={mfdsProductsLoading}
-            productsTotalCount={mfdsProductsTotalCount}
-            dmfRecords={mfdsDmf}
-            dmfLoading={mfdsDmfLoading}
-            dmfTotalCount={mfdsDmfTotalCount}
-            isProductSearch={isProductSearch}
-            fullWidth
-          />
-        ) : (
-          <div className={`grid gap-5 min-w-0 ${memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
-            <div className={`space-y-4 min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "hidden lg:hidden" : ""}`}>
-              <NewsList
-                regionFilter={regionFilter}
-                displayNews={displayNews}
-                bookmarkedNewsItems={bookmarkedNewsItems}
-                scrapSearch={scrapSearch}
-                setScrapSearch={setScrapSearch}
-                isLoading={isLoading}
-                newsArticlesCount={newsArticles.length}
-                memoMap={memoMap}
-                isBookmarked={isBookmarked}
-                isRead={isRead}
-                markRead={markRead}
-                readIds={readIds}
-                handleKeywordClick={handleKeywordClick}
-                handleToggleBookmark={handleToggleBookmark}
-                saveMemo={saveMemo}
-                getMatchedKeywords={getMatchedKeywords}
-                getFollowUpMatch={getFollowUpMatch}
-                toNewsItem={toNewsItem}
-                user={user}
-              />
-            </div>
-            <Sidebar
-              user={user}
-              keywords={keywords}
-              onAddKeyword={addKeyword}
-              onRemoveKeyword={removeKeyword}
-              bookmarkedArticles={bookmarkedArticles}
+        <div className={`grid gap-5 min-w-0 ${memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
+          <div className={`space-y-4 min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "hidden lg:hidden" : ""}`}>
+            <NewsList
+              regionFilter={regionFilter}
+              displayNews={displayNews}
+              bookmarkedNewsItems={bookmarkedNewsItems}
+              scrapSearch={scrapSearch}
+              setScrapSearch={setScrapSearch}
+              isLoading={isLoading}
+              newsArticlesCount={newsArticles.length}
               memoMap={memoMap}
-              memoExpanded={memoExpanded}
-              onMemoExpand={setMemoExpanded}
-              onNewsClick={(articleId) => {
-                setRegionFilter("스크랩");
-                setTimeout(() => {
-                  document.getElementById(`scrap-${articleId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }, 100);
-              }}
-              onKeywordClick={handleKeywordClick}
-              onAlertKeywordClick={setNewsOnlySearch}
+              isBookmarked={isBookmarked}
+              isRead={isRead}
+              markRead={markRead}
+              readIds={readIds}
+              handleKeywordClick={handleKeywordClick}
+              handleToggleBookmark={handleToggleBookmark}
+              saveMemo={saveMemo}
+              getMatchedKeywords={getMatchedKeywords}
+              getFollowUpMatch={getFollowUpMatch}
+              toNewsItem={toNewsItem}
+              user={user}
             />
           </div>
-        )}
+          <Sidebar
+            user={user}
+            keywords={keywords}
+            onAddKeyword={addKeyword}
+            onRemoveKeyword={removeKeyword}
+            bookmarkedArticles={bookmarkedArticles}
+            memoMap={memoMap}
+            memoExpanded={memoExpanded}
+            onMemoExpand={setMemoExpanded}
+            onNewsClick={(articleId) => {
+              setRegionFilter("스크랩");
+              setTimeout(() => {
+                document.getElementById(`scrap-${articleId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 100);
+            }}
+            onKeywordClick={handleKeywordClick}
+            onAlertKeywordClick={setNewsOnlySearch}
+          />
+        </div>
       </main>
 
       <NcePatentModal
