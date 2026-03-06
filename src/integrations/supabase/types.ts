@@ -457,6 +457,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_keywords: {
+        Row: {
+          created_at: string | null
+          id: string
+          keyword: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          keyword: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          keyword?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_memo_entries: {
         Row: {
           content: string
