@@ -74,7 +74,6 @@ export const UsDmfSection = ({ onKeywordClick }: Props) => {
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
-        <FileText className="w-4 h-4 text-muted-foreground" />
         <h2 className="text-sm font-semibold text-foreground">US DMF 2025</h2>
         <span className="text-[10px] text-muted-foreground ml-auto font-mono mr-2">TOP 50</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
