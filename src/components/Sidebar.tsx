@@ -2,7 +2,6 @@ import { memo } from "react";
 import { KeywordAlertSection } from "@/components/KeywordAlertSection";
 import { MemoSection } from "@/components/MemoSection";
 import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySection";
-import { NedrugSection } from "@/components/NedrugSection";
 import { BigDealsSection } from "@/components/BigDealsSection";
 import { NcePatentSection } from "@/components/NcePatentSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
@@ -42,7 +41,6 @@ export const Sidebar = memo(({
         />
       )}
       <IntelligenceSummarySection />
-      <NedrugSection />
       {user && (
         <KeywordAlertSection
           user={user}
