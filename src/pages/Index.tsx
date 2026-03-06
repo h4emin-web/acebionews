@@ -131,14 +131,15 @@ const Index = () => {
           isLoggedIn={!!user}
         />
 
-        <div className="flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
+        {regionFilter !== "nedrug" && (
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
+            </div>
           </div>
+        )}
 
-        </div>
-
-        <div className={`grid gap-5 min-w-0 ${memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
+        <div className={`grid gap-5 min-w-0 ${regionFilter === "nedrug" ? "lg:grid-cols-1" : memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
           <div className={`space-y-4 min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "hidden lg:hidden" : ""}`}>
             <NewsList
               regionFilter={regionFilter}
@@ -162,7 +163,7 @@ const Index = () => {
               user={user}
             />
           </div>
-          <Sidebar
+          {regionFilter !== "nedrug" && <Sidebar
             user={user}
             keywords={keywords}
             onAddKeyword={addKeyword}
@@ -179,7 +180,7 @@ const Index = () => {
             }}
             onKeywordClick={handleKeywordClick}
             onAlertKeywordClick={setNewsOnlySearch}
-          />
+          />}
         </div>
       </main>
 
