@@ -5,6 +5,7 @@ import { ScrapNewsCard } from "@/components/ScrapNewsCard";
 import { PillLoader } from "@/components/PillLoader";
 import { ReportsSection } from "@/components/ReportsSection";
 import { NedrugSection } from "@/components/NedrugSection";
+import { FdaToolSection } from "@/components/FdaToolSection";
 import type { NewsItem } from "@/data/mockNews";
 import type { RegionFilter } from "@/components/StatsBar";
 
@@ -172,6 +173,7 @@ export const NewsList = memo(({
 
   if (regionFilter === "리포트") return <ReportsSection />;
   if (regionFilter === "nedrug") return <NedrugSection />;
+  if (regionFilter === "fda") return <FdaToolSection />;
 
   if (isLoading) {
     return (
