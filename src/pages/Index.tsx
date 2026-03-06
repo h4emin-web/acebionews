@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { FlaskConical } from "lucide-react";
-import { Header } from "@/components/Header";
+import { AppHeader } from "@/components/AppHeader";
 import { NewsList } from "@/components/NewsList";
 import { Sidebar } from "@/components/Sidebar";
 import { StatsBar } from "@/components/StatsBar";
@@ -121,7 +121,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header
+      <AppHeader
         user={user}
         displayName={displayName}
         todayStr={todayStr}
