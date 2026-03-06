@@ -15,7 +15,7 @@ export function useNewsFilters() {
   const handleSearchChange = useCallback((v: string) => {
     setSearch(v);
     setKeywordFilter("");
-    if (v && (regionFilter === "리포트" || regionFilter === "바이오위클리" || regionFilter === "동향리포트" || regionFilter === "스크랩")) {
+    if (v && (regionFilter === "리포트" || regionFilter === "스크랩")) {
       setRegionFilter("all");
     }
   }, [regionFilter]);
