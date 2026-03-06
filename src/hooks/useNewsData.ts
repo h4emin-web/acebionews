@@ -146,54 +146,34 @@ function extractEnglishName(keyword: string): string | null {
 
 // MFDS domestic products (real data)
 export function useMfdsProducts(keyword: string) {
-  const koName = extractKoreanName(keyword);
-  const enName = extractEnglishName(keyword);
   return useQuery({
     queryKey: ["mfds-products", keyword],
     enabled: !!keyword,
     staleTime: 10 * 60 * 1000,
+    retry: 2,
     queryFn: async () => {
-      // Search with Korean name first
       const { data, error } = await supabase.functions.invoke("scrape-mfds", {
-        body: { keyword: koName, type: "products" },
+        body: { keyword, type: "products" },
       });
       if (error) throw error;
-      const results = data?.domesticProducts || [];
-      const totalCount = data?.totalCount || 0;
-      // If no results with Korean, try English name
-      if (results.length === 0 && enName) {
-        const { data: enData, error: enError } = await supabase.functions.invoke("scrape-mfds", {
-          body: { keyword: enName, type: "products" },
-        });
-        if (!enError) return { products: enData?.domesticProducts || [], totalCount: enData?.totalCount || 0 };
-      }
-      return { products: results, totalCount };
+      return { products: data?.domesticProducts || [], totalCount: data?.totalCount || 0 };
     },
   });
 }
 
 // MFDS DMF records (real data)
 export function useMfdsDmf(keyword: string) {
-  const koName = extractKoreanName(keyword);
-  const enName = extractEnglishName(keyword);
   return useQuery({
     queryKey: ["mfds-dmf", keyword],
     enabled: !!keyword,
     staleTime: 10 * 60 * 1000,
+    retry: 2,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("scrape-mfds", {
-        body: { keyword: koName, type: "dmf" },
+        body: { keyword, type: "dmf" },
       });
       if (error) throw error;
-      const results = data?.dmfRecords || [];
-      const totalCount = data?.totalCount || 0;
-      if (results.length === 0 && enName) {
-        const { data: enData, error: enError } = await supabase.functions.invoke("scrape-mfds", {
-          body: { keyword: enName, type: "dmf" },
-        });
-        if (!enError) return { records: enData?.dmfRecords || [], totalCount: enData?.totalCount || 0 };
-      }
-      return { records: results, totalCount };
+      return { records: data?.dmfRecords || [], totalCount: data?.totalCount || 0 };
     },
   });
 }
