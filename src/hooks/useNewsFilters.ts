@@ -15,7 +15,7 @@ export function useNewsFilters() {
   const handleSearchChange = useCallback((v: string) => {
     setSearch(v);
     setKeywordFilter("");
-    if (v && (regionFilter === "리포트" || regionFilter === "nedrug" || regionFilter === "fda" || regionFilter === "스크랩")) {
+    if (v && (regionFilter === "리포트" || regionFilter === "nedrug" || regionFilter === "스크랩")) {
       setRegionFilter("all");
     }
   }, [regionFilter]);
