@@ -8,6 +8,7 @@ export function useReadArticles(user: User | null) {
   const { data: readIds = [] } = useQuery<string[]>({
     queryKey: ["read-articles", user?.id],
     enabled: !!user,
+    staleTime: 1000 * 60 * 5, // 5분간 리페치 안 함
     queryFn: async () => {
       const { data, error } = await supabase
         .from("read_articles")
