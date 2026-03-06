@@ -13,9 +13,11 @@ type Props = {
   showBookmark?: boolean;
   isRead?: boolean;
   onMarkRead?: (id: string) => void;
+  matchedKeywords?: string[];
+  isFollowUp?: boolean;
 };
 
-export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBookmark, showBookmark, isRead, onMarkRead }: Props) => {
+export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBookmark, showBookmark, isRead, onMarkRead, matchedKeywords = [], isFollowUp }: Props) => {
   const flagCode = countryFlagCodes[news.country] || null;
   const { ref, ripples, handlePointerMove, handlePointerLeave, handleClick } = useCardEffects();
   const [scale, setScale] = useState(1);
@@ -82,6 +84,22 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
         </div>
       </div>
 
+      {isFollowUp && (
+        <div className="flex mb-2">
+          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500 text-white">
+            📌 후속 뉴스
+          </span>
+        </div>
+      )}
+      {matchedKeywords.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {matchedKeywords.map((kw) => (
+            <span key={kw} className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500 text-white animate-pulse">
+              🔔 {kw}
+            </span>
+          ))}
+        </div>
+      )}
       <h3 className="text-base font-semibold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors break-words overflow-hidden">
         {isRead && <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground align-middle">읽음</span>}
         {news.title}
