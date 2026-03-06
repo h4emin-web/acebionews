@@ -42,7 +42,7 @@ export const NewsList = memo(({
 
   // 단일 IntersectionObserver - 화면에 들어왔다가 완전히 나갔을 때 읽음 처리
   useEffect(() => {
-    if (!markRead || regionFilter === "스크랩") return;
+    if (!markRead || !user || regionFilter === "스크랩") return;
     const container = listRef.current;
     if (!container) return;
 
