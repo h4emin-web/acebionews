@@ -51,25 +51,7 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
     setTimeout(() => setRipples((prev) => prev.filter((r) => r.id !== id)), 600);
   }, []);
 
-  // 화면에 2초 이상 보이면 자동 읽음 처리
-  useEffect(() => {
-    if (!onMarkRead || isRead) return;
-    const el = ref.current;
-    if (!el) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          timer = setTimeout(() => onMarkRead(news.id), 2000);
-        } else {
-          clearTimeout(timer);
-        }
-      },
-      { threshold: 0.6 }
-    );
-    observer.observe(el);
-    return () => { observer.disconnect(); clearTimeout(timer); };
-  }, [news.id, isRead]);
+  // 읽음 처리는 NewsList에서 단일 Observer로 관리 (data-article-id 속성 사용)
 
   const handleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -87,6 +69,7 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onClick={handleClick}
+      data-article-id={!isRead ? news.id : undefined}
       className={`card-3d rounded-xl p-5 group animate-fade-in relative overflow-hidden transition-opacity ${isRead ? "opacity-60" : ""}`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
