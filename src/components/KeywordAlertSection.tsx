@@ -8,9 +8,10 @@ type Props = {
   keywords: string[];
   onAdd: (kw: string) => void;
   onRemove: (kw: string) => void;
+  onKeywordClick: (kw: string) => void;
 };
 
-export const KeywordAlertSection = ({ keywords, onAdd, onRemove }: Props) => {
+export const KeywordAlertSection = ({ keywords, onAdd, onRemove, onKeywordClick }: Props) => {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
 
@@ -60,9 +61,11 @@ export const KeywordAlertSection = ({ keywords, onAdd, onRemove }: Props) => {
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {keywords.map((kw) => (
-                <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
-                  {kw}
-                  <button onClick={() => onRemove(kw)} className="hover:text-rose-900 transition-colors">
+                <span key={kw} className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-full text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                  <button onClick={() => onKeywordClick(kw)} className="hover:text-rose-900 hover:underline transition-colors">
+                    {kw}
+                  </button>
+                  <button onClick={() => onRemove(kw)} className="hover:text-rose-900 transition-colors ml-0.5">
                     <X className="w-3 h-3" />
                   </button>
                 </span>
