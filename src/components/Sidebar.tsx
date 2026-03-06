@@ -21,12 +21,13 @@ type Props = {
   onMemoExpand: (v: boolean) => void;
   onNewsClick: (articleId: string) => void;
   onKeywordClick: (kw: string) => void;
+  onAlertKeywordClick: (kw: string) => void;
 };
 
 export const Sidebar = memo(({
   user, keywords, onAddKeyword, onRemoveKeyword,
   bookmarkedArticles, memoMap, memoExpanded, onMemoExpand,
-  onNewsClick, onKeywordClick
+  onNewsClick, onKeywordClick, onAlertKeywordClick
 }: Props) => {
   return (
     <aside className={`hidden lg:block min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "col-span-full" : "space-y-4"}`}>
@@ -36,7 +37,7 @@ export const Sidebar = memo(({
           keywords={keywords}
           onAdd={onAddKeyword}
           onRemove={onRemoveKeyword}
-          onKeywordClick={onKeywordClick}
+          onKeywordClick={onAlertKeywordClick}
         />
       )}
       {user && (
