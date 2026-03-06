@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Handshake, ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -65,10 +65,8 @@ export const BigDealsSection = () => {
       <div className="card-elevated rounded-lg overflow-hidden">
         <CollapsibleTrigger asChild>
           <button className="w-full px-4 py-3 border-b border-border flex items-center gap-2 hover:bg-muted/30 transition-colors">
-            <Handshake className="w-4 h-4 text-pharma-amber" />
             <h3 className="font-bold text-sm text-foreground">Big Deals Tracker</h3>
             <span className="text-[10px] text-muted-foreground">2026</span>
-            <span className="text-[10px] text-muted-foreground ml-auto mr-1">{deals.length}건</span>
             <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
           </button>
         </CollapsibleTrigger>
