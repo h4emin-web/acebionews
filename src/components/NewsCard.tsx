@@ -11,9 +11,11 @@ type Props = {
   isBookmarked?: boolean;
   onToggleBookmark?: (id: string) => void;
   showBookmark?: boolean;
+  isRead?: boolean;
+  onMarkRead?: (id: string) => void;
 };
 
-export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBookmark, showBookmark }: Props) => {
+export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBookmark, showBookmark, isRead, onMarkRead }: Props) => {
   const flagCode = countryFlagCodes[news.country] || null;
   const { ref, ripples, handlePointerMove, handlePointerLeave, handleClick } = useCardEffects();
   const [scale, setScale] = useState(1);
@@ -34,7 +36,7 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onClick={handleClick}
-      className="card-3d rounded-xl p-5 group animate-fade-in relative overflow-hidden"
+      className={`card-3d rounded-xl p-5 group animate-fade-in relative overflow-hidden transition-opacity ${isRead ? "opacity-60" : ""}`}
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-gradient-to-br from-primary/[0.03] via-transparent to-accent/[0.03]" />
@@ -81,6 +83,7 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
       </div>
 
       <h3 className="text-base font-semibold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors break-words overflow-hidden">
+        {isRead && <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground align-middle">읽음</span>}
         {news.title}
       </h3>
       <p className="text-[13px] text-muted-foreground leading-relaxed mb-3 break-words overflow-hidden">{news.summary}</p>
@@ -97,7 +100,7 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
             </span>
           ))}
         </div>
-        <a href={news.url} className="text-muted-foreground hover:text-primary transition-colors shrink-0" target="_blank" rel="noreferrer">
+        <a href={news.url} onClick={() => onMarkRead?.(news.id)} className="text-muted-foreground hover:text-primary transition-colors shrink-0" target="_blank" rel="noreferrer">
           <ExternalLink className="w-3.5 h-3.5" />
         </a>
       </div>
