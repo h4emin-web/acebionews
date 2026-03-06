@@ -36,6 +36,7 @@ export const Sidebar = memo(({
           keywords={keywords}
           onAdd={onAddKeyword}
           onRemove={onRemoveKeyword}
+          onKeywordClick={onKeywordClick}
         />
       )}
       {user && (
