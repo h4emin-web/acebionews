@@ -123,7 +123,18 @@ const Index = () => {
       <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} onLogin={handleLogin} />
 
       <main className="container max-w-7xl mx-auto px-4 py-6 space-y-5">
-        <div className="hidden md:flex items-center gap-3">
+        <StatsBar
+          news={allNews}
+          totalReports={reports.length}
+          totalBioWeekly={bioWeeklyPosts.length}
+          totalIbricReports={ibricReports.length}
+          regionFilter={regionFilter}
+          onRegionFilterChange={setRegionFilter}
+          bookmarkCount={bookmarkIds.length}
+          isLoggedIn={!!user}
+        />
+
+        <div className="flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
           </div>
@@ -135,19 +146,6 @@ const Index = () => {
             국내 IND 승인
           </button>
         </div>
-
-        {!search && !keywordFilter && (
-          <StatsBar
-            news={allNews}
-            totalReports={reports.length}
-            totalBioWeekly={bioWeeklyPosts.length}
-            totalIbricReports={ibricReports.length}
-            regionFilter={regionFilter}
-            onRegionFilterChange={setRegionFilter}
-            bookmarkCount={bookmarkIds.length}
-            isLoggedIn={!!user}
-          />
-        )}
 
         <div className={`grid gap-5 min-w-0 ${memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
           <div className={`space-y-4 min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "hidden lg:hidden" : ""}`}>
