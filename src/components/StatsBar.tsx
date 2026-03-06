@@ -1,6 +1,6 @@
 import type { NewsArticle } from "@/hooks/useNewsData";
 
-export type RegionFilter = "all" | "국내" | "해외" | "스크랩" | "리포트";
+export type RegionFilter = "all" | "국내" | "해외" | "스크랩" | "리포트" | "nedrug";
 
 type Props = {
   news: NewsArticle[];
@@ -20,6 +20,7 @@ export const StatsBar = ({ regionFilter, onRegionFilterChange, isLoggedIn }: Pro
     { label: "해외", filter: "해외" as const },
     ...(isLoggedIn ? [{ label: "스크랩", filter: "스크랩" as const }] : []),
     { label: "리포트", filter: "리포트" as const },
+    { label: "Nedrug", filter: "nedrug" as const },
   ];
 
   return (
