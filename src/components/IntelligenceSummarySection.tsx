@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, TrendingUp, Calendar, Beaker } from "lucide-react";
+import { Brain, ChevronDown, TrendingUp, Calendar, Beaker } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,7 @@ export const IntelligenceSummarySection = () => {
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
+        <Brain className="w-4 h-4 text-primary" />
         <h2 className="text-sm font-semibold text-foreground">정보 요약</h2>
         {latestDate && (
           <span className="text-[10px] text-muted-foreground ml-auto mr-2">

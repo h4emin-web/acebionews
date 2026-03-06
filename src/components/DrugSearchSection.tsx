@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ChevronDown, Maximize2, X } from "lucide-react";
+import { Pill, Search, ChevronDown, Maximize2, X } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
 import { useMfdsProducts, useMfdsDmf } from "@/hooks/useNewsData";
@@ -34,7 +34,7 @@ export const DrugSearchSection = ({ onKeywordClick }: Props) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
-          placeholder="성분명 검색"
+          placeholder="성분명 검색 (예: 아스피린, aspirin)"
           className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
@@ -67,6 +67,7 @@ export const DrugSearchSection = ({ onKeywordClick }: Props) => {
       <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
+            <Pill className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-semibold">국내 제품 및 DMF 현황</h2>
             {search && <span className="text-xs text-muted-foreground">— {search}</span>}
           </div>
@@ -85,6 +86,7 @@ export const DrugSearchSection = ({ onKeywordClick }: Props) => {
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
+        <Pill className="w-4 h-4 text-primary" />
         <h2 className="text-sm font-semibold text-foreground">국내 제품 및 DMF 현황</h2>
         <button
           onClick={(e) => { e.stopPropagation(); setExpanded(true); setOpen(true); }}

@@ -1,10 +1,12 @@
 import { useState, useCallback, useMemo } from "react";
+import { FlaskConical } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { NewsList } from "@/components/NewsList";
 import { Sidebar } from "@/components/Sidebar";
 import { StatsBar } from "@/components/StatsBar";
 import { SearchBar } from "@/components/SearchBar";
 import { NcePatentModal } from "@/components/NcePatentModal";
+import { IndApprovalModal } from "@/components/IndApprovalModal";
 import { LoginDialog } from "@/components/LoginDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useBookmarks } from "@/hooks/useBookmarks";
@@ -17,6 +19,7 @@ import { toast } from "sonner";
 const Index = () => {
   const [scrapSearch, setScrapSearch] = useState("");
   const [nceModalOpen, setNceModalOpen] = useState(false);
+  const [indModalOpen, setIndModalOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [memoExpanded, setMemoExpanded] = useState(false);
 
@@ -115,10 +118,6 @@ const Index = () => {
         onLogout={logout}
         onTodayToggle={() => setTodayOnly(v => !v)}
         onUnreadToggle={() => setShowUnreadOnly(v => !v)}
-        keywords={keywords}
-        onAddKeyword={addKeyword}
-        onRemoveKeyword={removeKeyword}
-        onAlertKeywordClick={setNewsOnlySearch}
       />
 
       <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} onLogin={handleLogin} />
@@ -135,7 +134,18 @@ const Index = () => {
           isLoggedIn={!!user}
         />
 
-        <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
+          </div>
+          <button
+            onClick={() => setIndModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-3 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap shrink-0"
+          >
+            <FlaskConical className="w-4 h-4" />
+            국내 IND 승인
+          </button>
+        </div>
 
         <div className={`grid gap-5 min-w-0 ${memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
           <div className={`space-y-4 min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "hidden lg:hidden" : ""}`}>
@@ -163,6 +173,9 @@ const Index = () => {
           </div>
           <Sidebar
             user={user}
+            keywords={keywords}
+            onAddKeyword={addKeyword}
+            onRemoveKeyword={removeKeyword}
             bookmarkedArticles={bookmarkedArticles}
             memoMap={memoMap}
             memoExpanded={memoExpanded}
@@ -174,6 +187,7 @@ const Index = () => {
               }, 100);
             }}
             onKeywordClick={handleKeywordClick}
+            onAlertKeywordClick={setNewsOnlySearch}
           />
         </div>
       </main>
@@ -183,6 +197,7 @@ const Index = () => {
         onClose={() => setNceModalOpen(false)}
         onKeywordClick={(kw) => { handleSearchChange(kw); setNceModalOpen(false); }}
       />
+      <IndApprovalModal open={indModalOpen} onClose={() => setIndModalOpen(false)} />
     </div>
   );
 };
