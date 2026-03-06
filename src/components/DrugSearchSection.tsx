@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Pill, Search, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SearchSidebarPanel } from "@/components/SearchSidebarPanel";
-import { SearchResultsPanel } from "@/components/SearchResultsPanel";
-import { useManufacturers, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf } from "@/hooks/useNewsData";
+import { useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf } from "@/hooks/useNewsData";
 
 type Props = {
   onKeywordClick: (kw: string) => void;
@@ -14,7 +13,7 @@ export const DrugSearchSection = ({ onKeywordClick }: Props) => {
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
 
-  const { data: drugInfo, isLoading: drugInfoLoading } = useDrugInfo(search);
+  const { data: drugInfo } = useDrugInfo(search);
   const { data: mfdsIngredient } = useMfdsIngredientLookup(search);
 
   const isValidIngredient = mfdsIngredient?.nameKo &&
@@ -76,12 +75,6 @@ export const DrugSearchSection = ({ onKeywordClick }: Props) => {
 
           {search && (
             <>
-              <SearchResultsPanel
-                keyword={search}
-                profile={drugInfo}
-                loading={drugInfoLoading}
-                onRelatedClick={(kw) => { setInput(kw); setSearch(kw); }}
-              />
               <SearchSidebarPanel
                 keyword={search}
                 products={mfdsProducts}
