@@ -3,9 +3,6 @@ import { KeywordAlertSection } from "@/components/KeywordAlertSection";
 import { MemoSection } from "@/components/MemoSection";
 import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySection";
 import { BigDealsSection } from "@/components/BigDealsSection";
-import { NcePatentSection } from "@/components/NcePatentSection";
-import { UsDmfSection } from "@/components/UsDmfSection";
-import { FdaSection } from "@/components/FdaSection";
 import { DrugSearchSection } from "@/components/DrugSearchSection";
 import type { User } from "@supabase/supabase-js";
 
@@ -53,9 +50,6 @@ export const Sidebar = memo(({
 
       <DrugSearchSection onKeywordClick={onKeywordClick} />
       <BigDealsSection />
-      <NcePatentSection onKeywordClick={onKeywordClick} />
-      <UsDmfSection onKeywordClick={onKeywordClick} />
-      <FdaSection onKeywordClick={onKeywordClick} />
     </aside>
   );
 });
