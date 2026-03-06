@@ -1,5 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
-import { Pill, Clock, Search, CalendarDays, Flag, FlaskConical, LogIn, LogOut, User } from "lucide-react";
+import {
+              {user && (
+                <button
+                  onClick={() => setShowUnreadOnly((v) => !v)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
+                    showUnreadOnly
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border bg-background text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <EyeOff className="w-3.5 h-3.5" />
+                  안읽음만
+                </button>
+              )} useState, useEffect, useCallback } from "react";
+import { Pill, Clock, Search, CalendarDays, Flag, FlaskConical, LogIn, LogOut, User, EyeOff } from "lucide-react";
 import { BigDealsSection } from "@/components/BigDealsSection";
 import { PillLoader } from "@/components/PillLoader";
 import { useQuery } from "@tanstack/react-query";
@@ -27,6 +40,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ScrapNewsCard } from "@/components/ScrapNewsCard";
 import { LoginDialog } from "@/components/LoginDialog";
 import { useBookmarks } from "@/hooks/useBookmarks";
+import { useReadArticles } from "@/hooks/useReadArticles";
 import type { NewsItem } from "@/data/mockNews";
 import { deduplicateNews } from "@/utils/deduplicateNews";
 import { toast } from "sonner";
@@ -45,10 +59,12 @@ const Index = () => {
   const [indModalOpen, setIndModalOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [memoExpanded, setMemoExpanded] = useState(false);
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
   // Auth & Bookmarks
   const { user, login, logout, displayName } = useAuth();
-  const { bookmarkIds, bookmarkedArticles, memoMap, toggleBookmark, isBookmarked, saveMemo } = useBookmarks(user);
+  const { bookmarkIds, bookmarkedArticles, memoMap, memoDateMap, toggleBookmark, isBookmarked, saveMemo } = useBookmarks(user);
+  const { isRead, markRead, readIds } = useReadArticles(user);
 
   const handleLogin = useCallback(async (name: string) => {
     const result = await login(name);
@@ -132,7 +148,9 @@ const Index = () => {
   const isProductSearch = drugInfo?.searchedAsProduct === true;
 
   const allNews = deduplicateNews(search ? searchResults : newsArticles);
-  const displayNews = allNews.filter((n) => regionFilter === "all" || regionFilter === "리포트" || regionFilter === "스크랩" || n.region === regionFilter);
+  const displayNews = allNews
+    .filter((n) => regionFilter === "all" || regionFilter === "리포트" || regionFilter === "스크랩" || n.region === regionFilter)
+    .filter((n) => !showUnreadOnly || !isRead(n.id));
   const isLoading = search ? searchLoading : newsLoading;
   const isSearching = !!search;
 
@@ -336,6 +354,8 @@ const Index = () => {
                       isBookmarked={isBookmarked(news.id)}
                       onToggleBookmark={handleToggleBookmark}
                       showBookmark={!!user}
+                      isRead={isRead(news.id)}
+                      onMarkRead={markRead}
                     />
                   );
                 })
