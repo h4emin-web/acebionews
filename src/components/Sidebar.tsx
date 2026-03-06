@@ -8,6 +8,7 @@ import { BigDealsSection } from "@/components/BigDealsSection";
 import { NcePatentSection } from "@/components/NcePatentSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
 import { FdaSection } from "@/components/FdaSection";
+import { DrugSearchSection } from "@/components/DrugSearchSection";
 import type { User } from "@supabase/supabase-js";
 
 type Props = {
@@ -53,6 +54,7 @@ export const Sidebar = memo(({
       <IntelligenceSummarySection />
       <MfdsSection onKeywordClick={onKeywordClick} />
       <MfdsRecallSection />
+      <DrugSearchSection onKeywordClick={onKeywordClick} />
       <BigDealsSection />
       <NcePatentSection onKeywordClick={onKeywordClick} />
       <UsDmfSection onKeywordClick={onKeywordClick} />
