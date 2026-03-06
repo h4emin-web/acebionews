@@ -28,7 +28,7 @@ const Index = () => {
 
   const { user, login, logout, displayName } = useAuth();
   const { bookmarkIds, bookmarkedArticles, memoMap, toggleBookmark, isBookmarked, saveMemo } = useBookmarks(user);
-  const { isRead, markRead } = useReadArticles(user);
+  const { isRead, markRead, readIds } = useReadArticles(user);
   const { keywords, addKeyword, removeKeyword, getMatchedKeywords } = useUserKeywords(user);
 
   const {
@@ -199,6 +199,7 @@ const Index = () => {
                 isBookmarked={isBookmarked}
                 isRead={isRead}
                 markRead={markRead}
+                readIds={readIds}
                 handleKeywordClick={handleKeywordClick}
                 handleToggleBookmark={handleToggleBookmark}
                 saveMemo={saveMemo}
