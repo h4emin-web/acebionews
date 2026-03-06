@@ -103,9 +103,9 @@ const IndModal = ({ data, loading, onClose }: { data: Trial[]; loading: boolean;
 };
 
 // ── IND 테이블 ──
-const IndTable = ({ data, loading, search, onSearchChange, onExpand }: {
+const IndTable = ({ data, loading, search, onSearchChange, onExpand, large = false }: {
   data: Trial[]; loading: boolean; search: string;
-  onSearchChange: (v: string) => void; onExpand: () => void;
+  onSearchChange: (v: string) => void; onExpand: () => void; large?: boolean;
 }) => {
   const filtered = useMemo(() => {
     if (!search) return data;
@@ -139,23 +139,23 @@ const IndTable = ({ data, loading, search, onSearchChange, onExpand }: {
           <table className="w-full">
             <thead className="sticky top-0 bg-card z-10">
               <tr className="border-b border-border bg-muted/30">
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase">의뢰자</th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase">제품명 / 실험 내용</th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase">단계</th>
-                <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase">승인일</th>
+                <th className={`px-3 py-2 text-left font-semibold text-muted-foreground uppercase ${large ? "text-xs" : "text-[10px]"}`}>의뢰자</th>
+                <th className={`px-3 py-2 text-left font-semibold text-muted-foreground uppercase ${large ? "text-xs" : "text-[10px]"}`}>제품명 / 실험 내용</th>
+                <th className={`px-3 py-2 text-left font-semibold text-muted-foreground uppercase ${large ? "text-xs" : "text-[10px]"}`}>단계</th>
+                <th className={`px-3 py-2 text-left font-semibold text-muted-foreground uppercase ${large ? "text-xs" : "text-[10px]"}`}>승인일</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((item) => (
                 <tr key={item.id} className="hover:bg-muted/40 transition-colors">
-                  <td className="px-3 py-2.5 text-[11px] text-foreground whitespace-nowrap">{item.sponsor}</td>
+                  <td className={`px-3 py-2.5 whitespace-nowrap ${large ? "text-sm" : "text-[11px]"} text-foreground`}>{item.sponsor}</td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-medium text-foreground">{item.product_name}</span>
+                      <span className={`font-medium text-foreground ${large ? "text-sm" : "text-[11px]"}`}>{item.product_name}</span>
                       {isNew(item.approval_date) && <Badge className="text-[8px] px-1 py-0 h-3.5 bg-red-500 text-white border-0">NEW</Badge>}
                     </div>
                     {(item.summary || item.trial_title) && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">
+                      <p className={`text-muted-foreground mt-0.5 line-clamp-1 ${large ? "text-xs" : "text-[10px]"}`}>
                         {item.summary || item.trial_title}
                       </p>
                     )}
@@ -163,7 +163,7 @@ const IndTable = ({ data, loading, search, onSearchChange, onExpand }: {
                   <td className="px-3 py-2.5">
                     <Badge variant="outline" className="text-[9px] px-1 py-0 whitespace-nowrap">{item.phase}</Badge>
                   </td>
-                  <td className="px-3 py-2.5 text-[11px] text-muted-foreground whitespace-nowrap">{item.approval_date}</td>
+                  <td className={`px-3 py-2.5 whitespace-nowrap ${large ? "text-sm" : "text-[11px]"} text-muted-foreground`}>{item.approval_date}</td>
                 </tr>
               ))}
             </tbody>
@@ -192,6 +192,7 @@ const SafetyList = ({ notices, loading }: { notices: any[]; loading: boolean }) 
                     <Icon className="w-3 h-3 shrink-0" />{n.type}
                   </span>
                   <div className="flex items-center gap-1 shrink-0">
+                    {isNew(n.date) && <Badge className="text-[8px] px-1 py-0 h-3.5 bg-red-500 text-white border-0">NEW</Badge>}
                     <span className="text-[10px] text-muted-foreground">{n.date}</span>
                     {n.url && (
                       <a href={n.url} target="_blank" rel="noreferrer"
@@ -221,17 +222,20 @@ const RecallList = ({ recalls, loading }: { recalls: MfdsRecall[]; loading: bool
         : recalls.map((r) => (
           <div key={r.id} className="px-4 py-3 hover:bg-muted/40 transition-colors group">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <span className="text-[10px] text-muted-foreground">{r.order_date}</span>
-              {r.url && (
-                <a href={r.url} target="_blank" rel="noreferrer"
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-all shrink-0">
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
+              <p className="text-[11px] text-muted-foreground line-clamp-1 flex-1">{r.recall_reason}</p>
+              <div className="flex items-center gap-1 shrink-0">
+                {isNew(r.order_date) && <Badge className="text-[8px] px-1 py-0 h-3.5 bg-red-500 text-white border-0">NEW</Badge>}
+                <span className="text-[10px] text-muted-foreground">{r.order_date}</span>
+                {r.url && (
+                  <a href={r.url} target="_blank" rel="noreferrer"
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-all">
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
             </div>
             <p className="text-[12px] font-medium text-foreground leading-snug">{r.product_name}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">{r.company}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{r.recall_reason}</p>
           </div>
         ))}
     </div>
@@ -296,7 +300,7 @@ export const NedrugSection = () => {
         )}
         {tab === "ind" && (
           <IndTable data={indData} loading={indLoading} search={indSearch}
-            onSearchChange={setIndSearch} onExpand={() => setIndModalOpen(true)} />
+            onSearchChange={setIndSearch} onExpand={() => setIndModalOpen(true)} large />
         )}
         {tab === "safety" && (
           <div className="grid grid-cols-2 divide-x divide-border">
