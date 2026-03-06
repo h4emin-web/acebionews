@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useRef, useMemo } from "react";
 import { Pill, Search } from "lucide-react";
 import { NewsCard } from "@/components/NewsCard";
 import { ScrapNewsCard } from "@/components/ScrapNewsCard";
@@ -31,6 +31,47 @@ type Props = {
   user: any;
 };
 
+// 개별 카드를 memo로 감싸서 readIds 변경 시 해당 카드만 리렌더링
+const MemoNewsCard = memo(({
+  news, item, index, isRead, isBookmarked, showBookmark,
+  onKeywordClick, onToggleBookmark, onMarkRead,
+  matchedKeywords, isFollowUp,
+}: {
+  news: any;
+  item: NewsItem;
+  index: number;
+  isRead: boolean;
+  isBookmarked: boolean;
+  showBookmark: boolean;
+  onKeywordClick: (kw: string) => void;
+  onToggleBookmark: (id: string) => void;
+  onMarkRead: (id: string) => void;
+  matchedKeywords: string[];
+  isFollowUp: boolean;
+}) => (
+  <NewsCard
+    news={item}
+    index={index}
+    onKeywordClick={onKeywordClick}
+    isBookmarked={isBookmarked}
+    onToggleBookmark={onToggleBookmark}
+    showBookmark={showBookmark}
+    isRead={isRead}
+    onMarkRead={onMarkRead}
+    matchedKeywords={matchedKeywords}
+    isFollowUp={isFollowUp}
+  />
+), (prev, next) => {
+  // isRead만 바뀌었을 때만 해당 카드 리렌더링
+  return (
+    prev.isRead === next.isRead &&
+    prev.isBookmarked === next.isBookmarked &&
+    prev.news.id === next.news.id &&
+    prev.matchedKeywords.length === next.matchedKeywords.length
+  );
+});
+MemoNewsCard.displayName = "MemoNewsCard";
+
 export const NewsList = memo(({
   regionFilter, displayNews, bookmarkedNewsItems, scrapSearch, setScrapSearch,
   isLoading, newsArticlesCount, memoMap, isBookmarked, isRead, markRead, readIds,
@@ -40,13 +81,15 @@ export const NewsList = memo(({
   const listRef = useRef<HTMLDivElement>(null);
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // 단일 IntersectionObserver - 화면에 들어왔다가 완전히 나갔을 때 읽음 처리
+  // readIds를 Set으로 변환해서 O(1) 조회
+  const readSet = useMemo(() => new Set(readIds), [readIds]);
+
+  // 단일 IntersectionObserver - 화면 밖으로 나갔을 때 읽음 처리
   useEffect(() => {
     if (!markRead || !user || regionFilter === "스크랩") return;
     const container = listRef.current;
     if (!container) return;
 
-    // 한 번이라도 화면에 보인 카드 추적
     const seenArticles = new Set<string>();
 
     const observer = new IntersectionObserver(
@@ -54,15 +97,11 @@ export const NewsList = memo(({
         entries.forEach((entry) => {
           const articleId = (entry.target as HTMLElement).dataset.articleId;
           if (!articleId) return;
-
           if (entry.isIntersecting) {
-            // 화면에 들어오면 "본 것"으로 표시
             seenArticles.add(articleId);
-            // 진행 중인 타이머 취소
             clearTimeout(timers.current[articleId]);
             delete timers.current[articleId];
           } else {
-            // 화면 밖으로 나갔을 때 - 한 번 본 카드면 읽음 처리
             if (seenArticles.has(articleId)) {
               timers.current[articleId] = setTimeout(() => {
                 markRead(articleId);
@@ -83,9 +122,9 @@ export const NewsList = memo(({
       Object.values(timers.current).forEach(clearTimeout);
       timers.current = {};
     };
-  }, [displayNews, readIds, regionFilter]);
+  }, [displayNews, regionFilter, user]);
+
   if (regionFilter === "스크랩") {
-    // 스크랩 탭은 observer 불필요
     const q = scrapSearch.toLowerCase();
     const filtered = q
       ? bookmarkedNewsItems.filter(n =>
@@ -146,19 +185,20 @@ export const NewsList = memo(({
 
   if (displayNews.length > 0) {
     return (
-      <div ref={listRef}>
+      <div ref={listRef} className="space-y-4">
         {displayNews.map((news, i) => {
           const item = toNewsItem(news);
           return (
-            <NewsCard
+            <MemoNewsCard
               key={news.id}
-              news={item}
+              news={news}
+              item={item}
               index={i}
-              onKeywordClick={handleKeywordClick}
+              isRead={readSet.has(news.id)}
               isBookmarked={isBookmarked(news.id)}
-              onToggleBookmark={handleToggleBookmark}
               showBookmark={!!user}
-              isRead={isRead(news.id)}
+              onKeywordClick={handleKeywordClick}
+              onToggleBookmark={handleToggleBookmark}
               onMarkRead={markRead}
               matchedKeywords={getMatchedKeywords(item.apiKeywords, item.title, item.summary)}
               isFollowUp={!isBookmarked(news.id) && getFollowUpMatch(item.apiKeywords)}
