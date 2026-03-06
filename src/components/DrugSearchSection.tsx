@@ -34,7 +34,7 @@ export const DrugSearchSection = ({ onKeywordClick }: Props) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
-          placeholder="성분명 검색 (예: 아스피린, aspirin)"
+          placeholder="성분명 검색"
           className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
