@@ -1,4 +1,4 @@
-import { AlertCircle, ExternalLink, ChevronDown, Trash2 } from "lucide-react";
+import { AlertCircle, ExternalLink, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -32,7 +32,6 @@ export const MfdsRecallSection = () => {
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="card-elevated rounded-lg overflow-hidden">
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
-        <Trash2 className="w-4 h-4 text-red-500" />
         <h2 className="text-sm font-semibold text-foreground">의약품안전나라 회수·폐기</h2>
         <span className="text-[10px] text-muted-foreground ml-auto font-mono mr-2">nedrug</span>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
