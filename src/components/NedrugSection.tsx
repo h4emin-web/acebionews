@@ -87,9 +87,7 @@ const IndModal = ({ data, loading, onClose }: { data: Trial[]; loading: boolean;
                       {item.summary && <p className="text-[11px] text-foreground">{item.summary}</p>}
                       {item.trial_title && <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{item.trial_title}</p>}
                     </td>
-                    <td className="px-3 py-2.5">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 whitespace-nowrap">{item.phase}</Badge>
-                    </td>
+                    <td className="px-3 py-2.5 text-xs text-foreground whitespace-nowrap">{item.phase}</td>
                     <td className="px-3 py-2.5 text-[11px] text-foreground whitespace-nowrap">{item.approval_date}</td>
                   </tr>
                 ))}
@@ -160,9 +158,7 @@ const IndTable = ({ data, loading, search, onSearchChange, onExpand, large = fal
                       </p>
                     )}
                   </td>
-                  <td className="px-3 py-2.5">
-                    <Badge variant="outline" className="text-[9px] px-1 py-0 whitespace-nowrap">{item.phase}</Badge>
-                  </td>
+                  <td className="px-3 py-2.5 text-[11px] text-foreground whitespace-nowrap">{item.phase}</td>
                   <td className={`px-3 py-2.5 whitespace-nowrap ${large ? "text-sm" : "text-[11px]"} text-muted-foreground`}>{item.approval_date}</td>
                 </tr>
               ))}
