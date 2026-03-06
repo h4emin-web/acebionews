@@ -2,6 +2,7 @@ import { memo } from "react";
 import { KeywordAlertSection } from "@/components/KeywordAlertSection";
 import { MemoSection } from "@/components/MemoSection";
 import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySection";
+import { IndApprovalSection } from "@/components/IndApprovalSection";
 import { MfdsSection } from "@/components/MfdsSection";
 import { MfdsRecallSection } from "@/components/MfdsRecallSection";
 import { BigDealsSection } from "@/components/BigDealsSection";
@@ -33,15 +34,6 @@ export const Sidebar = memo(({
   return (
     <aside className={`hidden lg:block min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "col-span-full" : "space-y-4"}`}>
       {user && (
-        <KeywordAlertSection
-          user={user}
-          keywords={keywords}
-          onAdd={onAddKeyword}
-          onRemove={onRemoveKeyword}
-          onKeywordClick={onAlertKeywordClick}
-        />
-      )}
-      {user && (
         <MemoSection
           user={user}
           bookmarkedArticles={bookmarkedArticles}
@@ -52,6 +44,16 @@ export const Sidebar = memo(({
         />
       )}
       <IntelligenceSummarySection />
+      <IndApprovalSection />
+      {user && (
+        <KeywordAlertSection
+          user={user}
+          keywords={keywords}
+          onAdd={onAddKeyword}
+          onRemove={onRemoveKeyword}
+          onKeywordClick={onAlertKeywordClick}
+        />
+      )}
       <MfdsSection onKeywordClick={onKeywordClick} />
       <MfdsRecallSection />
       <DrugSearchSection onKeywordClick={onKeywordClick} />
