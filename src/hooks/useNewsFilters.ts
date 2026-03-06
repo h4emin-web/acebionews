@@ -15,25 +15,25 @@ export function useNewsFilters() {
 
   const handleSearchChange = useCallback((v: string) => {
     setSearch(v);
-    setKeywordFilter(""); // 일반 검색하면 키워드 필터 초기화
+    setKeywordFilter("");
+    if (!v) setDebouncedSearch(""); // 검색 비우면 즉시 초기화
     if (v && (regionFilter === "리포트" || regionFilter === "바이오위클리" || regionFilter === "동향리포트" || regionFilter === "스크랩")) {
       setRegionFilter("all");
     }
   }, [regionFilter]);
 
-  // 키워드 알림 클릭용 - search/debouncedSearch 건드리지 않음
+  // 키워드 알림 클릭용 - search/debouncedSearch 완전히 건드리지 않음
   const setNewsOnlySearch = useCallback((v: string) => {
     setKeywordFilter(v);
-    setSearch("");
-    setDebouncedSearch("");
     setRegionFilter("all");
   }, []);
 
   useEffect(() => {
+    if (keywordFilter) return; // 키워드 필터 중엔 debouncedSearch 변경 안 함
     if (!search) { setDebouncedSearch(""); return; }
     const timer = setTimeout(() => setDebouncedSearch(search), 600);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, keywordFilter]);
 
   const now = new Date();
   const currentYear = now.getFullYear();
