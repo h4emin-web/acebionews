@@ -370,6 +370,24 @@ export type Database = {
         }
         Relationships: []
       }
+      read_articles: {
+        Row: {
+          article_id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       regulatory_notices: {
         Row: {
           created_at: string
