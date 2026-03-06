@@ -60,6 +60,7 @@ export type Database = {
         Row: {
           article_id: string
           created_at: string
+          folder_id: string | null
           id: string
           memo: string | null
           user_id: string
@@ -67,6 +68,7 @@ export type Database = {
         Insert: {
           article_id: string
           created_at?: string
+          folder_id?: string | null
           id?: string
           memo?: string | null
           user_id: string
@@ -74,11 +76,20 @@ export type Database = {
         Update: {
           article_id?: string
           created_at?: string
+          folder_id?: string | null
           id?: string
           memo?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "memo_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clinical_trial_approvals: {
         Row: {
@@ -215,6 +226,27 @@ export type Database = {
           id?: string
           section?: string
           summary_date?: string
+        }
+        Relationships: []
+      }
+      memo_folders: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -404,6 +436,33 @@ export type Database = {
           summary?: string | null
           title?: string
           url?: string
+        }
+        Relationships: []
+      }
+      user_memo_entries: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          title: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
