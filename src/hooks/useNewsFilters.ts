@@ -100,7 +100,7 @@ export function useNewsFilters() {
     mfdsDmfData, mfdsDmfLoading,
     isProductSearch: drugInfo?.searchedAsProduct === true,
     isLoading: search ? searchLoading : newsLoading,
-    isSearching: !!search,
+    isSearching: !!debouncedSearch,
     todayStr,
   };
 }
