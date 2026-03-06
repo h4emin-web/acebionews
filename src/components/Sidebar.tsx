@@ -2,9 +2,7 @@ import { memo } from "react";
 import { KeywordAlertSection } from "@/components/KeywordAlertSection";
 import { MemoSection } from "@/components/MemoSection";
 import { IntelligenceSummarySection } from "@/components/IntelligenceSummarySection";
-import { IndApprovalSection } from "@/components/IndApprovalSection";
-import { MfdsSection } from "@/components/MfdsSection";
-import { MfdsRecallSection } from "@/components/MfdsRecallSection";
+import { NedrugSection } from "@/components/NedrugSection";
 import { BigDealsSection } from "@/components/BigDealsSection";
 import { NcePatentSection } from "@/components/NcePatentSection";
 import { UsDmfSection } from "@/components/UsDmfSection";
@@ -44,7 +42,7 @@ export const Sidebar = memo(({
         />
       )}
       <IntelligenceSummarySection />
-      <IndApprovalSection />
+      <NedrugSection />
       {user && (
         <KeywordAlertSection
           user={user}
@@ -54,8 +52,7 @@ export const Sidebar = memo(({
           onKeywordClick={onAlertKeywordClick}
         />
       )}
-      <MfdsSection onKeywordClick={onKeywordClick} />
-      <MfdsRecallSection />
+
       <DrugSearchSection onKeywordClick={onKeywordClick} />
       <BigDealsSection />
       <NcePatentSection onKeywordClick={onKeywordClick} />
