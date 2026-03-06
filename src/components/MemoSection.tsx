@@ -302,7 +302,7 @@ export const MemoSection = ({ user, bookmarkedArticles, memoMap, onNewsClick, ex
 
             {/* 새 메모 입력 */}
             <div className="rounded-lg border border-border p-2 space-y-1.5 bg-muted/20">
-              <input value={newEntryTitle} onChange={(e) => setNewEntryTitle(e.target.value)} placeholder="제목 (같은 제목이면 기존 항목에 추가)"
+              <input value={newEntryTitle} onChange={(e) => setNewEntryTitle(e.target.value)} placeholder="제목"
                 className="w-full px-2 py-1.5 rounded border border-border bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
               <textarea value={newEntryContent} onChange={(e) => setNewEntryContent(e.target.value)} placeholder="내용을 입력하세요" rows={3}
                 className="w-full resize-none px-2 py-1.5 rounded border border-border bg-background text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
