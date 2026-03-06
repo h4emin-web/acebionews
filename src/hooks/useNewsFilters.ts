@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNewsArticles, useAllApiKeywords, useSearchNews, useDrugInfo, useMfdsIngredientLookup, useMfdsProducts, useMfdsDmf, useIndustryReports } from "@/hooks/useNewsData";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,24 +7,27 @@ import type { RegionFilter } from "@/components/StatsBar";
 
 export function useNewsFilters() {
   const [search, setSearch] = useState("");
+  const [keywordFilter, setKeywordFilter] = useState(""); // 키워드 알림 전용 - MFDS 검색 안 함
   const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
   const [todayOnly, setTodayOnly] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // 뉴스 검색만 (MFDS 검색 안 됨) - 키워드 알림용
-  const setNewsOnlySearch = useCallback((v: string) => {
-    setSearch(v);
-    setRegionFilter("all");
-    // debouncedSearch 변경 안 함 → MFDS/약물 검색 안 돌아감
-  }, []);
-
   const handleSearchChange = useCallback((v: string) => {
     setSearch(v);
+    setKeywordFilter(""); // 일반 검색하면 키워드 필터 초기화
     if (v && (regionFilter === "리포트" || regionFilter === "바이오위클리" || regionFilter === "동향리포트" || regionFilter === "스크랩")) {
       setRegionFilter("all");
     }
   }, [regionFilter]);
+
+  // 키워드 알림 클릭용 - search/debouncedSearch 건드리지 않음
+  const setNewsOnlySearch = useCallback((v: string) => {
+    setKeywordFilter(v);
+    setSearch("");
+    setDebouncedSearch("");
+    setRegionFilter("all");
+  }, []);
 
   useEffect(() => {
     if (!search) { setDebouncedSearch(""); return; }
@@ -43,7 +46,6 @@ export function useNewsFilters() {
   const { data: allKeywords = [] } = useAllApiKeywords();
   const { data: reports = [] } = useIndustryReports();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchNews(search);
-  const { data: manufacturerData, isLoading: manufacturersLoading } = useQuery({ queryKey: ["manufacturers-placeholder"], queryFn: async () => null, enabled: false });
 
   const { data: bioWeeklyPosts = [] } = useQuery({
     queryKey: ["substack-posts-count"],
@@ -83,11 +85,20 @@ export function useNewsFilters() {
   const { data: mfdsProductsData, isLoading: mfdsProductsLoading } = useMfdsProducts(ingredientKeyword);
   const { data: mfdsDmfData, isLoading: mfdsDmfLoading } = useMfdsDmf(ingredientKeyword);
 
-  const allNews = deduplicateNews(search ? searchResults : newsArticles);
+  // keywordFilter 있으면 newsArticles에서 프론트 필터링
+  const baseNews = deduplicateNews(search ? searchResults : newsArticles);
+  const allNews = useMemo(() => {
+    if (!keywordFilter) return baseNews;
+    const q = keywordFilter.toLowerCase();
+    return baseNews.filter(n =>
+      (n.api_keywords || []).some((k: string) => k.toLowerCase().includes(q)) ||
+      n.title.toLowerCase().includes(q)
+    );
+  }, [baseNews, keywordFilter]);
 
   return {
-    search, setSearch, handleSearchChange,
-    setNewsOnlySearch,
+    search, handleSearchChange,
+    keywordFilter, setNewsOnlySearch,
     regionFilter, setRegionFilter,
     todayOnly, setTodayOnly,
     showUnreadOnly, setShowUnreadOnly,
