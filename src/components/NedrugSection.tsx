@@ -26,10 +26,10 @@ const typeIcons: Record<string, React.ElementType> = {
   "회수·판매중지": AlertCircle, "부작용": AlertCircle,
 };
 const typeColors: Record<string, string> = {
-  "안전성 서한": "bg-red-50 text-red-500", "회수·폐기": "bg-red-50 text-red-500",
-  "안전성정보": "bg-red-50 text-red-500", "회수·판매중지": "bg-red-50 text-red-500",
-  "부작용": "bg-red-50 text-red-500", "공문": "bg-blue-50 text-blue-500",
-  "허가변경": "bg-blue-50 text-blue-500",
+  "안전성 서한": "text-foreground", "회수·폐기": "text-foreground",
+  "안전성정보": "text-foreground", "회수·판매중지": "text-foreground",
+  "부작용": "text-foreground", "공문": "text-foreground",
+  "허가변경": "text-foreground",
 };
 
 // ── IND 확대 모달 ──
@@ -250,8 +250,8 @@ export const NedrugSection = () => {
                   return (
                     <div key={n.id} className="px-3 py-2.5 hover:bg-muted/40 transition-colors group">
                       <div className="flex items-start justify-between gap-1 mb-1">
-                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold ${typeColors[n.type] || "bg-muted text-muted-foreground"}`}>
-                          <Icon className="w-2.5 h-2.5" />{n.type}
+                        <span className={`text-[10px] font-medium ${typeColors[n.type] || "text-muted-foreground"}`}>
+                          {n.type}
                         </span>
                         <div className="flex items-center gap-1 shrink-0">
                           <span className="text-[10px] text-muted-foreground">{n.date}</span>
