@@ -37,14 +37,14 @@ const SummaryText = ({ text }: { text: string }) => (
 );
 
 const BADGE = {
-  bioweekly: "text-sky-500 bg-sky-50 border border-sky-100",
-  ibric:     "text-emerald-500 bg-emerald-50 border border-emerald-100",
-  industry:  "text-orange-400 bg-orange-50 border border-orange-100",
+  bioweekly: "text-foreground",
+  ibric:     "text-foreground",
+  industry:  "text-foreground",
 };
 const LINK_COLOR = {
-  bioweekly: "text-sky-500",
-  ibric:     "text-emerald-500",
-  industry:  "text-orange-400",
+  bioweekly: "text-foreground",
+  ibric:     "text-foreground",
+  industry:  "text-foreground",
 };
 
 type ReportTab = "all" | "bioweekly" | "ibric" | "industry";
@@ -124,7 +124,7 @@ export const ReportsSection = () => {
           {SOURCE_TABS.map((t) => (
             <button key={t.key} onClick={() => setSourceFilter(t.key)}
               className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
-                sourceFilter === t.key ? "bg-sky-100 text-sky-600" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                sourceFilter === t.key ? "bg-muted text-foreground font-semibold" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}>
               {t.label}
             </button>
