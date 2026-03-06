@@ -32,7 +32,7 @@ const Index = () => {
   const { keywords, addKeyword, removeKeyword, getMatchedKeywords } = useUserKeywords(user);
 
   const {
-    search, handleSearchChange,
+    search, handleSearchChange, setNewsOnlySearch,
     regionFilter, setRegionFilter,
     todayOnly, setTodayOnly,
     showUnreadOnly, setShowUnreadOnly,
@@ -225,6 +225,7 @@ const Index = () => {
                 }, 100);
               }}
               onKeywordClick={handleKeywordClick}
+              onAlertKeywordClick={setNewsOnlySearch}
             />
           </div>
         )}
