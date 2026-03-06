@@ -40,31 +40,39 @@ export const NewsList = memo(({
   const listRef = useRef<HTMLDivElement>(null);
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // 단일 IntersectionObserver로 모든 카드 읽음 처리
+  // 단일 IntersectionObserver - 화면에 들어왔다가 완전히 나갔을 때 읽음 처리
   useEffect(() => {
     if (!markRead || regionFilter === "스크랩") return;
     const container = listRef.current;
     if (!container) return;
+
+    // 한 번이라도 화면에 보인 카드 추적
+    const seenArticles = new Set<string>();
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const articleId = (entry.target as HTMLElement).dataset.articleId;
           if (!articleId) return;
+
           if (entry.isIntersecting) {
-            if (!timers.current[articleId]) {
+            // 화면에 들어오면 "본 것"으로 표시
+            seenArticles.add(articleId);
+            // 진행 중인 타이머 취소
+            clearTimeout(timers.current[articleId]);
+            delete timers.current[articleId];
+          } else {
+            // 화면 밖으로 나갔을 때 - 한 번 본 카드면 읽음 처리
+            if (seenArticles.has(articleId)) {
               timers.current[articleId] = setTimeout(() => {
                 markRead(articleId);
                 delete timers.current[articleId];
-              }, 2000);
+              }, 300);
             }
-          } else {
-            clearTimeout(timers.current[articleId]);
-            delete timers.current[articleId];
           }
         });
       },
-      { threshold: 0.5 }
+      { threshold: 0.1 }
     );
 
     const cards = container.querySelectorAll("[data-article-id]");
