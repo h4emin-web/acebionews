@@ -12,6 +12,13 @@ export function useNewsFilters() {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  // 뉴스 검색만 (MFDS 검색 안 됨) - 키워드 알림용
+  const setNewsOnlySearch = useCallback((v: string) => {
+    setSearch(v);
+    setRegionFilter("all");
+    // debouncedSearch 변경 안 함 → MFDS/약물 검색 안 돌아감
+  }, []);
+
   const handleSearchChange = useCallback((v: string) => {
     setSearch(v);
     if (v && (regionFilter === "리포트" || regionFilter === "바이오위클리" || regionFilter === "동향리포트" || regionFilter === "스크랩")) {
@@ -80,6 +87,7 @@ export function useNewsFilters() {
 
   return {
     search, setSearch, handleSearchChange,
+    setNewsOnlySearch,
     regionFilter, setRegionFilter,
     todayOnly, setTodayOnly,
     showUnreadOnly, setShowUnreadOnly,
