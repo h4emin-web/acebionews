@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import { Pill, Search } from "lucide-react";
 import { NewsCard } from "@/components/NewsCard";
 import { ScrapNewsCard } from "@/components/ScrapNewsCard";
@@ -21,6 +21,7 @@ type Props = {
   isBookmarked: (id: string) => boolean;
   isRead: (id: string) => boolean;
   markRead: (id: string) => void;
+  readIds: string[];
   handleKeywordClick: (kw: string) => void;
   handleToggleBookmark: (id: string) => void;
   saveMemo: (id: string, memo: string) => void;
@@ -32,11 +33,51 @@ type Props = {
 
 export const NewsList = memo(({
   regionFilter, displayNews, bookmarkedNewsItems, scrapSearch, setScrapSearch,
-  isLoading, newsArticlesCount, memoMap, isBookmarked, isRead, markRead,
+  isLoading, newsArticlesCount, memoMap, isBookmarked, isRead, markRead, readIds,
   handleKeywordClick, handleToggleBookmark, saveMemo,
   getMatchedKeywords, getFollowUpMatch, toNewsItem, user
 }: Props) => {
+  const listRef = useRef<HTMLDivElement>(null);
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // 단일 IntersectionObserver로 모든 카드 읽음 처리
+  useEffect(() => {
+    if (!markRead || regionFilter === "스크랩") return;
+    const container = listRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const articleId = (entry.target as HTMLElement).dataset.articleId;
+          if (!articleId) return;
+          if (entry.isIntersecting) {
+            if (!timers.current[articleId]) {
+              timers.current[articleId] = setTimeout(() => {
+                markRead(articleId);
+                delete timers.current[articleId];
+              }, 2000);
+            }
+          } else {
+            clearTimeout(timers.current[articleId]);
+            delete timers.current[articleId];
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    const cards = container.querySelectorAll("[data-article-id]");
+    cards.forEach((el) => observer.observe(el));
+
+    return () => {
+      observer.disconnect();
+      Object.values(timers.current).forEach(clearTimeout);
+      timers.current = {};
+    };
+  }, [displayNews, readIds, regionFilter]);
   if (regionFilter === "스크랩") {
+    // 스크랩 탭은 observer 불필요
     const q = scrapSearch.toLowerCase();
     const filtered = q
       ? bookmarkedNewsItems.filter(n =>
@@ -97,7 +138,7 @@ export const NewsList = memo(({
 
   if (displayNews.length > 0) {
     return (
-      <>
+      <div ref={listRef}>
         {displayNews.map((news, i) => {
           const item = toNewsItem(news);
           return (
@@ -116,7 +157,7 @@ export const NewsList = memo(({
             />
           );
         })}
-      </>
+      </div>
     );
   }
 
