@@ -83,8 +83,6 @@ export const NewsList = memo(({
     );
   }
 
-  if (regionFilter === "동향리포트") return <IbricReportsSection />;
-  if (regionFilter === "바이오위클리") return <BioWeeklySection />;
   if (regionFilter === "리포트") return <IndustryReportsSection />;
 
   if (isLoading) {
