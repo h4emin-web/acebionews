@@ -6,6 +6,7 @@ import { StatsBar } from "@/components/StatsBar";
 import { SearchBar } from "@/components/SearchBar";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { LoginDialog } from "@/components/LoginDialog";
+import { MemoPanel } from "@/components/MemoPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { useReadArticles } from "@/hooks/useReadArticles";
@@ -18,7 +19,7 @@ const Index = () => {
   const [scrapSearch, setScrapSearch] = useState("");
   const [nceModalOpen, setNceModalOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
-  const [memoExpanded, setMemoExpanded] = useState(false);
+  const [memoPanelOpen, setMemoPanelOpen] = useState(false);
 
   const { user, login, logout, displayName } = useAuth();
   const { bookmarkIds, bookmarkedArticles, memoMap, toggleBookmark, isBookmarked, saveMemo } = useBookmarks(user);
@@ -56,6 +57,15 @@ const Index = () => {
     handleSearchChange(kw);
     setRegionFilter("all");
   }, [handleSearchChange]);
+
+  const handleScrapClick = useCallback(() => {
+    setRegionFilter(regionFilter === "스크랩" ? "all" : "스크랩");
+    setMemoPanelOpen(false);
+  }, [regionFilter]);
+
+  const handleMemoToggle = useCallback(() => {
+    setMemoPanelOpen(v => !v);
+  }, []);
 
   const scrapKeywordSet = useMemo(() => new Set(
     bookmarkedArticles.flatMap((a: any) => a.api_keywords || []).map((k: string) => k.toLowerCase())
@@ -102,6 +112,9 @@ const Index = () => {
     [bookmarkedArticles]
   );
 
+  const showSidebar = regionFilter !== "nedrug" && regionFilter !== "fda" && !memoPanelOpen;
+  const showMemoPanel = memoPanelOpen && user && regionFilter !== "nedrug" && regionFilter !== "fda";
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader
@@ -110,11 +123,19 @@ const Index = () => {
         todayStr={todayStr}
         todayOnly={todayOnly}
         showUnreadOnly={showUnreadOnly}
-        onLogoClick={() => { handleSearchChange(""); setRegionFilter("all"); setTodayOnly(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+        onLogoClick={() => { handleSearchChange(""); setRegionFilter("all"); setTodayOnly(false); setMemoPanelOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}
         onLoginClick={() => setLoginDialogOpen(true)}
         onLogout={logout}
         onTodayToggle={() => setTodayOnly(v => !v)}
         onUnreadToggle={() => setShowUnreadOnly(v => !v)}
+        onScrapClick={handleScrapClick}
+        onMemoToggle={handleMemoToggle}
+        memoOpen={memoPanelOpen}
+        scrapActive={regionFilter === "스크랩"}
+        keywords={keywords}
+        onAddKeyword={addKeyword}
+        onRemoveKeyword={removeKeyword}
+        onKeywordClick={setNewsOnlySearch}
       />
 
       <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} onLogin={handleLogin} />
@@ -139,8 +160,12 @@ const Index = () => {
           </div>
         )}
 
-        <div className={`grid gap-5 min-w-0 ${(regionFilter === "nedrug" || regionFilter === "fda") ? "lg:grid-cols-1" : memoExpanded ? "lg:grid-cols-[0px_1fr]" : "lg:grid-cols-[1fr_340px]"}`}>
-          <div className={`space-y-4 min-w-0 overflow-hidden transition-all duration-300 ${memoExpanded ? "hidden lg:hidden" : ""}`}>
+        <div className={`grid gap-5 min-w-0 ${
+          (regionFilter === "nedrug" || regionFilter === "fda") ? "lg:grid-cols-1" :
+          showMemoPanel ? "lg:grid-cols-[1fr_380px]" :
+          "lg:grid-cols-[1fr_340px]"
+        }`}>
+          <div className="space-y-4 min-w-0 overflow-hidden">
             <NewsList
               regionFilter={regionFilter}
               displayNews={displayNews}
@@ -163,24 +188,24 @@ const Index = () => {
               user={user}
             />
           </div>
-          {(regionFilter !== "nedrug" && regionFilter !== "fda") && <Sidebar
-            user={user}
-            keywords={keywords}
-            onAddKeyword={addKeyword}
-            onRemoveKeyword={removeKeyword}
-            bookmarkedArticles={bookmarkedArticles}
-            memoMap={memoMap}
-            memoExpanded={memoExpanded}
-            onMemoExpand={setMemoExpanded}
-            onNewsClick={(articleId) => {
-              setRegionFilter("스크랩");
-              setTimeout(() => {
-                document.getElementById(`scrap-${articleId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-              }, 100);
-            }}
-            onKeywordClick={handleKeywordClick}
-            onAlertKeywordClick={setNewsOnlySearch}
-          />}
+          {showMemoPanel && (
+            <MemoPanel
+              user={user!}
+              bookmarkedArticles={bookmarkedArticles}
+              memoMap={memoMap}
+              onClose={() => setMemoPanelOpen(false)}
+              onNewsClick={(articleId) => {
+                setRegionFilter("스크랩");
+                setMemoPanelOpen(false);
+                setTimeout(() => {
+                  document.getElementById(`scrap-${articleId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 100);
+              }}
+            />
+          )}
+          {showSidebar && (
+            <Sidebar onKeywordClick={handleKeywordClick} />
+          )}
         </div>
       </main>
 

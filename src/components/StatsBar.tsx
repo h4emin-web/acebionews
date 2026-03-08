@@ -21,7 +21,6 @@ export const StatsBar = ({ regionFilter, onRegionFilterChange, isLoggedIn }: Pro
     { label: "전체", filter: "all" as const, mobileVisible: true },
     { label: "국내", filter: "국내" as const, mobileVisible: true },
     { label: "해외", filter: "해외" as const, mobileVisible: true },
-    ...(isLoggedIn ? [{ label: "스크랩", filter: "스크랩" as const, mobileVisible: false }] : []),
     { label: "리포트", filter: "리포트" as const, mobileVisible: true },
     { label: "Nedrug", filter: "nedrug" as const, mobileVisible: false },
     { label: "FDA", filter: "fda" as const, mobileVisible: false },
