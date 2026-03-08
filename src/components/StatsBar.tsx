@@ -1,4 +1,5 @@
 import type { NewsArticle } from "@/hooks/useNewsData";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export type RegionFilter = "all" | "국내" | "해외" | "스크랩" | "리포트" | "nedrug" | "fda";
 
@@ -14,15 +15,19 @@ type Props = {
 };
 
 export const StatsBar = ({ regionFilter, onRegionFilterChange, isLoggedIn }: Props) => {
-  const tabs = [
-    { label: "전체", filter: "all" as const },
-    { label: "국내", filter: "국내" as const },
-    { label: "해외", filter: "해외" as const },
-    ...(isLoggedIn ? [{ label: "스크랩", filter: "스크랩" as const }] : []),
-    { label: "리포트", filter: "리포트" as const },
-    { label: "Nedrug", filter: "nedrug" as const },
-    { label: "FDA", filter: "fda" as const },
+  const isMobile = useIsMobile();
+
+  const allTabs = [
+    { label: "전체", filter: "all" as const, mobileVisible: true },
+    { label: "국내", filter: "국내" as const, mobileVisible: true },
+    { label: "해외", filter: "해외" as const, mobileVisible: true },
+    ...(isLoggedIn ? [{ label: "스크랩", filter: "스크랩" as const, mobileVisible: false }] : []),
+    { label: "리포트", filter: "리포트" as const, mobileVisible: true },
+    { label: "Nedrug", filter: "nedrug" as const, mobileVisible: false },
+    { label: "FDA", filter: "fda" as const, mobileVisible: false },
   ];
+
+  const tabs = isMobile ? allTabs.filter(t => t.mobileVisible) : allTabs;
 
   return (
     <nav className="flex items-center gap-0 border-b border-border overflow-x-auto scrollbar-hide -mx-4 px-4">
