@@ -111,8 +111,8 @@ const Index = () => {
     [bookmarkedArticles]
   );
 
-  const showSidebar = regionFilter !== "nedrug" && regionFilter !== "fda" && !memoPanelOpen;
-  const showMemoPanel = memoPanelOpen && user && regionFilter !== "nedrug" && regionFilter !== "fda";
+  const isToolView = regionFilter === "nedrug" || regionFilter === "fda" || regionFilter === "bigdeal";
+  const showMemoPanel = memoPanelOpen && user && !isToolView;
 
   return (
     <div className="min-h-screen bg-background">
