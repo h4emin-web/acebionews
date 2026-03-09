@@ -150,7 +150,7 @@ const Index = () => {
           onRemoveKeyword={removeKeyword}
           onKeywordClick={setNewsOnlySearch}
         />
-        {(regionFilter !== "nedrug" && regionFilter !== "fda") && (
+        {!isToolView && (
           <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
@@ -159,9 +159,9 @@ const Index = () => {
         )}
 
         <div className={`grid gap-5 min-w-0 ${
-          (regionFilter === "nedrug" || regionFilter === "fda") ? "lg:grid-cols-1" :
+          isToolView ? "lg:grid-cols-1" :
           showMemoPanel ? "lg:grid-cols-[1fr_380px]" :
-          "lg:grid-cols-[1fr_340px]"
+          "lg:grid-cols-1"
         }`}>
           <div className="space-y-4 min-w-0 overflow-hidden">
             <NewsList
@@ -200,9 +200,6 @@ const Index = () => {
                 }, 100);
               }}
             />
-          )}
-          {showSidebar && (
-            <Sidebar onKeywordClick={handleKeywordClick} />
           )}
         </div>
       </main>
