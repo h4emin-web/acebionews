@@ -77,12 +77,12 @@ export const BigDealsSection = ({ defaultOpen = false }: { defaultOpen?: boolean
             {deals.map((deal) => (
               <div key={deal.id} className="px-3 py-2.5 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span className="font-semibold text-foreground truncate">{deal.payer}</span>
+                  <span className="font-semibold text-foreground">{deal.payer}</span>
                   <FlagImg code={deal.payer_country} className="shrink-0" />
                   <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                  <span className="font-semibold text-foreground truncate">{deal.payee}</span>
+                  <span className="font-semibold text-foreground">{deal.payee}</span>
                   <FlagImg code={deal.payee_country} className="shrink-0" />
-                  <span className="ml-auto font-bold text-primary whitespace-nowrap text-xs">
+                  <span className="ml-1 font-bold text-primary whitespace-nowrap text-xs">
                     {formatKrw(deal.total_m)}
                   </span>
                 </div>
