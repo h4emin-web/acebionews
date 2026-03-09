@@ -1,5 +1,5 @@
 import { memo, useState, useRef, useEffect } from "react";
-import { Clock, CalendarDays, LogIn, LogOut, User, EyeOff, Bookmark, NotebookPen, Bell, Plus, X } from "lucide-react";
+import { Clock, CalendarDays, LogIn, LogOut, User, EyeOff } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 type Props = {
@@ -13,14 +13,6 @@ type Props = {
   onLogout: () => void;
   onTodayToggle: () => void;
   onUnreadToggle: () => void;
-  onScrapClick: () => void;
-  onMemoToggle: () => void;
-  memoOpen: boolean;
-  scrapActive: boolean;
-  keywords: string[];
-  onAddKeyword: (kw: string) => void;
-  onRemoveKeyword: (kw: string) => void;
-  onKeywordClick: (kw: string) => void;
 };
 
 export const AppHeader = memo(({
