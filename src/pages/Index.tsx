@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { NewsList } from "@/components/NewsList";
-import { Sidebar } from "@/components/Sidebar";
 import { StatsBar } from "@/components/StatsBar";
 import { SearchBar } from "@/components/SearchBar";
 import { NcePatentModal } from "@/components/NcePatentModal";
@@ -112,8 +111,8 @@ const Index = () => {
     [bookmarkedArticles]
   );
 
-  const showSidebar = regionFilter !== "nedrug" && regionFilter !== "fda" && !memoPanelOpen;
-  const showMemoPanel = memoPanelOpen && user && regionFilter !== "nedrug" && regionFilter !== "fda";
+  const isToolView = regionFilter === "nedrug" || regionFilter === "fda" || regionFilter === "bigdeal";
+  const showMemoPanel = memoPanelOpen && user && !isToolView;
 
   return (
     <div className="min-h-screen bg-background">
@@ -151,7 +150,7 @@ const Index = () => {
           onRemoveKeyword={removeKeyword}
           onKeywordClick={setNewsOnlySearch}
         />
-        {(regionFilter !== "nedrug" && regionFilter !== "fda") && (
+        {!isToolView && (
           <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <SearchBar value={search} onChange={handleSearchChange} suggestions={allKeywords} />
@@ -160,9 +159,9 @@ const Index = () => {
         )}
 
         <div className={`grid gap-5 min-w-0 ${
-          (regionFilter === "nedrug" || regionFilter === "fda") ? "lg:grid-cols-1" :
+          isToolView ? "lg:grid-cols-1" :
           showMemoPanel ? "lg:grid-cols-[1fr_380px]" :
-          "lg:grid-cols-[1fr_340px]"
+          "lg:grid-cols-1"
         }`}>
           <div className="space-y-4 min-w-0 overflow-hidden">
             <NewsList
@@ -201,9 +200,6 @@ const Index = () => {
                 }, 100);
               }}
             />
-          )}
-          {showSidebar && (
-            <Sidebar onKeywordClick={handleKeywordClick} />
           )}
         </div>
       </main>

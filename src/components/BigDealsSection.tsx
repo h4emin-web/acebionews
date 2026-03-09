@@ -45,8 +45,8 @@ function formatDate(d: string) {
   return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,"0")}.${String(dt.getDate()).padStart(2,"0")}`;
 }
 
-export const BigDealsSection = () => {
-  const [open, setOpen] = useState(false);
+export const BigDealsSection = ({ defaultOpen = false }: { defaultOpen?: boolean }) => {
+  const [open, setOpen] = useState(defaultOpen);
 
   const { data: deals = [] } = useQuery({
     queryKey: ["biotech-deals"],

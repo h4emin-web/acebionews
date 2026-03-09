@@ -3,7 +3,7 @@ import { Bookmark, NotebookPen, Bell, Plus, X } from "lucide-react";
 import type { NewsArticle } from "@/hooks/useNewsData";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-export type RegionFilter = "all" | "국내" | "해외" | "스크랩" | "리포트" | "nedrug" | "fda";
+export type RegionFilter = "all" | "국내" | "해외" | "스크랩" | "리포트" | "nedrug" | "fda" | "bigdeal";
 
 type Props = {
   news: NewsArticle[];
@@ -56,6 +56,7 @@ export const StatsBar = ({
     { label: "리포트", filter: "리포트" as const, mobileVisible: true },
     { label: "Nedrug", filter: "nedrug" as const, mobileVisible: false },
     { label: "FDA", filter: "fda" as const, mobileVisible: false },
+    { label: "Big Deal", filter: "bigdeal" as const, mobileVisible: false },
   ];
 
   const tabs = isMobile ? allTabs.filter(t => t.mobileVisible) : allTabs;
