@@ -6,6 +6,7 @@ import { PillLoader } from "@/components/PillLoader";
 import { ReportsSection } from "@/components/ReportsSection";
 import { NedrugSection } from "@/components/NedrugSection";
 import { FdaToolSection } from "@/components/FdaToolSection";
+import { BigDealsSection } from "@/components/BigDealsSection";
 import type { NewsItem } from "@/data/mockNews";
 import type { RegionFilter } from "@/components/StatsBar";
 
