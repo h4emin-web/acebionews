@@ -175,6 +175,7 @@ export const NewsList = memo(({
   if (regionFilter === "리포트") return <ReportsSection />;
   if (regionFilter === "nedrug") return <NedrugSection />;
   if (regionFilter === "fda") return <FdaToolSection />;
+  if (regionFilter === "bigdeal") return <BigDealsSection defaultOpen />;
 
   if (isLoading) {
     return (

@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { NewsList } from "@/components/NewsList";
-import { Sidebar } from "@/components/Sidebar";
 import { StatsBar } from "@/components/StatsBar";
 import { SearchBar } from "@/components/SearchBar";
 import { NcePatentModal } from "@/components/NcePatentModal";

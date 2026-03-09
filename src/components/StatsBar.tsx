@@ -56,6 +56,7 @@ export const StatsBar = ({
     { label: "리포트", filter: "리포트" as const, mobileVisible: true },
     { label: "Nedrug", filter: "nedrug" as const, mobileVisible: false },
     { label: "FDA", filter: "fda" as const, mobileVisible: false },
+    { label: "Big Deal", filter: "bigdeal" as const, mobileVisible: false },
   ];
 
   const tabs = isMobile ? allTabs.filter(t => t.mobileVisible) : allTabs;
