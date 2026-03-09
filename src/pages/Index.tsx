@@ -128,14 +128,6 @@ const Index = () => {
         onLogout={logout}
         onTodayToggle={() => setTodayOnly(v => !v)}
         onUnreadToggle={() => setShowUnreadOnly(v => !v)}
-        onScrapClick={handleScrapClick}
-        onMemoToggle={handleMemoToggle}
-        memoOpen={memoPanelOpen}
-        scrapActive={regionFilter === "스크랩"}
-        keywords={keywords}
-        onAddKeyword={addKeyword}
-        onRemoveKeyword={removeKeyword}
-        onKeywordClick={setNewsOnlySearch}
       />
 
       <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} onLogin={handleLogin} />
@@ -150,8 +142,15 @@ const Index = () => {
           onRegionFilterChange={setRegionFilter}
           bookmarkCount={bookmarkIds.length}
           isLoggedIn={!!user}
+          onScrapClick={handleScrapClick}
+          onMemoToggle={handleMemoToggle}
+          memoOpen={memoPanelOpen}
+          scrapActive={regionFilter === "스크랩"}
+          keywords={keywords}
+          onAddKeyword={addKeyword}
+          onRemoveKeyword={removeKeyword}
+          onKeywordClick={setNewsOnlySearch}
         />
-
         {(regionFilter !== "nedrug" && regionFilter !== "fda") && (
           <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
