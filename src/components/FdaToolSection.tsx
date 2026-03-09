@@ -162,9 +162,9 @@ const DmfPanel = ({ large = false }: { large?: boolean }) => (
     <div className="px-4 py-3 border-b border-border bg-muted/20 shrink-0">
       <h3 className="text-sm font-semibold text-foreground">DMF 2025</h3>
     </div>
-    {large && (
-      <div className="overflow-y-auto scrollbar-hide flex-1" style={{ maxHeight: "60vh" }}>
-        <table className="w-full">
+    <div className="overflow-y-auto scrollbar-hide flex-1" style={{ maxHeight: "60vh" }}>
+      <table className="w-full">
+        {large && (
           <thead className="sticky top-0 bg-card z-10">
             <tr className="border-b border-border bg-muted/30">
               <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase">순위</th>
@@ -172,21 +172,21 @@ const DmfPanel = ({ large = false }: { large?: boolean }) => (
               <th className="px-3 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase">승인횟수</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
-            {dmfData.map((d) => (
-              <tr key={d.rank} className="hover:bg-muted/40 transition-colors">
-                <td className="px-3 py-2.5 text-muted-foreground font-mono text-sm">{d.rank}</td>
-                <td className="px-3 py-2.5">
-                  <p className="font-medium text-foreground text-sm">{d.nameKo}</p>
-                  <p className="text-muted-foreground text-xs">{d.name}</p>
-                </td>
-                <td className="px-3 py-2.5 text-right font-semibold text-foreground text-sm">{d.count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
+        )}
+        <tbody className="divide-y divide-border">
+          {dmfData.map((d) => (
+            <tr key={d.rank} className="hover:bg-muted/40 transition-colors">
+              <td className={`px-3 text-muted-foreground font-mono ${large ? "py-2.5 text-sm" : "py-1.5 text-[11px]"}`}>{d.rank}</td>
+              <td className={`px-3 ${large ? "py-2.5" : "py-1.5"}`}>
+                <p className={`font-medium text-foreground truncate ${large ? "text-sm" : "text-[11px]"}`}>{d.nameKo}</p>
+                {large && <p className="text-muted-foreground text-xs">{d.name}</p>}
+              </td>
+              <td className={`px-3 text-right font-semibold text-foreground ${large ? "py-2.5 text-sm" : "py-1.5 text-[11px]"}`}>{d.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </div>
 );
 
