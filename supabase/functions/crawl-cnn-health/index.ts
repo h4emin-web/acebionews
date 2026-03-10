@@ -1,7 +1,6 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface CnnArticle {
@@ -11,93 +10,72 @@ interface CnnArticle {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const res = await fetch("https://edition.cnn.com/health", {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept: "text/html,application/xhtml+xml",
       },
     });
-
-    if (!res.ok) {
-      throw new Error(`CNN fetch failed: ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`CNN fetch failed: ${res.status}`);
 
     const html = await res.text();
     const articles: CnnArticle[] = [];
-
-    // Extract articles from CNN HTML using regex patterns
-    // Look for container__link patterns with headlines
-    const linkPattern =
-      /href="(\/\d{4}\/\d{2}\/\d{2}\/health\/[^"]+)"/g;
-    const titlePattern =
-      /<span[^>]*class="[^"]*headline[^"]*"[^>]*>([^<]+)<\/span>/g;
-
-    // Method 1: Extract from data-zjs-headline or headline spans
-    const headlineRegex =
-      /href="(\/\d{4}\/\d{2}\/\d{2}\/health\/[^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]{10,})<\/span>/g;
-    let match;
-
     const seenUrls = new Set<string>();
 
-    // Try to find article cards with images
-    const cardRegex =
-      /href="(\/\d{4}\/\d{2}\/\d{2}\/health\/[^"]+)"[\s\S]*?(?:src="(https:\/\/[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)")?[\s\S]*?<span[^>]*>([^<]{15,})<\/span>/g;
+    // 이미지 URL 맵 — URL 경로 → 이미지 src 미리 수집
+    const imgMap = new Map<string, string>();
+    const imgBlockRegex = /href="(\/\d{4}\/\d{2}\/\d{2}\/health\/[^"]+)"[\s\S]{0,800}?src="(https:\/\/[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/g;
+    let imgMatch;
+    while ((imgMatch = imgBlockRegex.exec(html)) !== null) {
+      const path = imgMatch[1];
+      if (!imgMap.has(path)) imgMap.set(path, imgMatch[2]);
+    }
 
-    while ((match = cardRegex.exec(html)) !== null) {
-      const url = `https://edition.cnn.com${match[1]}`;
+    // 헤드라인 추출 — container__headline-text 패턴
+    const headlineRegex = /href="(\/\d{4}\/\d{2}\/\d{2}\/health\/[^"]+)"[^>]*>[\s\S]*?<span[^>]*class="[^"]*container__headline-text[^"]*"[^>]*>\s*([^<]{10,})\s*<\/span>/g;
+    let match;
+    while ((match = headlineRegex.exec(html)) !== null) {
+      const path = match[1];
+      const url = `https://edition.cnn.com${path}`;
       if (seenUrls.has(url)) continue;
       seenUrls.add(url);
-      articles.push({
-        title: match[3].trim(),
-        url,
-        imageUrl: match[2] || undefined,
-      });
+      articles.push({ title: match[2].trim(), url, imageUrl: imgMap.get(path) });
       if (articles.length >= 15) break;
     }
 
-    // Fallback: simpler extraction
+    // Fallback: data-zjs-headline
     if (articles.length < 5) {
-      const simpleRegex =
-        /data-link-type="article"[^>]*href="([^"]+)"[^>]*>[\s\S]*?<span[^>]*class="[^"]*container__headline-text[^"]*"[^>]*>([^<]+)<\/span>/g;
-      while ((match = simpleRegex.exec(html)) !== null) {
-        const rawUrl = match[1];
-        const url = rawUrl.startsWith("http")
-          ? rawUrl
-          : `https://edition.cnn.com${rawUrl}`;
+      const fallback = /href="(\/\d{4}\/\d{2}\/\d{2}\/health\/[^"]+)"[^>]*data-zjs-headline="([^"]{10,})"/g;
+      while ((match = fallback.exec(html)) !== null) {
+        const path = match[1];
+        const url = `https://edition.cnn.com${path}`;
         if (seenUrls.has(url)) continue;
         seenUrls.add(url);
-        articles.push({ title: match[2].trim(), url });
+        articles.push({ title: match[2].trim(), url, imageUrl: imgMap.get(path) });
         if (articles.length >= 15) break;
       }
     }
 
-    // Fallback 2: any health article links with nearby text
+    // Fallback 2: any span near health links
     if (articles.length < 3) {
-      const fallbackRegex =
-        /href="(\/\d{4}\/\d{2}\/\d{2}\/health\/[^"]+)"[^>]*>[^<]*<[^>]*>([^<]{15,})</g;
-      while ((match = fallbackRegex.exec(html)) !== null) {
-        const url = `https://edition.cnn.com${match[1]}`;
+      const simple = /href="(\/\d{4}\/\d{2}\/\d{2}\/health\/[^"]+)"[\s\S]{0,300}?<span[^>]*>([^<]{15,})<\/span>/g;
+      while ((match = simple.exec(html)) !== null) {
+        const path = match[1];
+        const url = `https://edition.cnn.com${path}`;
         if (seenUrls.has(url)) continue;
         seenUrls.add(url);
-        articles.push({ title: match[2].trim(), url });
+        articles.push({ title: match[2].trim(), url, imageUrl: imgMap.get(path) });
         if (articles.length >= 15) break;
       }
     }
 
-    // Extract images separately and try to match
+    // featured 이미지 없으면 첫 번째 CNN 미디어 이미지로 보완
     if (articles.length > 0 && !articles[0].imageUrl) {
-      const imgRegex =
-        /src="(https:\/\/media\.cnn\.com\/[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/g;
-      const firstImg = imgRegex.exec(html);
-      if (firstImg) {
-        articles[0].imageUrl = firstImg[1];
-      }
+      const firstImg = /src="(https:\/\/media\.cnn\.com\/[^"]*\.(?:jpg|jpeg|png|webp)[^"]*)"/.exec(html);
+      if (firstImg) articles[0].imageUrl = firstImg[1];
     }
 
     return new Response(JSON.stringify({ success: true, articles }), {
@@ -106,14 +84,8 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Error crawling CNN Health:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
