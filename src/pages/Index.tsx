@@ -203,7 +203,7 @@ const Index = () => {
             />
           ) : !isToolView ? (
             <div className="hidden lg:block">
-              <ApiImporterPanel onKeywordClick={handleKeywordClick} />
+              <CnnHealthPanel />
             </div>
           ) : null}
         </div>
