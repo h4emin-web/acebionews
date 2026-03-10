@@ -23,47 +23,9 @@ const BriefingPanel = () => {
   const { data: briefing, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["daily-briefing", today],
     queryFn: async () => {
-      // 오늘 뉴스 가져오기
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yd = yesterday.toISOString().split("T")[0];
-
-      const { data: news } = await supabase
-        .from("news_articles")
-        .select("title, summary, source, region, category")
-        .gte("date", yd)
-        .order("created_at", { ascending: false })
-        .limit(40);
-
-      if (!news || news.length === 0) return null;
-
-      const newsList = news
-        .map((n: any) => `[${n.region}/${n.source}] ${n.title}`)
-        .join("\n");
-
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `당신은 제약·바이오 산업 전문 에디터입니다. 오늘의 주요 뉴스를 간결하고 임팩트 있게 브리핑해주세요.
-응답은 반드시 아래 JSON 형식으로만 반환하세요. (마크다운 코드블록 없이 순수 JSON)
-{
-  "headline": "오늘의 한줄 헤드라인 (20자 이내)",
-  "items": [
-    { "emoji": "💊", "title": "주제 (10자 이내)", "summary": "2~3줄 요약" },
-    ...최대 5개
-  ],
-  "insight": "에디터 코멘트 — 전체 흐름을 한 문장으로"
-}`,
-          messages: [{ role: "user", content: `다음 오늘의 뉴스를 브리핑해주세요:\n\n${newsList}` }],
-        }),
-      });
-
-      const data = await response.json();
-      const text = data.content?.[0]?.text || "{}";
-      return JSON.parse(text.replace(/```json|```/g, "").trim());
+      const { data, error } = await supabase.functions.invoke("generate-daily-briefing");
+      if (error) throw error;
+      return data?.briefing || null;
     },
     staleTime: 1000 * 60 * 60, // 1시간 캐시
     refetchOnWindowFocus: false,
@@ -126,15 +88,6 @@ const BriefingPanel = () => {
 // ─────────────────────────────────────────
 // 키워드 트렌드
 // ─────────────────────────────────────────
-
-// 불용어
-const STOPWORDS = new Set([
-  "이", "가", "을", "를", "의", "에", "에서", "으로", "로", "와", "과",
-  "한", "하는", "하여", "및", "등", "위한", "대한", "통해", "위해", "관련",
-  "발표", "공개", "진행", "시작", "완료", "확인", "제공", "지원", "개발",
-  "the", "a", "an", "of", "in", "for", "to", "and", "or", "is", "are",
-  "with", "on", "at", "by", "from", "new", "study", "data", "drug",
-]);
 
 const TrendPanel = () => {
   const { data: keywords = [], isLoading } = useQuery({
