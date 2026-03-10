@@ -6,7 +6,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { NcePatentModal } from "@/components/NcePatentModal";
 import { LoginDialog } from "@/components/LoginDialog";
 import { MemoPanel } from "@/components/MemoPanel";
-import { ApiImporterPanel } from "@/components/ApiImporterPanel";
+import { CnnHealthPanel } from "@/components/CnnHealthPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { useReadArticles } from "@/hooks/useReadArticles";
@@ -203,7 +203,7 @@ const Index = () => {
             />
           ) : !isToolView ? (
             <div className="hidden lg:block">
-              <ApiImporterPanel onKeywordClick={handleKeywordClick} />
+              <CnnHealthPanel />
             </div>
           ) : null}
         </div>
