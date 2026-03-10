@@ -162,7 +162,7 @@ const Index = () => {
         <div className={`grid gap-5 min-w-0 ${
           isToolView ? "lg:grid-cols-1" :
           showMemoPanel ? "lg:grid-cols-[1fr_380px]" :
-          "lg:grid-cols-1"
+          "lg:grid-cols-[1fr_420px]"
         }`}>
           <div className="space-y-4 min-w-0 overflow-hidden">
             <NewsList
@@ -187,7 +187,7 @@ const Index = () => {
               user={user}
             />
           </div>
-          {showMemoPanel && (
+          {showMemoPanel ? (
             <MemoPanel
               user={user!}
               bookmarkedArticles={bookmarkedArticles}
@@ -201,7 +201,11 @@ const Index = () => {
                 }, 100);
               }}
             />
-          )}
+          ) : !isToolView ? (
+            <div className="hidden lg:block">
+              <ApiImporterPanel onKeywordClick={handleKeywordClick} />
+            </div>
+          ) : null}
         </div>
       </main>
 
