@@ -28,22 +28,22 @@ export const AppHeader = memo(({
           </div>
           <span className="text-[17px] font-bold text-foreground tracking-tight">BioNews</span>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-nowrap shrink-0">
           {user ? (
-            <button onClick={onLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm">
-              <User className="w-3.5 h-3.5" />
+            <button onClick={onLogout} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm whitespace-nowrap shrink-0">
+              <User className="w-3.5 h-3.5 shrink-0" />
               <span className="max-w-[60px] truncate">{displayName}님</span>
-              <LogOut className="w-3 h-3 text-muted-foreground" />
+              <LogOut className="w-3 h-3 text-muted-foreground shrink-0" />
             </button>
           ) : (
-            <button onClick={onLoginClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm">
-              <LogIn className="w-3.5 h-3.5" />
+            <button onClick={onLoginClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors shadow-sm whitespace-nowrap shrink-0">
+              <LogIn className="w-3.5 h-3.5 shrink-0" />
               로그인
             </button>
           )}
           <button
             onClick={onTodayToggle}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
               todayOnly ? "bg-primary text-primary-foreground border-primary" : "bg-background text-foreground border-border hover:bg-muted"
             }`}
           >
@@ -53,11 +53,11 @@ export const AppHeader = memo(({
           {user && (
             <button
               onClick={onUnreadToggle}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors shadow-sm whitespace-nowrap shrink-0 ${
                 showUnreadOnly ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background text-foreground hover:bg-muted"
               }`}
             >
-              <EyeOff className="w-3.5 h-3.5" />
+              <EyeOff className="w-3.5 h-3.5 shrink-0" />
               안읽음만
             </button>
           )}
