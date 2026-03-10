@@ -28,9 +28,6 @@ export const CnnHealthPanel = () => {
       className="card-elevated rounded-lg overflow-hidden sticky top-[100px]"
       style={{ maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}
     >
-      <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-bold text-foreground">🌍 CNN Health</h2>
-      </div>
 
       {isLoading ? (
         <div className="px-4 py-10 text-center text-xs text-muted-foreground">
