@@ -80,13 +80,13 @@ Deno.serve(async (req) => {
     // 크롤링 실패시 주요 고정 이벤트 fallback
     if (events.length < 3) {
       const year = today.getFullYear();
-      const fallbacks: BioEvent[] = [
+      const fallbacks: BioEvent[] = ([
         { id: "asco-2025", title: "ASCO Annual Meeting 2025", date: `${year}-05-30`, location: "Chicago, IL", category: "conference", url: "https://www.asco.org/meetings-education/asco-meetings/2025-asco-annual-meeting" },
         { id: "esmo-2025", title: "ESMO Congress 2025", date: `${year}-09-12`, location: "Berlin, Germany", category: "conference", url: "https://www.esmo.org" },
         { id: "ash-2025",  title: "ASH Annual Meeting 2025", date: `${year}-12-06`, location: "Orlando, FL", category: "conference", url: "https://www.hematology.org" },
         { id: "jpmorgan-2026", title: "J.P. Morgan Healthcare Conference", date: `${year + 1}-01-12`, location: "San Francisco, CA", category: "conference", url: "https://www.jpmorgan.com" },
         { id: "bio-2025",  title: "BIO International Convention 2025", date: `${year}-06-16`, location: "Boston, MA", category: "conference", url: "https://www.bio.org" },
-      ].filter(e => e.date >= today.toISOString().split("T")[0]);
+      ] as BioEvent[]).filter(e => e.date >= today.toISOString().split("T")[0]);
       events.push(...fallbacks);
     }
 
