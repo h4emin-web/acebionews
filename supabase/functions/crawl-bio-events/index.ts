@@ -77,18 +77,39 @@ Deno.serve(async (req) => {
       }
     } catch (e) { console.error("BioSpace events error:", e); }
 
-    // 크롤링 실패시 주요 고정 이벤트 fallback
-    if (events.length < 3) {
-      const year = today.getFullYear();
-      const fallbacks: BioEvent[] = ([
-        { id: "asco-2025", title: "ASCO Annual Meeting 2025", date: `${year}-05-30`, location: "Chicago, IL", category: "conference", url: "https://www.asco.org/meetings-education/asco-meetings/2025-asco-annual-meeting" },
-        { id: "esmo-2025", title: "ESMO Congress 2025", date: `${year}-09-12`, location: "Berlin, Germany", category: "conference", url: "https://www.esmo.org" },
-        { id: "ash-2025",  title: "ASH Annual Meeting 2025", date: `${year}-12-06`, location: "Orlando, FL", category: "conference", url: "https://www.hematology.org" },
-        { id: "jpmorgan-2026", title: "J.P. Morgan Healthcare Conference", date: `${year + 1}-01-12`, location: "San Francisco, CA", category: "conference", url: "https://www.jpmorgan.com" },
-        { id: "bio-2025",  title: "BIO International Convention 2025", date: `${year}-06-16`, location: "Boston, MA", category: "conference", url: "https://www.bio.org" },
-      ] as BioEvent[]).filter(e => e.date >= today.toISOString().split("T")[0]);
-      events.push(...fallbacks);
-    }
+    // 주요 고정 이벤트 (원료의약품/API 산업 중심)
+    const year = today.getFullYear();
+    const todayStr = today.toISOString().split("T")[0];
+    const fixedEvents: BioEvent[] = ([
+      // ── 원료의약품(API) / CPhI 관련 ──
+      { id: "cphi-na-2025", title: "CPhI North America 2025", date: `${year}-05-06`, location: "Philadelphia, PA", category: "conference", url: "https://www.cphi.com/north-america/" },
+      { id: "cphi-ww-2025", title: "CPhI Worldwide 2025", date: `${year}-10-07`, location: "Milan, Italy", category: "conference", url: "https://www.cphi.com/europe/" },
+      { id: "cphi-sea-2025", title: "CPhI South East Asia 2025", date: `${year}-03-12`, location: "Bangkok, Thailand", category: "conference", url: "https://www.cphi.com/sea/" },
+      { id: "cphi-japan-2025", title: "CPhI Japan 2025", date: `${year}-04-16`, location: "Tokyo, Japan", category: "conference", url: "https://www.cphi.com/japan/" },
+      { id: "cphi-korea-2025", title: "CPhI Korea 2025", date: `${year}-08-26`, location: "Seoul, Korea", category: "conference", url: "https://www.cphi.com/korea/" },
+      { id: "cphi-china-2025", title: "CPhI China 2025", date: `${year}-06-18`, location: "Shanghai, China", category: "conference", url: "https://www.cphi.com/china/" },
+      { id: "cphi-india-2025", title: "CPhI & PMEC India 2025", date: `${year}-11-25`, location: "New Delhi, India", category: "conference", url: "https://www.cphi.com/india/" },
+      // ── API/제네릭/CDMO 관련 ──
+      { id: "apimf-2025", title: "APIMF Annual Meeting 2025", date: `${year}-06-03`, location: "Barcelona, Spain", category: "conference", url: "https://apimf.org" },
+      { id: "dcat-2025", title: "DCAT Week 2025", date: `${year}-03-24`, location: "New York, NY", category: "conference", url: "https://www.dcatwk.com" },
+      { id: "informex-2025", title: "INFORMEX / CPhI Active 2025", date: `${year}-05-06`, location: "Philadelphia, PA", category: "conference", url: "https://www.informex.com" },
+      { id: "acs-2025", title: "ACS Spring Meeting 2025", date: `${year}-03-23`, location: "San Diego, CA", category: "conference", url: "https://www.acs.org" },
+      { id: "excipact-2025", title: "ExciPACT Conference 2025", date: `${year}-09-15`, location: "Frankfurt, Germany", category: "conference", url: "https://www.excipact.org" },
+      // ── 주요 바이오/제약 학회 ──
+      { id: "asco-2025", title: "ASCO Annual Meeting 2025", date: `${year}-05-30`, location: "Chicago, IL", category: "conference", url: "https://www.asco.org" },
+      { id: "bio-2025", title: "BIO International Convention 2025", date: `${year}-06-16`, location: "Boston, MA", category: "conference", url: "https://www.bio.org" },
+      { id: "esmo-2025", title: "ESMO Congress 2025", date: `${year}-09-12`, location: "Berlin, Germany", category: "conference", url: "https://www.esmo.org" },
+      { id: "ash-2025", title: "ASH Annual Meeting 2025", date: `${year}-12-06`, location: "Orlando, FL", category: "conference", url: "https://www.hematology.org" },
+      { id: "jpmorgan-2026", title: "J.P. Morgan Healthcare Conference", date: `${year + 1}-01-12`, location: "San Francisco, CA", category: "conference", url: "https://www.jpmorgan.com" },
+    ] as BioEvent[]).filter(e => e.date >= todayStr);
+    
+    // 고정 이벤트 중 크롤링에서 이미 가져온 것과 중복되지 않는 것만 추가
+    const existingTitles = new Set(events.map(e => e.title.toLowerCase()));
+    fixedEvents.forEach(fe => {
+      if (!existingTitles.has(fe.title.toLowerCase())) {
+        events.push(fe);
+      }
+    });
 
     // 날짜순 정렬
     events.sort((a, b) => a.date.localeCompare(b.date));

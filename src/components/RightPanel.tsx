@@ -45,18 +45,12 @@ const BriefingPanel = () => {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      {/* 헤드라인 */}
-      <div className="bg-foreground text-background rounded-lg px-4 py-3">
-        <p className="text-[10px] font-medium opacity-60 mb-1">TODAY'S HEADLINE</p>
-        <p className="text-[14px] font-bold leading-snug">{briefing.headline}</p>
-      </div>
-
+    <div className="p-4 space-y-3">
       {/* 주요 항목 */}
       <div className="space-y-3">
         {briefing.items?.map((item: any, i: number) => (
-          <div key={i} className="flex gap-3">
-            <span className="text-lg shrink-0 mt-0.5">{item.emoji}</span>
+          <div key={i} className="flex gap-2.5">
+            <span className="text-base shrink-0 mt-0.5">{item.emoji}</span>
             <div>
               <p className="text-[12px] font-semibold text-foreground">{item.title}</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">{item.summary}</p>
@@ -68,8 +62,8 @@ const BriefingPanel = () => {
       {/* 에디터 코멘트 */}
       {briefing.insight && (
         <div className="border-t border-border pt-3">
-          <p className="text-[10px] font-semibold text-muted-foreground mb-1">에디터 코멘트</p>
-          <p className="text-[11px] text-foreground leading-relaxed italic">"{briefing.insight}"</p>
+          <p className="text-[10px] font-semibold text-muted-foreground mb-1">한줄 요약</p>
+          <p className="text-[11px] text-foreground leading-relaxed">{briefing.insight}</p>
         </div>
       )}
 
@@ -89,11 +83,9 @@ const BriefingPanel = () => {
 // 키워드 트렌드
 // ─────────────────────────────────────────
 
-const STOPWORDS = new Set(["the","and","for","with","from","that","this","are","was","were","has","have","had","been","will","its","not","but","can","all","new","about","more","into","also","than","over","after","how","what","when","where","who","which","their","they","would","could","should","may","just","some","other","most","very","only","even","through","between","under","while","does","like","said","says","being","been","these","those","such","many","each","both","make","made","still","among","또한","대한","위한","통해","이번","이를","등을","에서","으로","하는","것으로","있는","있다","에도","것을"]);
-
 const TrendPanel = () => {
   const { data: keywords = [], isLoading } = useQuery({
-    queryKey: ["keyword-trend-7d"],
+    queryKey: ["keyword-trend-api-7d"],
     queryFn: async () => {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -101,39 +93,31 @@ const TrendPanel = () => {
 
       const { data: news } = await supabase
         .from("news_articles")
-        .select("title, category")
+        .select("title, api_keywords")
         .gte("date", from)
         .order("date", { ascending: false })
-        .limit(300);
+        .limit(500);
 
       if (!news) return [];
 
-      const freq: Record<string, { count: number; category: string }> = {};
+      const freq: Record<string, number> = {};
 
       news.forEach((n: any) => {
-        // 한글 2글자 이상, 영어 4글자 이상 단어 추출
-        const words = (n.title || "")
-          .split(/[\s,.\-()[\]\/·\|]+/)
-          .map((w: string) => w.trim())
-          .filter((w: string) => {
-            if (STOPWORDS.has(w.toLowerCase())) return false;
-            const isKo = /[가-힣]/.test(w);
-            const isEn = /^[a-zA-Z]+$/.test(w);
-            return (isKo && w.length >= 2) || (isEn && w.length >= 4);
-          });
-
-        words.forEach((w: string) => {
-          const key = w.toLowerCase();
-          if (!freq[key]) freq[key] = { count: 0, category: n.category || "" };
-          freq[key].count++;
+        // api_keywords 배열에서 원료의약품명/제품명 추출
+        const apiKws: string[] = n.api_keywords || [];
+        apiKws.forEach((kw: string) => {
+          const key = kw.trim();
+          if (key.length < 2) return;
+          const normalizedKey = key.toLowerCase();
+          freq[normalizedKey] = (freq[normalizedKey] || 0) + 1;
         });
       });
 
       return Object.entries(freq)
-        .filter(([, v]) => v.count >= 2)
-        .sort((a, b) => b[1].count - a[1].count)
+        .filter(([, count]) => count >= 2)
+        .sort((a, b) => b[1] - a[1])
         .slice(0, 30)
-        .map(([word, v], i) => ({ word, count: v.count, rank: i + 1 }));
+        .map(([word, count], i) => ({ word, count, rank: i + 1 }));
     },
     staleTime: 1000 * 60 * 30,
   });
