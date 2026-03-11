@@ -49,12 +49,9 @@ const BriefingPanel = () => {
       {/* 주요 항목 */}
       <div className="space-y-3">
         {briefing.items?.map((item: any, i: number) => (
-          <div key={i} className="flex gap-2.5">
-            <span className="text-base shrink-0 mt-0.5">{item.emoji}</span>
-            <div>
-              <p className="text-[12px] font-semibold text-foreground">{item.title}</p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">{item.summary}</p>
-            </div>
+          <div key={i}>
+            <p className="text-[12px] font-semibold text-foreground">{item.title}</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">{item.summary}</p>
           </div>
         ))}
       </div>
