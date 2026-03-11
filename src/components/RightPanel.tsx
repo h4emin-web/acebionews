@@ -45,18 +45,12 @@ const BriefingPanel = () => {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      {/* 헤드라인 */}
-      <div className="bg-foreground text-background rounded-lg px-4 py-3">
-        <p className="text-[10px] font-medium opacity-60 mb-1">TODAY'S HEADLINE</p>
-        <p className="text-[14px] font-bold leading-snug">{briefing.headline}</p>
-      </div>
-
+    <div className="p-4 space-y-3">
       {/* 주요 항목 */}
       <div className="space-y-3">
         {briefing.items?.map((item: any, i: number) => (
-          <div key={i} className="flex gap-3">
-            <span className="text-lg shrink-0 mt-0.5">{item.emoji}</span>
+          <div key={i} className="flex gap-2.5">
+            <span className="text-base shrink-0 mt-0.5">{item.emoji}</span>
             <div>
               <p className="text-[12px] font-semibold text-foreground">{item.title}</p>
               <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">{item.summary}</p>
@@ -68,8 +62,8 @@ const BriefingPanel = () => {
       {/* 에디터 코멘트 */}
       {briefing.insight && (
         <div className="border-t border-border pt-3">
-          <p className="text-[10px] font-semibold text-muted-foreground mb-1">에디터 코멘트</p>
-          <p className="text-[11px] text-foreground leading-relaxed italic">"{briefing.insight}"</p>
+          <p className="text-[10px] font-semibold text-muted-foreground mb-1">한줄 요약</p>
+          <p className="text-[11px] text-foreground leading-relaxed">{briefing.insight}</p>
         </div>
       )}
 
