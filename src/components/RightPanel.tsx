@@ -89,11 +89,9 @@ const BriefingPanel = () => {
 // 키워드 트렌드
 // ─────────────────────────────────────────
 
-const STOPWORDS = new Set(["the","and","for","with","from","that","this","are","was","were","has","have","had","been","will","its","not","but","can","all","new","about","more","into","also","than","over","after","how","what","when","where","who","which","their","they","would","could","should","may","just","some","other","most","very","only","even","through","between","under","while","does","like","said","says","being","been","these","those","such","many","each","both","make","made","still","among","또한","대한","위한","통해","이번","이를","등을","에서","으로","하는","것으로","있는","있다","에도","것을"]);
-
 const TrendPanel = () => {
   const { data: keywords = [], isLoading } = useQuery({
-    queryKey: ["keyword-trend-7d"],
+    queryKey: ["keyword-trend-api-7d"],
     queryFn: async () => {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -101,39 +99,31 @@ const TrendPanel = () => {
 
       const { data: news } = await supabase
         .from("news_articles")
-        .select("title, category")
+        .select("title, api_keywords")
         .gte("date", from)
         .order("date", { ascending: false })
-        .limit(300);
+        .limit(500);
 
       if (!news) return [];
 
-      const freq: Record<string, { count: number; category: string }> = {};
+      const freq: Record<string, number> = {};
 
       news.forEach((n: any) => {
-        // 한글 2글자 이상, 영어 4글자 이상 단어 추출
-        const words = (n.title || "")
-          .split(/[\s,.\-()[\]\/·\|]+/)
-          .map((w: string) => w.trim())
-          .filter((w: string) => {
-            if (STOPWORDS.has(w.toLowerCase())) return false;
-            const isKo = /[가-힣]/.test(w);
-            const isEn = /^[a-zA-Z]+$/.test(w);
-            return (isKo && w.length >= 2) || (isEn && w.length >= 4);
-          });
-
-        words.forEach((w: string) => {
-          const key = w.toLowerCase();
-          if (!freq[key]) freq[key] = { count: 0, category: n.category || "" };
-          freq[key].count++;
+        // api_keywords 배열에서 원료의약품명/제품명 추출
+        const apiKws: string[] = n.api_keywords || [];
+        apiKws.forEach((kw: string) => {
+          const key = kw.trim();
+          if (key.length < 2) return;
+          const normalizedKey = key.toLowerCase();
+          freq[normalizedKey] = (freq[normalizedKey] || 0) + 1;
         });
       });
 
       return Object.entries(freq)
-        .filter(([, v]) => v.count >= 2)
-        .sort((a, b) => b[1].count - a[1].count)
+        .filter(([, count]) => count >= 2)
+        .sort((a, b) => b[1] - a[1])
         .slice(0, 30)
-        .map(([word, v], i) => ({ word, count: v.count, rank: i + 1 }));
+        .map(([word, count], i) => ({ word, count, rank: i + 1 }));
     },
     staleTime: 1000 * 60 * 30,
   });
