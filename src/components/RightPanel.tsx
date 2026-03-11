@@ -89,6 +89,8 @@ const BriefingPanel = () => {
 // 키워드 트렌드
 // ─────────────────────────────────────────
 
+const STOPWORDS = new Set(["the","and","for","with","from","that","this","are","was","were","has","have","had","been","will","its","not","but","can","all","new","about","more","into","also","than","over","after","how","what","when","where","who","which","their","they","would","could","should","may","just","some","other","most","very","only","even","through","between","under","while","does","like","said","says","being","been","these","those","such","many","each","both","make","made","still","among","또한","대한","위한","통해","이번","이를","등을","에서","으로","하는","것으로","있는","있다","에도","것을"]);
+
 const TrendPanel = () => {
   const { data: keywords = [], isLoading } = useQuery({
     queryKey: ["keyword-trend-7d"],
