@@ -2,22 +2,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const GEMINI_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (!GEMINI_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 어제~오늘 뉴스 가져오기
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const from = yesterday.toISOString().split("T")[0];
@@ -36,20 +35,21 @@ Deno.serve(async (req) => {
     }
 
     const newsList = news
-      .map((n: any) => `[${n.region}/${n.source}] ${n.title}`)
+      .map((n: any) => `[${n.region}/${n.source}] ${n.title}: ${n.summary?.slice(0, 80)}`)
       .join("\n");
 
+    console.log(`Generating briefing from ${news.length} articles`);
+
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${GEMINI_KEY}`,
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gemini-2.0-flash",
-          max_tokens: 1000,
+          model: "google/gemini-2.5-flash",
           messages: [
             {
               role: "system",
@@ -72,8 +72,15 @@ items는 최대 5개, 원료의약품·신약·임상·규제·딜 관련 뉴스
       }
     );
 
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      throw new Error(`AI gateway error: ${response.status}`);
+    }
+
     const aiData = await response.json();
     const text = aiData.choices?.[0]?.message?.content || "{}";
+    console.log("AI raw response:", text.slice(0, 200));
     const briefing = JSON.parse(text.replace(/```json|```/g, "").trim());
 
     return new Response(JSON.stringify({ success: true, briefing }), {
