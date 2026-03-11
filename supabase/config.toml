@@ -41,3 +41,12 @@ verify_jwt = false
 
 [functions.generate-intelligence]
 verify_jwt = false
+
+[functions.generate-daily-briefing]
+verify_jwt = false
+
+[functions.crawl-bio-events]
+verify_jwt = false
+
+[functions.crawl-cnn-health]
+verify_jwt = false
