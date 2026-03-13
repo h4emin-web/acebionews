@@ -620,6 +620,111 @@ async function fetchHtml(
   }
 }
 
+// Fetch full body text for domestic Korean articles by scraping article pages directly
+async function enrichDomesticArticles(
+  articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>
+): Promise<void> {
+  const domesticArticles = articles.filter(a => a.region === "국내" && a.url);
+  if (domesticArticles.length === 0) return;
+
+  const toScrape = domesticArticles.slice(0, 40);
+  console.log(`Enriching ${toScrape.length} domestic articles with full body text`);
+
+  for (let i = 0; i < toScrape.length; i += 5) {
+    const batch = toScrape.slice(i, i + 5);
+    const results = await Promise.all(
+      batch.map(async (article) => {
+        try {
+          const resp = await fetch(article.url, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "ko-KR,ko;q=0.9",
+            },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!resp.ok) return null;
+          const html = await resp.text();
+
+          // Extract article body text from common Korean news site patterns
+          let bodyText = "";
+
+          // Pattern 1: <div id="article-view-content-div"> (많은 한국 뉴스 사이트)
+          const articleViewMatch = html.match(/<div[^>]*id="article-view-content-div"[^>]*>([\s\S]*?)<\/div>\s*(?:<div|<\/section|<\/article)/i);
+          if (articleViewMatch) {
+            bodyText = stripHtml(articleViewMatch[1]);
+          }
+
+          // Pattern 2: <div class="article_body"> or <div class="article-body">
+          if (!bodyText) {
+            const bodyMatch = html.match(/<div[^>]*class="[^"]*article[_-]?body[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+            if (bodyMatch) bodyText = stripHtml(bodyMatch[1]);
+          }
+
+          // Pattern 3: <article> tag content
+          if (!bodyText) {
+            const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+            if (articleMatch) bodyText = stripHtml(articleMatch[1]);
+          }
+
+          // Pattern 4: <div id="articleBody"> (데일리팜 등)
+          if (!bodyText) {
+            const articleBodyMatch = html.match(/<div[^>]*id="articleBody"[^>]*>([\s\S]*?)<\/div>/i);
+            if (articleBodyMatch) bodyText = stripHtml(articleBodyMatch[1]);
+          }
+
+          // Pattern 5: <div class="news_body_area"> or news-body
+          if (!bodyText) {
+            const newsBodyMatch = html.match(/<div[^>]*class="[^"]*news[_-]?body[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+            if (newsBodyMatch) bodyText = stripHtml(newsBodyMatch[1]);
+          }
+
+          // Pattern 6: <div class="content"> with substantial text
+          if (!bodyText) {
+            const contentMatch = html.match(/<div[^>]*class="content"[^>]*>([\s\S]*?)<\/div>/i);
+            if (contentMatch) {
+              const extracted = stripHtml(contentMatch[1]);
+              if (extracted.length > 100) bodyText = extracted;
+            }
+          }
+
+          // Pattern 7: 데일리팜 specific - <div class="article">
+          if (!bodyText) {
+            const dpMatch = html.match(/<div[^>]*class="article"[^>]*>([\s\S]*?)<\/div>/i);
+            if (dpMatch) bodyText = stripHtml(dpMatch[1]);
+          }
+
+          // Clean up extracted text
+          bodyText = bodyText
+            .replace(/\s+/g, " ")
+            .replace(/사진=[^\s]*/g, "")
+            .replace(/\[.*?기자\]/g, "")
+            .replace(/©.*$/g, "")
+            .replace(/무단전재.*$/g, "")
+            .replace(/저작권.*$/g, "")
+            .trim()
+            .slice(0, 3000);
+
+          return bodyText.length > 100 ? { url: article.url, body: bodyText } : null;
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    for (const r of results) {
+      if (!r) continue;
+      const article = articles.find(a => a.url === r.url);
+      if (article) {
+        article.summary = r.body; // Replace short snippet with full body text
+      }
+    }
+
+    if (i + 5 < toScrape.length) await new Promise(r => setTimeout(r, 500));
+  }
+  console.log(`Enriched domestic articles with body text`);
+}
+
 // Fetch full body text for ALL foreign articles using Firecrawl
 async function enrichForeignArticles(
   articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>
@@ -1215,7 +1320,10 @@ serve(async (req) => {
     const newFetched = allFetched.filter(a => !existingUrlSet.has(a.url));
     console.log(`Pre-filtered to ${newFetched.length} new articles (${allFetched.length - newFetched.length} already in DB)`);
 
-    // 2b. Enrich ALL foreign articles with full body text via Firecrawl
+    // 2b. Enrich domestic Korean articles with full body text
+    await enrichDomesticArticles(newFetched);
+
+    // 2c. Enrich ALL foreign articles with full body text via Firecrawl
     await enrichForeignArticles(newFetched);
 
     // 3. Extract keywords + translate foreign articles using Gemini
