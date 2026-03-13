@@ -335,6 +335,9 @@ function parseThebionews(html: string): Array<{ title: string; summary: string; 
     const normalizedDate = normalizeDate(dateStr);
     // Only include today's articles
     if (normalizedDate !== todayStr) continue;
+    // Skip English articles (more than 60% ASCII letters = English)
+    const asciiLetters = (title.match(/[a-zA-Z]/g) || []).length;
+    if (title.length > 0 && asciiLetters / title.length > 0.6) continue;
     if (title.length > 5) {
       articles.push({ title, summary, url, date: normalizedDate });
     }
