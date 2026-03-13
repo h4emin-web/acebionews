@@ -1320,7 +1320,10 @@ serve(async (req) => {
     const newFetched = allFetched.filter(a => !existingUrlSet.has(a.url));
     console.log(`Pre-filtered to ${newFetched.length} new articles (${allFetched.length - newFetched.length} already in DB)`);
 
-    // 2b. Enrich ALL foreign articles with full body text via Firecrawl
+    // 2b. Enrich domestic Korean articles with full body text
+    await enrichDomesticArticles(newFetched);
+
+    // 2c. Enrich ALL foreign articles with full body text via Firecrawl
     await enrichForeignArticles(newFetched);
 
     // 3. Extract keywords + translate foreign articles using Gemini
