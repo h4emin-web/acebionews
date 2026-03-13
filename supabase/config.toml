@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.crawl-cnn-health]
 verify_jwt = false
+
+[functions.pharma-chat]
+verify_jwt = false
