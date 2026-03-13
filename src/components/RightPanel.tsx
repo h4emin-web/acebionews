@@ -1,294 +1,244 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { ExternalLink, RefreshCw, TrendingUp, Calendar, Sparkles } from "lucide-react";
-import { PillLoader } from "@/components/PillLoader";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Bot, User, Loader2, Trash2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
-// ─────────────────────────────────────────
-// 탭 정의
-// ─────────────────────────────────────────
-type Tab = "briefing" | "trend" | "calendar";
-const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-  { key: "briefing", label: "AI 브리핑", icon: <Sparkles className="w-3.5 h-3.5" /> },
-  { key: "trend",    label: "키워드 트렌드", icon: <TrendingUp className="w-3.5 h-3.5" /> },
-  { key: "calendar", label: "이벤트",    icon: <Calendar className="w-3.5 h-3.5" /> },
+type Msg = { role: "user" | "assistant"; content: string };
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pharma-chat`;
+
+const SUGGESTIONS = [
+  "세마글루타이드 원료 공급 현황은?",
+  "FDA DMF 등록 절차 알려줘",
+  "2025년 특허 만료 블록버스터는?",
+  "바이오시밀러 개발 트렌드",
 ];
 
-// ─────────────────────────────────────────
-// AI 브리핑
-// ─────────────────────────────────────────
-const BriefingPanel = () => {
-  const today = new Date().toISOString().split("T")[0];
-
-  const { data: briefing, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["daily-briefing", today],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("generate-daily-briefing");
-      if (error) throw error;
-      return data?.briefing || null;
+async function streamChat({
+  messages,
+  onDelta,
+  onDone,
+  signal,
+}: {
+  messages: Msg[];
+  onDelta: (t: string) => void;
+  onDone: () => void;
+  signal?: AbortSignal;
+}) {
+  const resp = await fetch(CHAT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    staleTime: 1000 * 60 * 60, // 1시간 캐시
-    refetchOnWindowFocus: false,
+    body: JSON.stringify({ messages }),
+    signal,
   });
 
-  if (isLoading || isFetching) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <PillLoader text="AI 브리핑 생성 중..." />
-        <p className="text-[10px] text-muted-foreground">오늘의 뉴스를 분석하고 있어요</p>
-      </div>
-    );
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || "요청 실패");
   }
+  if (!resp.body) throw new Error("스트림 없음");
 
-  if (!briefing) {
-    return <div className="py-12 text-center text-xs text-muted-foreground">오늘 뉴스가 없습니다</div>;
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let done = false;
+
+  while (!done) {
+    const { done: rd, value } = await reader.read();
+    if (rd) break;
+    buf += decoder.decode(value, { stream: true });
+
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) !== -1) {
+      let line = buf.slice(0, nl);
+      buf = buf.slice(nl + 1);
+      if (line.endsWith("\r")) line = line.slice(0, -1);
+      if (line.startsWith(":") || line.trim() === "") continue;
+      if (!line.startsWith("data: ")) continue;
+      const json = line.slice(6).trim();
+      if (json === "[DONE]") { done = true; break; }
+      try {
+        const p = JSON.parse(json);
+        const c = p.choices?.[0]?.delta?.content;
+        if (c) onDelta(c);
+      } catch {
+        buf = line + "\n" + buf;
+        break;
+      }
+    }
   }
+  onDone();
+}
 
-  return (
-    <div className="p-4 space-y-3">
-      {/* 주요 항목 */}
-      <div className="space-y-3">
-        {briefing.items?.map((item: any, i: number) => (
-          <div key={i}>
-            <p className="text-[12px] font-semibold text-foreground">{item.title}</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">{item.summary}</p>
-          </div>
-        ))}
-      </div>
+export const RightPanel = () => {
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-      {/* 에디터 코멘트 */}
-      {briefing.insight && (
-        <div className="border-t border-border pt-3">
-          <p className="text-[10px] font-semibold text-muted-foreground mb-1">한줄 요약</p>
-          <p className="text-[11px] text-foreground leading-relaxed">{briefing.insight}</p>
-        </div>
-      )}
-
-      {/* 재생성 버튼 */}
-      <button
-        onClick={() => refetch()}
-        className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <RefreshCw className="w-3 h-3" />
-        다시 생성
-      </button>
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────
-// 키워드 트렌드
-// ─────────────────────────────────────────
-
-const TrendPanel = () => {
-  const { data: keywords = [], isLoading } = useQuery({
-    queryKey: ["keyword-trend-api-7d"],
-    queryFn: async () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const from = sevenDaysAgo.toISOString().split("T")[0];
-
-      const { data: news } = await supabase
-        .from("news_articles")
-        .select("title, api_keywords")
-        .gte("date", from)
-        .order("date", { ascending: false })
-        .limit(500);
-
-      if (!news) return [];
-
-      const freq: Record<string, number> = {};
-
-      news.forEach((n: any) => {
-        // api_keywords 배열에서 원료의약품명/제품명 추출
-        const apiKws: string[] = n.api_keywords || [];
-        apiKws.forEach((kw: string) => {
-          const key = kw.trim();
-          if (key.length < 2) return;
-          const normalizedKey = key.toLowerCase();
-          freq[normalizedKey] = (freq[normalizedKey] || 0) + 1;
-        });
-      });
-
-      return Object.entries(freq)
-        .filter(([, count]) => count >= 2)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 30)
-        .map(([word, count], i) => ({ word, count, rank: i + 1 }));
-    },
-    staleTime: 1000 * 60 * 30,
-  });
-
-  const max = keywords[0]?.count || 1;
-
-  if (isLoading) return <div className="py-12"><PillLoader text="분석 중..." /></div>;
-
-  return (
-    <div className="p-4">
-      <p className="text-[10px] text-muted-foreground mb-3">최근 7일 뉴스 기준 · {keywords.length}개 키워드</p>
-      <div className="space-y-2">
-        {keywords.map((kw, i) => (
-          <div key={kw.word} className="flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground font-mono w-5 text-right shrink-0">{kw.rank}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-0.5">
-                <span className={`text-[12px] font-medium text-foreground truncate ${i < 3 ? "font-bold" : ""}`}>
-                  {kw.word}
-                </span>
-                <span className="text-[10px] text-muted-foreground shrink-0 ml-2">{kw.count}회</span>
-              </div>
-              <div className="h-1 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-foreground rounded-full transition-all"
-                  style={{ width: `${(kw.count / max) * 100}%`, opacity: i < 3 ? 1 : 0.4 }}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────
-// 이벤트 캘린더
-// ─────────────────────────────────────────
-type BioEvent = {
-  id: string;
-  title: string;
-  date: string;
-  location?: string;
-  url?: string;
-  category: "conference" | "fda" | "earnings" | "other";
-};
-
-const EVENT_COLORS: Record<string, string> = {
-  conference: "bg-blue-500",
-  fda:        "bg-red-500",
-  earnings:   "bg-emerald-500",
-  other:      "bg-muted-foreground",
-};
-const EVENT_LABELS: Record<string, string> = {
-  conference: "학회", fda: "FDA", earnings: "실적", other: "기타",
-};
-
-const CalendarPanel = () => {
-  const { data: events = [], isLoading } = useQuery({
-    queryKey: ["bio-events"],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("crawl-bio-events");
-      if (error) throw error;
-      return (data?.events || []) as BioEvent[];
-    },
-    staleTime: 1000 * 60 * 60 * 6, // 6시간 캐시
-    refetchOnWindowFocus: false,
-  });
-
-  // 날짜 그룹핑
-  const grouped = useMemo(() => {
-    const map: Record<string, BioEvent[]> = {};
-    events.forEach(e => {
-      if (!map[e.date]) map[e.date] = [];
-      map[e.date].push(e);
+  const scrollToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     });
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-  }, [events]);
+  }, []);
 
-  const today = new Date().toISOString().split("T")[0];
+  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
-  const formatDate = (d: string) => {
-    const dt = new Date(d);
-    return dt.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
+  const send = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || isLoading) return;
+    setInput("");
+
+    const userMsg: Msg = { role: "user", content: trimmed };
+    setMessages(prev => [...prev, userMsg]);
+    setIsLoading(true);
+
+    let assistantSoFar = "";
+    const upsert = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant") {
+          return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
+        }
+        return [...prev, { role: "assistant", content: assistantSoFar }];
+      });
+    };
+
+    abortRef.current = new AbortController();
+    try {
+      await streamChat({
+        messages: [...messages, userMsg],
+        onDelta: upsert,
+        onDone: () => setIsLoading(false),
+        signal: abortRef.current.signal,
+      });
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        setMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${e.message || "오류가 발생했습니다"}` }]);
+      }
+      setIsLoading(false);
+    }
   };
 
-  if (isLoading) return <div className="py-12"><PillLoader text="이벤트 로딩 중..." /></div>;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send(input);
+    }
+  };
 
-  if (events.length === 0) {
-    return (
-      <div className="p-4 py-12 text-center">
-        <Calendar className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-        <p className="text-xs text-muted-foreground">이벤트 정보를 불러올 수 없습니다</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 space-y-4">
-      {grouped.map(([date, evts]) => (
-        <div key={date}>
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`text-[11px] font-bold ${date === today ? "text-foreground" : "text-muted-foreground"}`}>
-              {formatDate(date)}
-            </span>
-            {date === today && (
-              <span className="text-[9px] font-bold bg-foreground text-background px-1.5 py-0.5 rounded">TODAY</span>
-            )}
-          </div>
-          <div className="space-y-1.5 ml-1">
-            {evts.map(ev => (
-              <div key={ev.id} className="flex items-start gap-2 group">
-                <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${EVENT_COLORS[ev.category]}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-1">
-                    <p className="text-[12px] font-medium text-foreground leading-snug">{ev.title}</p>
-                    {ev.url && (
-                      <a href={ev.url} target="_blank" rel="noreferrer"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
-                        <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[9px] font-medium px-1 py-0.5 rounded bg-muted text-muted-foreground`}>
-                      {EVENT_LABELS[ev.category]}
-                    </span>
-                    {ev.location && <span className="text-[10px] text-muted-foreground">{ev.location}</span>}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────
-// 메인 패널
-// ─────────────────────────────────────────
-export const RightPanel = () => {
-  const [tab, setTab] = useState<Tab>("briefing");
+  const clearChat = () => {
+    abortRef.current?.abort();
+    setMessages([]);
+    setIsLoading(false);
+  };
 
   return (
     <div
       className="card-elevated rounded-lg overflow-hidden sticky top-[100px] flex flex-col"
       style={{ maxHeight: "calc(100vh - 120px)" }}
     >
-      {/* 탭 헤더 */}
-      <div className="flex border-b border-border shrink-0">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium transition-colors border-b-2 -mb-px ${
-              tab === t.key
-                ? "border-foreground text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t.icon}
-            {t.label}
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
+        <div className="flex items-center gap-2">
+          <Bot className="w-4 h-4 text-primary" />
+          <span className="text-[12px] font-semibold text-foreground">AI 의약 전문가</span>
+        </div>
+        {messages.length > 0 && (
+          <button onClick={clearChat} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-muted">
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
-        ))}
+        )}
       </div>
 
-      {/* 내용 */}
-      <div className="overflow-y-auto scrollbar-hide flex-1">
-        {tab === "briefing"  && <BriefingPanel />}
-        {tab === "trend"     && <TrendPanel />}
-        {tab === "calendar"  && <CalendarPanel />}
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide p-3 space-y-3" style={{ minHeight: 200 }}>
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4 py-8">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Bot className="w-5 h-5 text-primary" />
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-[12px] font-medium text-foreground">무엇이든 물어보세요</p>
+              <p className="text-[10px] text-muted-foreground">원료의약품, 규제, 특허, 임상 등</p>
+            </div>
+            <div className="flex flex-wrap gap-1.5 justify-center max-w-[300px]">
+              {SUGGESTIONS.map(s => (
+                <button
+                  key={s}
+                  onClick={() => send(s)}
+                  className="text-[10px] px-2.5 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          messages.map((msg, i) => (
+            <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : ""}`}>
+              {msg.role === "assistant" && (
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Bot className="w-3 h-3 text-primary" />
+                </div>
+              )}
+              <div className={`max-w-[85%] rounded-lg px-3 py-2 text-[11px] leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-foreground"
+              }`}>
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-xs dark:prose-invert max-w-none [&_p]:text-[11px] [&_p]:leading-relaxed [&_p]:my-1 [&_li]:text-[11px] [&_h1]:text-[13px] [&_h2]:text-[12px] [&_h3]:text-[11px] [&_code]:text-[10px] [&_strong]:font-semibold">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  msg.content
+                )}
+              </div>
+              {msg.role === "user" && (
+                <div className="w-5 h-5 rounded-full bg-foreground/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <User className="w-3 h-3 text-foreground" />
+                </div>
+              )}
+            </div>
+          ))
+        )}
+        {isLoading && messages[messages.length - 1]?.role === "user" && (
+          <div className="flex gap-2">
+            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Bot className="w-3 h-3 text-primary" />
+            </div>
+            <div className="bg-muted rounded-lg px-3 py-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-border p-2.5 shrink-0">
+        <div className="flex items-end gap-2">
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="질문을 입력하세요..."
+            rows={1}
+            className="flex-1 resize-none bg-muted rounded-lg px-3 py-2 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 max-h-[80px] scrollbar-hide"
+            style={{ minHeight: 36 }}
+          />
+          <button
+            onClick={() => send(input)}
+            disabled={!input.trim() || isLoading}
+            className="p-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-40 hover:opacity-90 transition-opacity shrink-0"
+          >
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
