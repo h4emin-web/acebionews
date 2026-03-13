@@ -65,6 +65,10 @@ function stripCdata(text: string): string {
 
 function stripHtml(text: string): string {
   return text
+    // script/style 블록 전체 제거 (내용 포함)
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    // 나머지 HTML 태그 제거
     .replace(/<[^>]*>/g, "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -74,8 +78,40 @@ function stripHtml(text: string): string {
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'")
     .replace(/&nbsp;/g, " ")
+    // JS 코드 잔재 제거 (중괄호 블록, function(), const 등)
+    .replace(/\$\(function\(\)[\s\S]*/, "")
+    .replace(/\{[^{}]{20,}\}/g, "")
+    .replace(/(const|var|let|function|if|return|window|document)\s+[\s\S]{0,200}/, "")
+    // AD 템플릿 패턴 제거
+    .replace(/#AD\w+[\s\S]*/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// 문장 중간에 잘리지 않게 자연스러운 지점에서 자르기
+function cleanSummary(text: string, maxLen = 200): string {
+  const cleaned = stripHtml(text);
+  if (cleaned.length <= maxLen) return cleaned;
+
+  // 마침표/느낌표/물음표 기준으로 자르기
+  const truncated = cleaned.slice(0, maxLen);
+  const lastPunct = Math.max(
+    truncated.lastIndexOf("다. "),
+    truncated.lastIndexOf("요. "),
+    truncated.lastIndexOf("다."),
+    truncated.lastIndexOf("요."),
+    truncated.lastIndexOf(". "),
+  );
+
+  if (lastPunct > maxLen * 0.5) {
+    // 마침표 뒤까지 포함해서 자르기
+    const end = truncated.lastIndexOf(".", lastPunct) + 1;
+    return cleaned.slice(0, end).trim();
+  }
+
+  // 마침표 없으면 단어 단위로 자르기
+  const lastSpace = truncated.lastIndexOf(" ");
+  return lastSpace > 0 ? cleaned.slice(0, lastSpace).trim() : truncated.trim();
 }
 
 // Parse RSS XML into articles
@@ -90,7 +126,7 @@ function parseRss(xml: string): Array<{ title: string; summary: string; url: str
     const linkM = block.match(/<link[^>]*>([\s\S]*?)<\/link>|<link[^>]*href="([^"]*?)"/i);
     const dateM = block.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>|<published[^>]*>([\s\S]*?)<\/published>|<dc:date[^>]*>([\s\S]*?)<\/dc:date>|<updated[^>]*>([\s\S]*?)<\/updated>/i);
     const title = stripHtml(stripCdata(titleM?.[1] || ""));
-    const summary = stripHtml(stripCdata(descM?.[1] || descM?.[2] || descM?.[3] || "")).slice(0, 300);
+    const summary = cleanSummary(stripCdata(descM?.[1] || descM?.[2] || descM?.[3] || ""));
     const url = stripCdata(linkM?.[1] || linkM?.[2] || "").trim();
     const date = stripCdata(dateM?.[1] || dateM?.[2] || dateM?.[3] || dateM?.[4] || "");
     if (title) {
@@ -136,7 +172,7 @@ function parseYakup(html: string): Array<{ title: string; summary: string; url: 
     if (!titleMatch) continue;
     const title = stripHtml(titleMatch[1]).trim();
     const summaryMatch = block.match(/class="text_con">\s*<span>\s*([\s\S]*?)\s*<\/span>/i);
-    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const summary = summaryMatch ? cleanSummary(summaryMatch[1]) : "";
     const dateMatch = block.match(/class="date">\s*([\d.]+)\s*<\/span>/i);
     const dateStr = dateMatch ? dateMatch[1].replace(/\./g, "-") : "";
     if (title.length > 5) {
@@ -164,7 +200,7 @@ function parseDailypharm(html: string): Array<{ title: string; summary: string; 
     if (!titleMatch) continue;
     const title = stripHtml(titleMatch[1]).trim();
     const summaryMatch = block.match(/<div\s+class="lin_cont[^"]*">([\s\S]*?)<\/div>/i);
-    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const summary = summaryMatch ? cleanSummary(summaryMatch[1]) : "";
     const dateMatch = block.match(/<div class="lin_data">\s*<div>(\d{4}-\d{2}-\d{2})/i);
     const dateStr = dateMatch ? dateMatch[1] : "";
     if (title.length > 5 && !articles.some(a => a.title === title)) {
@@ -203,7 +239,7 @@ function parseNewsmp(html: string): Array<{ title: string; summary: string; url:
     const url = rawUrl.startsWith("http") ? rawUrl : `https://www.newsmp.com${rawUrl}`;
     const title = stripHtml(titleMatch[2]).trim();
     const summaryMatch = block.match(/<p class="list-summary">\s*<a[^>]*>([\s\S]*?)<\/a>/i);
-    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const summary = summaryMatch ? cleanSummary(summaryMatch[1]) : "";
     const dateMatch = block.match(/\|\s*(\d{4}-\d{2}-\d{2})\s/i);
     const dateStr = dateMatch ? dateMatch[1] : "";
     if (title.length > 5) {
@@ -247,7 +283,7 @@ function parseKpanews(html: string): Array<{ title: string; summary: string; url
     const url = titleMatch[1].trim();
     const title = stripHtml(titleMatch[2]).trim();
     const summaryMatch = block.match(/<p class="altlist-summary">\s*([\s\S]*?)\s*<\/p>/i);
-    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const summary = summaryMatch ? cleanSummary(summaryMatch[1]) : "";
     const dateMatch = block.match(/<div class="altlist-info-item">(\d{2}-\d{2}\s+\d{2}:\d{2})<\/div>/i);
     const dateStr = dateMatch ? dateMatch[1] : "";
     if (title.length > 5) {
@@ -304,7 +340,7 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
     const url = titleMatch[1].trim();
     const title = stripHtml(titleMatch[2]).replace(/&nbsp;/g, " ").trim();
     const summaryMatch = block.match(/<p class="altlist-summary">\s*([\s\S]*?)\s*<\/p>/i);
-    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const summary = summaryMatch ? cleanSummary(summaryMatch[1]) : "";
     const dateMatch = block.match(/<div class="altlist-info-item">(\d{2}-\d{2}\s+\d{2}:\d{2})<\/div>/i);
     const dateStr = dateMatch ? dateMatch[1] : "";
     if (title.length > 5) {
@@ -329,7 +365,7 @@ function parseThebionews(html: string): Array<{ title: string; summary: string; 
     if (!url.startsWith("http")) url = `https://www.thebionews.net${url}`;
     const title = stripHtml(titleMatch[2]).trim();
     const summaryMatch = block.match(/<p class="lead[^"]*">\s*<a[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
-    const summary = summaryMatch ? stripHtml(summaryMatch[1]).slice(0, 300).trim() : "";
+    const summary = summaryMatch ? cleanSummary(summaryMatch[1]) : "";
     const dateMatch = block.match(/(\d{4}\.\d{2}\.\d{2})\s+\d{2}:\d{2}/);
     const dateStr = dateMatch ? dateMatch[1].replace(/\./g, "-") : "";
     const normalizedDate = normalizeDate(dateStr);
@@ -418,7 +454,7 @@ function parseBydrug(markdown: string): Array<{ title: string; summary: string; 
       if (i + 1 < lines.length) {
         const nextLine = lines[i + 1].trim();
         if (nextLine.length > 10 && !nextLine.startsWith("[") && !nextLine.startsWith("!") && !BYDRUG_URL_RE.test(nextLine)) {
-          summary = nextLine.slice(0, 300);
+          summary = cleanSummary(nextLine);
         }
       }
       addArticle(title, summary, url, extractDateNearLine(i, 10));
