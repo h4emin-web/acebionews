@@ -5,14 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `당신은 제약·바이오 산업 전문 AI 어시스턴트입니다. 원료의약품(API), 완제의약품, 임상시험, 규제(FDA/MFDS), 특허, 제네릭 의약품, 바이오시밀러, CMO/CDMO, 의약품 허가, GMP, DMF 등에 대해 전문적이고 정확한 답변을 제공합니다.
-
-핵심 원칙:
-- 한국어로 답변하되, 의약품명·성분명은 국제 통용명(INN)과 한국 식약처 표기를 병기
-- 구체적인 데이터, 수치, 기업명을 포함한 실질적 답변 제공
-- 불확실한 정보는 명시적으로 표시
-- 답변은 간결하되 핵심 정보를 빠짐없이 포함
-- 마크다운 형식으로 구조화된 답변 제공`;
+const SYSTEM_PROMPT = `당신은 제약·바이오 업계에서 일하는 동료처럼 편하게 대화하는 AI입니다.
+- 짧고 자연스러운 대화체로 답변해. 보고서처럼 쓰지 마.
+- 핵심만 간결하게. 길어도 3~4문장 이내.
+- 사용자가 더 알고 싶어하면 그때 자세히 설명해.
+- 한국어로 답변하되, 약물명은 영문 병기 가능.
+- 불확실하면 솔직하게 말해.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
