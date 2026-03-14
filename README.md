@@ -29,20 +29,20 @@
 
 | 기능 | 설명 |
 |:---|:---|
-| 📰 **뉴스 자동 수집** | 국내(데일리팜, 약사공론, 의약뉴스 등) / 해외(FiercePharma, BioPharma Dive 등) 13개+ 소스에서 RSS·크롤링 기반 자동 수집 |
-| 🤖 **AI 뉴스 분석** | Google Gemini 기반 원료의약품(API) 산업 관점의 비즈니스 임팩트 자동 분석 |
-| 📊 **인텔리전스 요약** | 일일 브리핑 및 산업 인텔리전스 자동 생성 |
-| 💊 **의약품 검색** | 약물 정보 검색 및 제조사 정보 조회 |
-| 📋 **규제 동향** | FDA 승인, MFDS(식약처) 고시, 임상시험 IND 승인, 리콜 정보 통합 |
-| 🧬 **NCE 특허 만료** | 신규화합물(NCE) 특허 만료 일정 추적 및 알림 |
-| 💰 **바이오 빅딜** | 글로벌 바이오텍 라이선스 딜·M&A 정보 모니터링 |
-| 🔖 **스크랩 & 메모** | 기사 북마크, 메모 작성, 폴더 관리 |
-| 🔔 **키워드 알림** | 사용자 관심 키워드 등록 및 매칭 뉴스 하이라이트 |
-| 🌐 **다국어 번역** | 해외 뉴스 한국어 자동 번역 |
+|  **뉴스 자동 수집** | 국내(데일리팜, 약사공론, 의약뉴스 등) / 해외(FiercePharma, BioPharma Dive 등) 13개+ 소스에서 RSS·크롤링 기반 자동 수집 |
+|  **AI 뉴스 분석** | Google Gemini 기반 원료의약품(API) 산업 관점의 비즈니스 임팩트 자동 분석 |
+|  **인텔리전스 요약** | 일일 브리핑 및 산업 인텔리전스 자동 생성 |
+|  **의약품 검색** | 약물 정보 검색 및 제조사 정보 조회 |
+|  **규제 동향** | FDA 승인, MFDS(식약처) 고시, 임상시험 IND 승인, 리콜 정보 통합 |
+|  **NCE 특허 만료** | 신규화합물(NCE) 특허 만료 일정 추적 및 알림 |
+|  **바이오 빅딜** | 글로벌 바이오텍 라이선스 딜·M&A 정보 모니터링 |
+|  **스크랩 & 메모** | 기사 북마크, 메모 작성, 폴더 관리 |
+|  **키워드 알림** | 사용자 관심 키워드 등록 및 매칭 뉴스 하이라이트 |
+|  **다국어 번역** | 해외 뉴스 한국어 자동 번역 |
 
 ---
 
-## 🏗️ 시스템 아키텍처
+##  시스템 아키텍처
 
 ```
 +=====================================================================+
@@ -58,7 +58,7 @@
 |                        Supabase Backend                              |
 |                                                                      |
 |  +----------------------------------------------------------------+  |
-|  |                   Edge Functions (Deno)                         |  |
+|  |                   Edge Functions (Deno)                        |  |
 |  |                                                                |  |
 |  |  +----------------+  +----------------+  +------------------+  |  |
 |  |  | [Crawlers]     |  | [AI Engine]    |  | [Search/Lookup]  |  |  |
@@ -78,11 +78,11 @@
 |              |               |                                       |
 |              v               v                                       |
 |  +----------------------------------------------------------------+  |
-|  |                   PostgreSQL Database                           |  |
+|  |                   PostgreSQL Database                          |  |
 |  |                                                                |  |
 |  |  news_articles | regulatory_notices | biotech_deals            |  |
 |  |  nce_patent_expiry | clinical_trial_approvals | mfds_recalls   |  |
-|  |  intelligence_summaries | industry_reports | ibric_reports      |  |
+|  |  intelligence_summaries | industry_reports | ibric_reports     |  |
 |  |  bookmarks | user_keywords | user_memos | read_articles        |  |
 |  +----------------------------------------------------------------+  |
 |                                                                      |
@@ -104,7 +104,7 @@
 
 ---
 
-## 📡 데이터 파이프라인
+##  데이터 파이프라인
 
 ```
  [External Sources]        [Collect & Process]         [Store]            [User Interface]
@@ -114,7 +114,7 @@
   RSS Feeds ------+     |                  |     +--------------+    +----------------------+
                   +---->|  crawl-news      |---->| news_articles|--->| News Feed            |
   HTML Crawling --+     |  (Cron: daily)   |     +--------------+    | Filter / Search      |
-                  |     |                  |           |             | Keyword Highlight     |
+                  |     |                  |           |             | Keyword Highlight    |
   Substack -------+     +------------------+           |             +----------------------+
                                                        |
                         +------------------+           |
@@ -274,19 +274,19 @@ acebionews/
 
 ---
 
-## 📊 데이터베이스 스키마
+##  데이터베이스 스키마
 
 ```
 +------------------+      +-------------------+      +----------------------+
 | news_articles    |      | regulatory_notices|      | biotech_deals        |
 +------------------+      +-------------------+      +----------------------+
-| id          [PK] |      | id           [PK] |      | id            [PK]  |
-| title            |      | title             |      | payer / payee       |
-| summary          |      | date              |      | total_m  (USD)      |
-| source / region  |      | type              |      | indication          |
-| country          |      | source            |      | technology          |
-| api_keywords[]   |      | related_apis[]    |      | deal_type           |
-| date / url       |      | url               |      | date                |
+| id          [PK] |      | id           [PK] |      | id            [PK]   |
+| title            |      | title             |      | payer / payee        |
+| summary          |      | date              |      | total_m  (USD)       |
+| source / region  |      | type              |      | indication           |
+| country          |      | source            |      | technology           |
+| api_keywords[]   |      | related_apis[]    |      | deal_type            |
+| date / url       |      | url               |      | date                 |
 +--------+---------+      +-------------------+      +----------------------+
          |
          | FK (article_id)
@@ -298,7 +298,7 @@ acebionews/
 | article_id  [FK] |      | keyword           |      | patent_expiry_date   |
 | memo             |      | created_at        |      | company              |
 | folder_id   [FK] |      +-------------------+      | indication           |
-+------------------+                                  +----------------------+
++------------------+                                 +----------------------+
 
 +------------------+      +-------------------+      +----------------------+
 | clinical_trial   |      | intelligence      |      | mfds_recalls         |
@@ -312,7 +312,7 @@ acebionews/
 
 ---
 
-## 📡 뉴스 소스
+##  뉴스 소스
 
 ### <img src="https://flagcdn.com/w20/kr.png" width="16" height="12" alt="KR" /> 국내
 
@@ -324,7 +324,7 @@ acebionews/
 | 팜뉴스 | HTML 크롤링 |
 | 더바이오 | HTML 크롤링 |
 
-### 🌍 해외
+###  해외
 
 | 소스 | 수집 방식 | 국가 |
 |:---|:---|:---|
