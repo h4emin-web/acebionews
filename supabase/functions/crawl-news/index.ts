@@ -65,9 +65,10 @@ function stripCdata(text: string): string {
 
 function stripHtml(text: string): string {
   return text
-    // script/style 블록 전체 제거 (내용 포함)
+    // script/style/noscript 블록 전체 제거 (내용 포함)
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
     // 나머지 HTML 태그 제거
     .replace(/<[^>]*>/g, "")
     .replace(/&amp;/g, "&")
@@ -78,12 +79,21 @@ function stripHtml(text: string): string {
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'")
     .replace(/&nbsp;/g, " ")
-    // JS 코드 잔재 제거 (중괄호 블록, function(), const 등)
-    .replace(/\$\(function\(\)[\s\S]*/, "")
+    // JS 코드 잔재 제거 — $(function(){...}) 패턴과 이후 전체
+    .replace(/\$\s*\(\s*function\s*\(\s*\)[\s\S]*/gi, "")
+    // jQuery/JS 즉시실행 패턴
+    .replace(/\$\s*\([\s\S]{10,}/g, "")
+    // JS 키워드로 시작하는 코드 블록
+    .replace(/(const|var|let|function|if|return|window|document|new\s+\w+)\s*[\(\{=][\s\S]*/g, "")
+    // 중괄호 블록 (JS 객체/함수)
     .replace(/\{[^{}]{20,}\}/g, "")
-    .replace(/(const|var|let|function|if|return|window|document)\s+[\s\S]{0,200}/, "")
+    // 이벤트핸들러 잔재
+    .replace(/\w+\.addEventListener[\s\S]*/g, "")
+    .replace(/\w+\.querySelector[\s\S]*/g, "")
     // AD 템플릿 패턴 제거
     .replace(/#AD\w+[\s\S]*/g, "")
+    // 특수문자/제어문자 정리
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
