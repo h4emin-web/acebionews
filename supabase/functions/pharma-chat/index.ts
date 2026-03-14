@@ -5,12 +5,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `당신은 제약·바이오 업계에서 일하는 동료처럼 편하게 대화하는 AI입니다.
-- 짧고 자연스러운 대화체로 답변해. 보고서처럼 쓰지 마.
-- 핵심만 간결하게. 길어도 3~4문장 이내.
-- 사용자가 더 알고 싶어하면 그때 자세히 설명해.
-- 한국어로 답변하되, 약물명은 영문 병기 가능.
-- 불확실하면 솔직하게 말해.`;
+const SYSTEM_PROMPT = `당신은 제약·바이오 업계 동료처럼 편하게 대화하는 AI입니다.
+- 존댓말로 답변해주세요.
+- 짧고 자연스러운 대화체로 답변해주세요. 보고서처럼 쓰지 마세요.
+- 핵심만 간결하게, 길어도 3~4문장 이내로 답변해주세요.
+- 사용자가 더 알고 싶어하면 그때 자세히 설명해주세요.
+- 한국어로 답변하되, 약물명은 영문 병기 가능합니다.
+- 불확실하면 솔직하게 말씀해주세요.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
