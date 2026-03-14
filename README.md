@@ -25,167 +25,113 @@
 
 ---
 
-##  주요 기능
+## 🔍 주요 기능
 
 | 기능 | 설명 |
 |:---|:---|
-|  **뉴스 자동 수집** | 국내(데일리팜, 약사공론, 의약뉴스 등) / 해외(FiercePharma, BioPharma Dive 등) 13개+ 소스에서 RSS·크롤링 기반 자동 수집 |
-|  **AI 뉴스 분석** | Google Gemini 기반 원료의약품(API) 산업 관점의 비즈니스 임팩트 자동 분석 |
-|  **인텔리전스 요약** | 일일 브리핑 및 산업 인텔리전스 자동 생성 |
-|  **의약품 검색** | 약물 정보 검색 및 제조사 정보 조회 |
-|  **규제 동향** | FDA 승인, MFDS(식약처) 고시, 임상시험 IND 승인, 리콜 정보 통합 |
-|  **NCE 특허 만료** | 신규화합물(NCE) 특허 만료 일정 추적 및 알림 |
-|  **바이오 빅딜** | 글로벌 바이오텍 라이선스 딜·M&A 정보 모니터링 |
-|  **스크랩 & 메모** | 기사 북마크, 메모 작성, 폴더 관리 |
-|  **키워드 알림** | 사용자 관심 키워드 등록 및 매칭 뉴스 하이라이트 |
-|  **다국어 번역** | 해외 뉴스 한국어 자동 번역 |
+| 📰 **뉴스 자동 수집** | 국내(데일리팜, 약사공론, 의약뉴스 등) / 해외(FiercePharma, BioPharma Dive 등) 13개+ 소스에서 RSS·크롤링 기반 자동 수집 |
+| 🤖 **AI 뉴스 분석** | Google Gemini 기반 원료의약품(API) 산업 관점의 비즈니스 임팩트 자동 분석 |
+| 📊 **인텔리전스 요약** | 일일 브리핑 및 산업 인텔리전스 자동 생성 |
+| 💊 **의약품 검색** | 약물 정보 검색 및 제조사 정보 조회 |
+| 📋 **규제 동향** | FDA 승인, MFDS(식약처) 고시, 임상시험 IND 승인, 리콜 정보 통합 |
+| 🧬 **NCE 특허 만료** | 신규화합물(NCE) 특허 만료 일정 추적 및 알림 |
+| 💰 **바이오 빅딜** | 글로벌 바이오텍 라이선스 딜·M&A 정보 모니터링 |
+| 🔖 **스크랩 & 메모** | 기사 북마크, 메모 작성, 폴더 관리 |
+| 🔔 **키워드 알림** | 사용자 관심 키워드 등록 및 매칭 뉴스 하이라이트 |
+| 🌐 **다국어 번역** | 해외 뉴스 한국어 자동 번역 |
 
 ---
 
 ## 🏗️ 시스템 아키텍처
 
-```mermaid
-graph TB
-    subgraph CLIENT[" Client · Browser"]
-        direction LR
-        React[" React 18 + Router"]
-        UI[" shadcn/ui + Radix"]
-        Chart[" Recharts"]
-        Query[" TanStack Query"]
-    end
-
-    subgraph SUPABASE[" Supabase Backend"]
-        direction TB
-
-        subgraph EDGE[" Edge Functions · Deno"]
-            direction LR
-
-            subgraph CRAWL[" Crawlers"]
-                C1["crawl-news"]
-                C2["crawl-deals"]
-                C3["crawl-ibric"]
-                C4["crawl-cnn"]
-                C5["crawl-mfds"]
-                C6["crawl-regulatory"]
-                C7["crawl-clinical"]
-                C8["crawl-reports"]
-            end
-
-            subgraph AI[" AI Engine"]
-                A1["analyze-news"]
-                A2["generate-intelligence"]
-                A3["generate-daily-brief"]
-                A4["translate-news"]
-                A5["enrich-nce-patents"]
-            end
-
-            subgraph SEARCH[" Search · Lookup"]
-                S1["search-drug-info"]
-                S2["search-manufacturers"]
-                S3["search-external"]
-                S4["pharma-chat"]
-            end
-        end
-
-        CRON["Cron Scheduler · pg_cron"]
-
-        subgraph DB[" PostgreSQL"]
-            direction LR
-            T1["news_articles"]
-            T2["regulatory_notices"]
-            T3["biotech_deals"]
-            T4["nce_patent_expiry"]
-            T5["bookmarks"]
-            T6["intelligence_summaries"]
-        end
-
-        AUTH[" Auth"]
-        REALTIME[" Realtime"]
-    end
-
-    subgraph EXTERNAL[" External Sources"]
-        direction LR
-        RSS[" RSS Feeds\nFiercePharma\nBioPharma Dive\nPharmaTimes"]
-        GEMINI[" Google Gemini\n뉴스 분석 · 번역\n인텔리전스 생성"]
-        GOV[" 공공 API\nFDA · MFDS\n임상시험 DB"]
-    end
-
-    CLIENT -- "HTTPS" --> SUPABASE
-    CRON --> EDGE
-    CRAWL --> DB
-    AI --> DB
-    SEARCH --> DB
-    RSS --> CRAWL
-    GOV --> CRAWL
-    GEMINI --> AI
-
-    style CLIENT fill:#1a1a2e,stroke:#16213e,color:#e0e0e0
-    style SUPABASE fill:#0d1117,stroke:#3FCF8E,color:#e0e0e0
-    style EDGE fill:#161b22,stroke:#58a6ff,color:#e0e0e0
-    style CRAWL fill:#1c2333,stroke:#f0883e,color:#e0e0e0
-    style AI fill:#1c2333,stroke:#a371f7,color:#e0e0e0
-    style SEARCH fill:#1c2333,stroke:#58a6ff,color:#e0e0e0
-    style DB fill:#1c2333,stroke:#3FCF8E,color:#e0e0e0
-    style EXTERNAL fill:#1a1a2e,stroke:#8b949e,color:#e0e0e0
+```
++=====================================================================+
+|                       Client  (Browser)                             |
+|                                                                     |
+|   React 18        shadcn/ui       Recharts       TanStack Query     |
+|   + Router        + Radix         Charts         (Data Fetching)    |
++==============+======================================================+
+               |
+               | HTTPS
+               v
++----------------------------------------------------------------------+
+|                        Supabase Backend                              |
+|                                                                      |
+|  +----------------------------------------------------------------+  |
+|  |                   Edge Functions (Deno)                         |  |
+|  |                                                                |  |
+|  |  +----------------+  +----------------+  +------------------+  |  |
+|  |  | [Crawlers]     |  | [AI Engine]    |  | [Search/Lookup]  |  |  |
+|  |  |                |  |                |  |                  |  |  |
+|  |  | crawl-news     |  | analyze-news   |  | search-drug-info |  |  |
+|  |  | crawl-deals    |  | generate-      |  | search-          |  |  |
+|  |  | crawl-ibric    |  |  intelligence  |  |  manufacturers   |  |  |
+|  |  | crawl-cnn      |  | generate-      |  | search-external  |  |  |
+|  |  | crawl-mfds     |  |  daily-brief   |  | pharma-chat      |  |  |
+|  |  | crawl-         |  | translate-news |  |                  |  |  |
+|  |  |  regulatory    |  | enrich-nce-    |  +------------------+  |  |
+|  |  | crawl-clinical |  |  patents       |                        |  |
+|  |  | crawl-reports  |  +----------------+  +------------------+  |  |
+|  |  +----------------+                      | [Cron Scheduler] |  |  |
+|  |                                          |  pg_cron         |  |  |
+|  +------------------------------------------+------------------+--+  |
+|              |               |                                       |
+|              v               v                                       |
+|  +----------------------------------------------------------------+  |
+|  |                   PostgreSQL Database                           |  |
+|  |                                                                |  |
+|  |  news_articles | regulatory_notices | biotech_deals            |  |
+|  |  nce_patent_expiry | clinical_trial_approvals | mfds_recalls   |  |
+|  |  intelligence_summaries | industry_reports | ibric_reports      |  |
+|  |  bookmarks | user_keywords | user_memos | read_articles        |  |
+|  +----------------------------------------------------------------+  |
+|                                                                      |
+|  +------------+    +-----------+    +----------------------------+   |
+|  | Auth       |    | Storage   |    | Realtime (Subscriptions)   |   |
+|  +------------+    +-----------+    +----------------------------+   |
++----------------------------------------------------------------------+
+               |
+  +------------+----------------+----------------+
+  |                             |                |
+  v                             v                v
++--------------+    +--------------+    +--------------+
+| RSS Feeds    |    | Gemini AI    |    | Public APIs  |
+| FiercePharma |    | News Analyze |    | FDA / MFDS   |
+| BioPharma    |    | Intelligence |    | Clinical DB  |
+| PharmaTimes  |    | Translation  |    | Drug Info    |
++--------------+    +--------------+    +--------------+
 ```
 
 ---
 
 ## 📡 데이터 파이프라인
 
-```mermaid
-flowchart LR
-    subgraph SRC[" 외부 소스"]
-        RSS[" RSS Feeds"]
-        HTML[" HTML 크롤링"]
-        SUB["Substack"]
-        FDA[" FDA · MFDS"]
-    end
+```
+ [External Sources]        [Collect & Process]         [Store]            [User Interface]
+====================    ======================    ===============    ========================
 
-    subgraph PROC[" 수집 · 처리"]
-        CN["crawl-news\n· Cron: 매일 ·"]
-        AN["analyze-news\n· Gemini API ·"]
-        GI["generate-intelligence"]
-        CR["crawl-regulatory"]
-        TN["translate-news"]
-    end
-
-    subgraph STORE[" 저장"]
-        NA[("news_articles")]
-        AI_R[("AI 분석 결과")]
-        IS[("intelligence\n_summaries")]
-        RN[("regulatory\n_notices")]
-    end
-
-    subgraph VIEW[" 사용자 화면"]
-        NF[" 뉴스 피드\n필터 · 검색\n키워드 하이라이트"]
-        BI[" 비즈니스\n임팩트 분석"]
-        DS[" 일일\n인텔리전스 요약"]
-        RD[" 규제 동향\n대시보드"]
-    end
-
-    RSS --> CN
-    HTML --> CN
-    SUB --> CN
-    FDA --> CR
-
-    CN --> NA
-    NA --> AN
-    AN --> AI_R
-    NA --> GI
-    NA --> TN
-    GI --> IS
-    CR --> RN
-
-    NA --> NF
-    AI_R --> BI
-    IS --> DS
-    RN --> RD
-
-    style SRC fill:#1a1a2e,stroke:#f0883e,color:#e0e0e0
-    style PROC fill:#1a1a2e,stroke:#a371f7,color:#e0e0e0
-    style STORE fill:#1a1a2e,stroke:#3FCF8E,color:#e0e0e0
-    style VIEW fill:#1a1a2e,stroke:#58a6ff,color:#e0e0e0
+                        +------------------+
+  RSS Feeds ------+     |                  |     +--------------+    +----------------------+
+                  +---->|  crawl-news      |---->| news_articles|--->| News Feed            |
+  HTML Crawling --+     |  (Cron: daily)   |     +--------------+    | Filter / Search      |
+                  |     |                  |           |             | Keyword Highlight     |
+  Substack -------+     +------------------+           |             +----------------------+
+                                                       |
+                        +------------------+           |
+                        |  analyze-news    |<----------+
+                        |  (Gemini API)    |     +--------------+    +----------------------+
+                        +------------------+---->| AI Analysis  |--->| Business Impact View |
+                                                 +--------------+    +----------------------+
+                        +------------------+
+                        |  generate-       |     +--------------+    +----------------------+
+                        |   intelligence   |---->| intelligence |--->| Daily Intelligence   |
+                        +------------------+     | _summaries   |    | Summary              |
+                                                 +--------------+    +----------------------+
+  FDA / MFDS ---------->+------------------+
+                        |  crawl-          |     +--------------+    +----------------------+
+                        |   regulatory     |---->| regulatory   |--->| Regulatory Dashboard |
+                        +------------------+     | _notices     |    +----------------------+
+                                                 +--------------+
 ```
 
 ---
@@ -218,7 +164,7 @@ flowchart LR
 
 ---
 
-## 시작하기
+## 🚀 시작하기
 
 ### 사전 요구사항
 
@@ -328,99 +274,45 @@ acebionews/
 
 ---
 
-## 데이터베이스 스키마
+## 📊 데이터베이스 스키마
 
-```mermaid
-erDiagram
-    news_articles {
-        uuid id PK
-        text title
-        text summary
-        text source
-        text region
-        text country
-        text[] api_keywords
-        date date
-        text url
-    }
+```
++------------------+      +-------------------+      +----------------------+
+| news_articles    |      | regulatory_notices|      | biotech_deals        |
++------------------+      +-------------------+      +----------------------+
+| id          [PK] |      | id           [PK] |      | id            [PK]  |
+| title            |      | title             |      | payer / payee       |
+| summary          |      | date              |      | total_m  (USD)      |
+| source / region  |      | type              |      | indication          |
+| country          |      | source            |      | technology          |
+| api_keywords[]   |      | related_apis[]    |      | deal_type           |
+| date / url       |      | url               |      | date                |
++--------+---------+      +-------------------+      +----------------------+
+         |
+         | FK (article_id)
+         v
++------------------+      +-------------------+      +----------------------+
+| bookmarks        |      | user_keywords     |      | nce_patent_expiry    |
++------------------+      +-------------------+      +----------------------+
+| user_id          |      | user_id           |      | drug_name            |
+| article_id  [FK] |      | keyword           |      | patent_expiry_date   |
+| memo             |      | created_at        |      | company              |
+| folder_id   [FK] |      +-------------------+      | indication           |
++------------------+                                  +----------------------+
 
-    bookmarks {
-        uuid id PK
-        uuid user_id FK
-        uuid article_id FK
-        text memo
-        uuid folder_id FK
-    }
-
-    user_keywords {
-        uuid id PK
-        uuid user_id
-        text keyword
-    }
-
-    regulatory_notices {
-        uuid id PK
-        text title
-        date date
-        text type
-        text source
-        text[] related_apis
-    }
-
-    biotech_deals {
-        uuid id PK
-        text payer
-        text payee
-        numeric total_m
-        text indication
-        text technology
-        text deal_type
-        date date
-    }
-
-    nce_patent_expiry {
-        uuid id PK
-        text drug_name
-        date patent_expiry_date
-        text company
-        text indication
-    }
-
-    clinical_trial_approvals {
-        uuid id PK
-        text phase
-        date approval_date
-        text dev_region
-    }
-
-    intelligence_summaries {
-        uuid id PK
-        date summary_date
-        text content
-        int source_count
-    }
-
-    mfds_recalls {
-        uuid id PK
-        text product_name
-        date recall_date
-        text reason
-        text company
-    }
-
-    memo_folders {
-        uuid id PK
-        uuid user_id
-        text name
-    }
-
-    news_articles ||--o{ bookmarks : "스크랩"
-    memo_folders ||--o{ bookmarks : "폴더 분류"
++------------------+      +-------------------+      +----------------------+
+| clinical_trial   |      | intelligence      |      | mfds_recalls         |
+|  _approvals      |      |  _summaries       |      +----------------------+
++------------------+      +-------------------+      | product_name         |
+| phase            |      | summary_date      |      | recall_date          |
+| approval_date    |      | content           |      | reason               |
+| dev_region       |      | source_count      |      | company              |
++------------------+      +-------------------+      +----------------------+
 ```
 
 ---
 
-## 뉴스 소스
+## 📡 뉴스 소스
 
 ### <img src="https://flagcdn.com/w20/kr.png" width="16" height="12" alt="KR" /> 국내
 
@@ -432,7 +324,7 @@ erDiagram
 | 팜뉴스 | HTML 크롤링 |
 | 더바이오 | HTML 크롤링 |
 
-### 해외
+### 🌍 해외
 
 | 소스 | 수집 방식 | 국가 |
 |:---|:---|:---|
@@ -446,8 +338,12 @@ erDiagram
 
 ---
 
-## 라이선스
+## 📜 라이선스
 
 이 프로젝트는 내부 사용 목적으로 제작되었습니다.
 
 ---
+
+<p align="center">
+  <sub>Built with ❤️ for the Pharmaceutical Industry</sub>
+</p>
