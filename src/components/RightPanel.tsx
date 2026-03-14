@@ -109,19 +109,26 @@ export const RightPanel = () => {
     };
 
     abortRef.current = new AbortController();
-    try {
-      await streamChat({
-        messages: [...messages, userMsg],
-        onDelta: upsert,
-        onDone: () => setIsLoading(false),
-        signal: abortRef.current.signal,
-      });
-    } catch (e: any) {
-      if (e.name !== "AbortError") {
-        setMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${e.message || "오류가 발생했습니다"}` }]);
+    const allMsgs = [...messages, userMsg];
+    const attempt = async (retry: number): Promise<void> => {
+      try {
+        await streamChat({
+          messages: allMsgs,
+          onDelta: upsert,
+          onDone: () => setIsLoading(false),
+          signal: abortRef.current!.signal,
+        });
+      } catch (e: any) {
+        if (e.name === "AbortError") { setIsLoading(false); return; }
+        if (retry > 0) {
+          await new Promise(r => setTimeout(r, 1000));
+          return attempt(retry - 1);
+        }
+        setMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${e.message || "오류가 발생했습니다. 다시 시도해주세요."}` }]);
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }
+    };
+    attempt(2);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
