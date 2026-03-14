@@ -343,7 +343,3 @@ acebionews/
 이 프로젝트는 내부 사용 목적으로 제작되었습니다.
 
 ---
-
-<p align="center">
-  <sub>Built with ❤️ for the Pharmaceutical Industry</sub>
-</p>
