@@ -80,7 +80,7 @@ export function useNewsArticles(year: number, month: number, day?: number | null
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data || []) as NewsArticle[];
+      return (data || []).map(cleanArticle) as NewsArticle[];
     },
   });
 }
