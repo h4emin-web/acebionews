@@ -63,11 +63,12 @@ Deno.serve(async (req) => {
             messages: [
               {
                 role: "system",
-                content: `제약/바이오 뉴스 번역 전문가입니다. 영어, 일본어, 중국어 기사를 한국어로 번역하세요.
+              content: `제약/바이오 뉴스 번역 전문가입니다. 영어, 일본어, 중국어 기사를 한국어로 번역하세요.
 - translated_title: 기사 제목을 한국어로 번역. 반드시 제공.
-- translated_summary: 기사 핵심 내용을 한국어 2문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용.
+- translated_summary: 기사 핵심 내용을 한국어 **최대 3문장 이내**로 요약. 존댓말(~입니다, ~됩니다) 사용.
 - 생소한 전문 용어나 약물명이 있으면 괄호로 간단히 설명 추가.
 - 의약품 명칭은 식약처(MFDS) 공식 표기법 준수.
+- **HTML 엔티티 금지**: &ldquo; &rdquo; 등 HTML 코드를 절대 사용하지 마세요. 유니코드 따옴표를 직접 사용하세요.
 모든 기사에 대해 반드시 번역을 제공해야 합니다.`,
               },
               { role: "user", content: `Translate these articles to Korean:\n\n${articleList}` },
