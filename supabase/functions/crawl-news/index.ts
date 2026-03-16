@@ -907,7 +907,7 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 3~4문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
+  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 **최대 3문장 이내**로 요약. 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
 - translated_summary를 작성할 때, 독자가 모를 수 있는 전문 용어·약물명·기술명이 등장하면 **요약 문장 안에서** 자연스럽게 설명을 포함하세요.
