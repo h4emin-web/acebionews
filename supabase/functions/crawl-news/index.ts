@@ -63,14 +63,8 @@ function stripCdata(text: string): string {
   return text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").trim();
 }
 
-function stripHtml(text: string): string {
+function decodeEntities(text: string): string {
   return text
-    // script/style/noscript 블록 전체 제거 (내용 포함)
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
-    // 나머지 HTML 태그 제거
-    .replace(/<[^>]*>/g, "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -79,6 +73,38 @@ function stripHtml(text: string): string {
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'")
     .replace(/&nbsp;/g, " ")
+    .replace(/&ldquo;/gi, "\u201C")
+    .replace(/&rdquo;/gi, "\u201D")
+    .replace(/&lsquo;/gi, "\u2018")
+    .replace(/&rsquo;/gi, "\u2019")
+    .replace(/&mdash;/gi, "\u2014")
+    .replace(/&ndash;/gi, "\u2013")
+    .replace(/&hellip;/gi, "\u2026")
+    .replace(/&middot;/gi, "\u00B7")
+    .replace(/&bull;/gi, "\u2022")
+    .replace(/&copy;/gi, "\u00A9")
+    .replace(/&reg;/gi, "\u00AE")
+    .replace(/&trade;/gi, "\u2122")
+    .replace(/&times;/gi, "\u00D7")
+    .replace(/&rarr;/gi, "\u2192")
+    .replace(/&#\d+;/g, (m) => {
+      const code = parseInt(m.slice(2, -1));
+      return code > 0 ? String.fromCharCode(code) : m;
+    })
+    .replace(/&#x[\da-fA-F]+;/g, (m) => {
+      const code = parseInt(m.slice(3, -1), 16);
+      return code > 0 ? String.fromCharCode(code) : m;
+    });
+}
+
+function stripHtml(text: string): string {
+  return decodeEntities(text
+    // script/style/noscript 블록 전체 제거 (내용 포함)
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
+    // 나머지 HTML 태그 제거
+    .replace(/<[^>]*>/g, ""))
     // JS 코드 잔재 제거 — $(function(){...}) 패턴과 이후 전체
     .replace(/\$\s*\(\s*function\s*\(\s*\)[\s\S]*/gi, "")
     // jQuery/JS 즉시실행 패턴
