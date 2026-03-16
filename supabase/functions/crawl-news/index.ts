@@ -1074,6 +1074,10 @@ async function extractKeywordsAndTranslate(
         finalSummary = r.translated_summary || article.summary;
       }
 
+      // Clean HTML entities from title and summary
+      finalTitle = decodeEntities(finalTitle);
+      finalSummary = decodeEntities(finalSummary);
+
       results.push({
         title: finalTitle,
         summary: finalSummary,
