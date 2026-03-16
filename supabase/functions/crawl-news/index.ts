@@ -17,8 +17,8 @@ const RSS_SOURCES = [
 
 // HTML sources — 약업신문 & 데일리팜 + 의약뉴스 + 히트뉴스 + fallback overseas
 const HTML_SOURCES = [
-  { url: "https://www.dailypharm.com/user/news?group=%EC%A2%85%ED%95%A9", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
-  { url: "https://www.dailypharm.com/user/news?group=%EC%A2%85%ED%95%A9&page=2", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
+  { url: "https://www.dailypharm.com/user/news?group=%EC%A0%9C%EC%95%BD%C2%B7%EB%B0%94%EC%9D%B4%EC%98%A4", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
+  { url: "https://www.dailypharm.com/user/news?group=%EC%A0%9C%EC%95%BD%C2%B7%EB%B0%94%EC%9D%B4%EC%98%A4&page=2", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
