@@ -63,14 +63,8 @@ function stripCdata(text: string): string {
   return text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").trim();
 }
 
-function stripHtml(text: string): string {
+function decodeEntities(text: string): string {
   return text
-    // script/style/noscript 블록 전체 제거 (내용 포함)
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
-    // 나머지 HTML 태그 제거
-    .replace(/<[^>]*>/g, "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -79,6 +73,38 @@ function stripHtml(text: string): string {
     .replace(/&apos;/g, "'")
     .replace(/&#x27;/g, "'")
     .replace(/&nbsp;/g, " ")
+    .replace(/&ldquo;/gi, "\u201C")
+    .replace(/&rdquo;/gi, "\u201D")
+    .replace(/&lsquo;/gi, "\u2018")
+    .replace(/&rsquo;/gi, "\u2019")
+    .replace(/&mdash;/gi, "\u2014")
+    .replace(/&ndash;/gi, "\u2013")
+    .replace(/&hellip;/gi, "\u2026")
+    .replace(/&middot;/gi, "\u00B7")
+    .replace(/&bull;/gi, "\u2022")
+    .replace(/&copy;/gi, "\u00A9")
+    .replace(/&reg;/gi, "\u00AE")
+    .replace(/&trade;/gi, "\u2122")
+    .replace(/&times;/gi, "\u00D7")
+    .replace(/&rarr;/gi, "\u2192")
+    .replace(/&#\d+;/g, (m) => {
+      const code = parseInt(m.slice(2, -1));
+      return code > 0 ? String.fromCharCode(code) : m;
+    })
+    .replace(/&#x[\da-fA-F]+;/g, (m) => {
+      const code = parseInt(m.slice(3, -1), 16);
+      return code > 0 ? String.fromCharCode(code) : m;
+    });
+}
+
+function stripHtml(text: string): string {
+  return decodeEntities(text
+    // script/style/noscript 블록 전체 제거 (내용 포함)
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, "")
+    // 나머지 HTML 태그 제거
+    .replace(/<[^>]*>/g, ""))
     // JS 코드 잔재 제거 — $(function(){...}) 패턴과 이후 전체
     .replace(/\$\s*\(\s*function\s*\(\s*\)[\s\S]*/gi, "")
     // jQuery/JS 즉시실행 패턴
@@ -881,7 +907,7 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 3~4문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
+  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 **최대 3문장 이내**로 요약. 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
 - translated_summary를 작성할 때, 독자가 모를 수 있는 전문 용어·약물명·기술명이 등장하면 **요약 문장 안에서** 자연스럽게 설명을 포함하세요.
@@ -917,14 +943,12 @@ async function extractKeywordsAndTranslate(
 - **KEY PRINCIPLE: If the article is about a pharma company but NOT about its drugs, pipelines, clinical data, or regulatory actions, set is_relevant to false.**
 - When in doubt, set is_relevant to false. We only want substantive pharmaceutical/biotech/healthcare news that professionals need to know.
 
-## TASK 5: SUMMARY DEPTH (CRITICAL)
-- **Summaries MUST contain ALL specific details from the article body text.** Do NOT write lazy/vague summaries.
-- If the article mentions a list (e.g., "10대 신약", "top 5 drugs"), you MUST list ALL items with their names, companies, and indications.
-- If the article contains numbers (revenue, market size, clinical trial results), include ALL of them.
-- If the article mentions multiple companies or drugs, name EVERY one of them.
-- Example of BAD summary: "2026년에 출시될 것으로 기대되는 혁신적인 신약 10가지에 대한 소개입니다." — This is USELESS. What are the 10 drugs?
-- Example of GOOD summary: "2026년 기대 신약으로 ①릴리의 도나네맙(알츠하이머), ②화이자의 다르보포에틴(빈혈)..." — Lists every item with company and indication.
-- translated_summary should be 3-6 sentences when the source article has rich content. Use MORE sentences for content-rich articles.
+## TASK 5: SUMMARY DEPTH & LENGTH (CRITICAL)
+- **Summaries MUST contain specific details** from the article body text. Do NOT write lazy/vague summaries.
+- If the article mentions specific numbers, company names, drug names — include them.
+- **CRITICAL LENGTH LIMIT: translated_summary는 반드시 최대 3문장 이내로 작성하세요. 절대 4문장 이상 쓰지 마세요.**
+- 3문장 안에 핵심 정보를 압축해서 넣으세요. 길게 쓰는 것보다 핵심만 간결하게.
+- **HTML 엔티티 금지**: &ldquo; &rdquo; &lsquo; &rsquo; 등 HTML 엔티티를 절대 사용하지 마세요. 대신 유니코드 따옴표("", '')를 직접 사용하세요.
 
 ## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
 - category: 규제/시장/공급망/R&D/임상/허가`,
@@ -1049,6 +1073,10 @@ async function extractKeywordsAndTranslate(
         finalTitle = stripRegionTag(r.translated_title || article.title);
         finalSummary = r.translated_summary || article.summary;
       }
+
+      // Clean HTML entities from title and summary
+      finalTitle = decodeEntities(finalTitle);
+      finalSummary = decodeEntities(finalSummary);
 
       results.push({
         title: finalTitle,

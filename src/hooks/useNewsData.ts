@@ -2,6 +2,32 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 
+// Clean HTML entities that may exist in DB data
+function cleanEntities(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/&ldquo;/gi, "\u201C")
+    .replace(/&rdquo;/gi, "\u201D")
+    .replace(/&lsquo;/gi, "\u2018")
+    .replace(/&rsquo;/gi, "\u2019")
+    .replace(/&mdash;/gi, "\u2014")
+    .replace(/&ndash;/gi, "\u2013")
+    .replace(/&hellip;/gi, "\u2026")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#\d+;/g, (m) => {
+      const code = parseInt(m.slice(2, -1));
+      return code > 0 ? String.fromCharCode(code) : m;
+    });
+}
+
+function cleanArticle<T extends { title: string; summary: string }>(a: T): T {
+  return { ...a, title: cleanEntities(a.title), summary: cleanEntities(a.summary) };
+}
+
 export type NewsArticle = {
   id: string;
   title: string;
@@ -54,7 +80,7 @@ export function useNewsArticles(year: number, month: number, day?: number | null
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data || []) as NewsArticle[];
+      return (data || []).map(cleanArticle) as NewsArticle[];
     },
   });
 }
@@ -79,7 +105,7 @@ export function useSearchNews(keyword: string) {
         .limit(30);
 
       if (error) throw error;
-      return (data || []) as NewsArticle[];
+      return (data || []).map(cleanArticle) as NewsArticle[];
     },
   });
 }
