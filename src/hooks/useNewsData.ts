@@ -105,7 +105,7 @@ export function useSearchNews(keyword: string) {
         .limit(30);
 
       if (error) throw error;
-      return (data || []) as NewsArticle[];
+      return (data || []).map(cleanArticle) as NewsArticle[];
     },
   });
 }
