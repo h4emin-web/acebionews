@@ -88,7 +88,7 @@ export const ScrapNewsCard = ({ news, index, onKeywordClick, onToggleBookmark, m
           <h3 className="text-base font-semibold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors break-words">
             {news.title}
           </h3>
-          <p className="text-[13px] text-muted-foreground leading-relaxed mb-3 break-words line-clamp-3">{news.summary}</p>
+          <p className="text-[13px] text-muted-foreground leading-relaxed mb-3 break-words line-clamp-none sm:line-clamp-3">{news.summary}</p>
 
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-wrap gap-1.5">
