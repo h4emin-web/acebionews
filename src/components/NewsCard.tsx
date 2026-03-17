@@ -124,7 +124,7 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
         {isRead && <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground align-middle">읽음</span>}
         {news.title}
       </h3>
-      <p className="text-[13px] text-muted-foreground leading-relaxed mb-3 break-words line-clamp-3">{news.summary}</p>
+      <p className="text-[13px] text-muted-foreground leading-relaxed mb-3 break-words line-clamp-none sm:line-clamp-3">{news.summary}</p>
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
