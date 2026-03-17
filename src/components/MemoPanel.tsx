@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MemoSection } from "@/components/MemoSection";
 import type { User } from "@supabase/supabase-js";
 import { X } from "lucide-react";
@@ -11,6 +12,8 @@ type Props = {
 };
 
 export const MemoPanel = ({ user, bookmarkedArticles, memoMap, onClose, onNewsClick }: Props) => {
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <div className="card-elevated rounded-lg overflow-hidden flex flex-col" style={{ height: "calc(100vh - 180px)", position: "sticky", top: "100px" }}>
       <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
@@ -25,8 +28,8 @@ export const MemoPanel = ({ user, bookmarkedArticles, memoMap, onClose, onNewsCl
           bookmarkedArticles={bookmarkedArticles}
           memoMap={memoMap}
           onNewsClick={onNewsClick}
-          expanded={false}
-          onExpand={() => {}}
+          expanded={expanded}
+          onExpand={setExpanded}
         />
       </div>
     </div>
