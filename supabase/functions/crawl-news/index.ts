@@ -903,11 +903,11 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: You MUST translate ALL foreign articles. This is NOT optional.**
 - For foreign articles, you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: Korean summary with KEY FACTS. Include specific numbers, company names, drug names, indications, and important details. 존댓말(~입니다, ~됩니다) 사용. 3-4 sentences for articles with rich content.
+  - translated_summary: Korean summary with KEY FACTS. Include specific numbers, company names, drug names, indications, and important details. 반드시 존댓말(~입니다, ~됩니다, ~습니다) 사용. "~이다", "~했다", "~한다" 등 반말 절대 금지. 2-3 complete sentences. NEVER end with "..." or incomplete sentences.
 - **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 **최대 3문장 이내**로 요약. 존댓말(~입니다, ~됩니다) 사용. "~이다", "~했다" 등 반말 사용 금지.
+  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 **최대 3문장 이내**로 요약. 반드시 존댓말(~입니다, ~됩니다, ~습니다) 사용. "~이다", "~했다", "~한다", "~됐다" 등 반말 절대 금지. 마지막 문장은 반드시 완전한 문장으로 끝내고 "..."로 절대 끝내지 마세요.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
 - translated_summary를 작성할 때, 독자가 모를 수 있는 전문 용어·약물명·기술명이 등장하면 **요약 문장 안에서** 자연스럽게 설명을 포함하세요.
@@ -948,6 +948,8 @@ async function extractKeywordsAndTranslate(
 - If the article mentions specific numbers, company names, drug names — include them.
 - **CRITICAL LENGTH LIMIT: translated_summary는 반드시 최대 3문장 이내로 작성하세요. 절대 4문장 이상 쓰지 마세요.**
 - 3문장 안에 핵심 정보를 압축해서 넣으세요. 길게 쓰는 것보다 핵심만 간결하게.
+- **CRITICAL: 모든 문장은 완전한 문장으로 끝내야 합니다. "..."로 끝내거나 문장을 중간에 자르는 것을 절대 금지합니다. 내용이 부족해도 아는 범위 내에서 완전한 문장으로 작성하세요.**
+- **CRITICAL: 모든 요약은 반드시 "~습니다", "~됩니다", "~입니다" 등 존댓말로 끝나야 합니다. "~했다", "~이다", "~한다" 등 반말로 끝나는 문장은 절대 금지입니다.**
 - **HTML 엔티티 금지**: &ldquo; &rdquo; &lsquo; &rsquo; 등 HTML 엔티티를 절대 사용하지 마세요. 대신 유니코드 따옴표("", '')를 직접 사용하세요.
 
 ## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
