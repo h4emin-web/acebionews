@@ -1113,6 +1113,24 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
 
+    // Rate limit: block if last successful run was less than 25 minutes ago
+    if (!body.force) {
+      const { data: lastRun } = await supabase
+        .from("news_articles")
+        .select("created_at")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (lastRun) {
+        const msSinceLast = Date.now() - new Date(lastRun.created_at).getTime();
+        if (msSinceLast < 25 * 60 * 1000) {
+          return new Response(JSON.stringify({ skipped: true, reason: "Last run too recent", msSinceLast }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
     // --- Backfill mode: fix keyword format to "한글명 (English Name)" ---
     if (body.backfillKeywords) {
       const { data: allArticles } = await supabase

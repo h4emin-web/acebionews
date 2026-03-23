@@ -7,19 +7,19 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.analyze-news]
-verify_jwt = false
+verify_jwt = true
 
 [functions.seed-nce-patents]
 verify_jwt = false
 
 [functions.enrich-nce-patents]
-verify_jwt = false
+verify_jwt = true
 
 [functions.search-external]
-verify_jwt = false
+verify_jwt = true
 
 [functions.search-drug-info]
-verify_jwt = false
+verify_jwt = true
 
 [functions.crawl-reports]
 verify_jwt = false
@@ -34,7 +34,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.search-manufacturers]
-verify_jwt = false
+verify_jwt = true
 
 [functions.crawl-clinical-trials]
 verify_jwt = false
@@ -49,7 +49,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.crawl-cnn-health]
-verify_jwt = false
+verify_jwt = true
 
 [functions.pharma-chat]
-verify_jwt = false
+verify_jwt = true
