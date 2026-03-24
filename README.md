@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
 </p>
 
-<h1 align="center">💊 AceBioNews</h1>
+<h1 align="center"> AceBioNews</h1>
 
 <p align="center">
   <b>바이오·제약 산업 뉴스 통합 인텔리전스 플랫폼</b><br/>
