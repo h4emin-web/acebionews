@@ -142,6 +142,7 @@ const Index = () => {
           onRegionFilterChange={setRegionFilter}
           bookmarkCount={bookmarkIds.length}
           isLoggedIn={!!user}
+          displayName={displayName}
           onScrapClick={handleScrapClick}
           onMemoToggle={handleMemoToggle}
           memoOpen={memoPanelOpen}

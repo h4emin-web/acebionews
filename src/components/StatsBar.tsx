@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Bookmark, NotebookPen, Bell, Plus, X } from "lucide-react";
+import { Bookmark, NotebookPen, Bell, Plus, X, ExternalLink } from "lucide-react";
 import type { NewsArticle } from "@/hooks/useNewsData";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -14,6 +14,7 @@ type Props = {
   onRegionFilterChange: (r: RegionFilter) => void;
   bookmarkCount?: number;
   isLoggedIn?: boolean;
+  displayName?: string;
   onScrapClick?: () => void;
   onMemoToggle?: () => void;
   memoOpen?: boolean;
@@ -25,7 +26,7 @@ type Props = {
 };
 
 export const StatsBar = ({
-  regionFilter, onRegionFilterChange, isLoggedIn,
+  regionFilter, onRegionFilterChange, isLoggedIn, displayName,
   onScrapClick, onMemoToggle, memoOpen, scrapActive,
   keywords = [], onAddKeyword, onRemoveKeyword, onKeywordClick,
 }: Props) => {
@@ -84,6 +85,17 @@ export const StatsBar = ({
 
       {isLoggedIn && (
         <div className="ml-auto flex items-center gap-1.5 shrink-0 pl-3">
+          {displayName === "해민" && (
+            <a
+              href="https://searching-manufaturer.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-border bg-background text-foreground hover:bg-muted transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              소싱
+            </a>
+          )}
           <button
             onClick={onScrapClick}
             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
