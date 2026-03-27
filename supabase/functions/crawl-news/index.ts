@@ -23,6 +23,7 @@ const HTML_SOURCES = [
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
   { url: "https://www.thebionews.net/news/articleList.html?view_type=sm", name: "더바이오", region: "국내", country: "KR", parser: "thebionews" },
+  { url: "https://www.medipana.com/news/articleList.html?view_type=sm", name: "메디파나", region: "국내", country: "KR", parser: "medipana" },
 
   { url: "https://pharma.economictimes.indiatimes.com", name: "ET Pharma India", region: "해외", country: "IN", parser: "generic" },
   { url: "https://www.yakuji.co.jp/entrycategory/6", name: "薬事日報", region: "해외", country: "JP", parser: "yakuji" },
@@ -386,6 +387,31 @@ function parsePharmnews(html: string): Array<{ title: string; summary: string; u
   return articles;
 }
 
+
+// Parse 메디파나 (medipana.com) HTML
+function parseMedipana(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
+  const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
+  const parts = html.split(/<li class="altlist-text-item">/gi);
+  const currentYear = new Date().getFullYear();
+  for (let i = 1; i < parts.length && articles.length < 20; i++) {
+    const block = parts[i];
+    const urlMatch = block.match(/<a\s+href="(https:\/\/www\.medipana\.com\/news\/articleView\.html\?idxno=\d+)"/i);
+    if (!urlMatch) continue;
+    const url = urlMatch[1];
+    const titleMatch = block.match(/<H2 class="altlist-subject">\s*<a[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
+    if (!titleMatch) continue;
+    const title = stripHtml(titleMatch[1]).trim();
+    // Date format: "03-27 12:05"
+    const dateMatch = block.match(/<div class="altlist-info-item">(\d{2}-\d{2})\s+\d{2}:\d{2}<\/div>/i);
+    const dateStr = dateMatch ? `${currentYear}-${dateMatch[1]}` : "";
+    if (title.length > 5) {
+      articles.push({ title, summary: "", url, date: normalizeDate(dateStr) });
+    }
+  }
+  console.log(`[메디파나] Extracted ${articles.length} articles`);
+  return articles;
+}
+
 // Parse 더바이오 (thebionews.net) HTML — only today's articles (KST)
 function parseThebionews(html: string): Array<{ title: string; summary: string; url: string; date: string }> {
   const articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
@@ -670,6 +696,8 @@ async function fetchHtml(
       articles = parsePharmnews(html);
     } else if (source.parser === "thebionews") {
       articles = parseThebionews(html);
+    } else if (source.parser === "medipana") {
+      articles = parseMedipana(html);
     } else if (source.parser === "answersnews" || source.parser === "iyakunews") {
       articles = parseIyakuNews(html);
     } else if (source.parser === "yakuji") {
