@@ -31,13 +31,14 @@ function useNmpaNotices() {
       return (data || []) as unknown as NmpaNotice[];
     },
     staleTime: 30 * 60 * 1000,
+    retry: 1,
   });
 }
 
 const isNew = (d: string) => (Date.now() - new Date(d).getTime()) / 86400000 <= 3;
 
 export const NmpaSection = () => {
-  const { data: notices = [], isLoading, refetch, isFetching } = useNmpaNotices();
+  const { data: notices = [], isLoading, isError, refetch, isFetching } = useNmpaNotices();
   const [alertOnly, setAlertOnly] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -86,18 +87,13 @@ export const NmpaSection = () => {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="공고 검색..."
-          className="w-full pl-9 pr-4 py-2 text-sm rounded-lg bg-muted/50 border border-border outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-        />
-      </div>
-
       {isLoading ? (
         <div className="flex justify-center py-12"><PillLoader /></div>
+      ) : isError ? (
+        <div className="text-center py-12 space-y-2">
+          <p className="text-muted-foreground text-sm">NMPA 데이터를 불러올 수 없습니다.</p>
+          <p className="text-xs text-muted-foreground">DB 테이블이 아직 생성되지 않았거나 크롤러가 실행되지 않았습니다.</p>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
           {alertOnly ? "최근 2주간 수입중단 공고가 없습니다." : "최근 2주간 공고가 없습니다."}
