@@ -184,10 +184,10 @@ serve(async (req) => {
         try {
           const body = await firecrawlScrape(article.url, FIRECRAWL_API_KEY);
 
-          const { titleKo, summary } = await summarizeWithGemini(
+          const { titleKo, summary } = await summarizeWithAI(
             article.title,
             body || article.title,
-            GEMINI_API_KEY
+            LOVABLE_API_KEY
           );
 
           const isSuspensionAlert = article.title.startsWith(SUSPENSION_PREFIX);
