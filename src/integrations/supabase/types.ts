@@ -370,6 +370,39 @@ export type Database = {
         }
         Relationships: []
       }
+      nmpa_notices: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          is_suspension_alert: boolean
+          summary: string | null
+          title: string
+          title_ko: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id: string
+          is_suspension_alert?: boolean
+          summary?: string | null
+          title: string
+          title_ko?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          is_suspension_alert?: boolean
+          summary?: string | null
+          title?: string
+          title_ko?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
       read_articles: {
         Row: {
           article_id: string
