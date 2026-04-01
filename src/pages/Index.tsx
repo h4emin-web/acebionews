@@ -112,7 +112,7 @@ const Index = () => {
     [bookmarkedArticles]
   );
 
-  const isToolView = regionFilter === "nedrug" || regionFilter === "fda" || regionFilter === "bigdeal";
+  const isToolView = regionFilter === "nedrug" || regionFilter === "nmpa" || regionFilter === "fda" || regionFilter === "bigdeal";
   const showMemoPanel = memoPanelOpen && user && !isToolView;
 
   return (

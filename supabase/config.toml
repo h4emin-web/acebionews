@@ -53,3 +53,5 @@ verify_jwt = true
 
 [functions.pharma-chat]
 verify_jwt = true
+[functions.crawl-nmpa]
+verify_jwt = false
