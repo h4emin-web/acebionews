@@ -44,7 +44,7 @@ function parseListMarkdown(markdown: string): NmpaArticle[] {
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-  const linkRegex = /\[([^\]]+)\]\((https?:\/\/www\.nmpa\.gov\.cn[^\)]+)\)/g;
+  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/[^\)\s]+\.html[^\)]*)\)/g;
   const dateRegex = /(\d{4}[-\/]\d{2}[-\/]\d{2})/;
 
   let m;
@@ -56,20 +56,32 @@ function parseListMarkdown(markdown: string): NmpaArticle[] {
     if (title.length < 5 || seen.has(url)) continue;
     if (!title.match(/[\u4e00-\u9fff]/)) continue;
 
-    const surrounding = markdown.slice(Math.max(0, m.index - 100), m.index + 200);
-    const dateMatch = surrounding.match(dateRegex);
-    const dateStr = dateMatch ? dateMatch[1].replace(/\//g, "-") : "";
+    // Date may be embedded in the link text as "(YYYY-MM-DD)" at the end
+    const titleDateMatch = title.match(/\s*\((\d{4}-\d{2}-\d{2})\)\s*$/);
+    let cleanTitle = title;
+    let dateStr = "";
+
+    if (titleDateMatch) {
+      dateStr = titleDateMatch[1];
+      cleanTitle = title.replace(/\s*\(\d{4}-\d{2}-\d{2}\)\s*$/, "").trim();
+    } else {
+      // Fall back to surrounding context
+      const surrounding = markdown.slice(Math.max(0, m.index - 100), m.index + 200);
+      const dateMatch = surrounding.match(dateRegex);
+      dateStr = dateMatch ? dateMatch[1].replace(/\//g, "-") : "";
+    }
 
     if (dateStr) {
       const articleDate = new Date(dateStr);
       if (articleDate < twoWeeksAgo) continue;
     }
 
-    seen.add(url);
+    const fullUrl = url.startsWith("http") ? url : `https://www.nmpa.gov.cn${url}`;
+    seen.add(fullUrl);
     articles.push({
-      id: slugId(url, title),
-      title,
-      url,
+      id: slugId(fullUrl, cleanTitle),
+      title: cleanTitle,
+      url: fullUrl,
       date: dateStr || new Date().toISOString().split("T")[0],
     });
   }
