@@ -931,17 +931,17 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: You MUST translate ALL foreign articles. This is NOT optional.**
 - For foreign articles, you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: Korean summary with KEY FACTS. Include specific numbers, company names, drug names, indications, and important details. 반드시 존댓말(~입니다, ~됩니다, ~습니다) 사용. "~이다", "~했다", "~한다" 등 반말 절대 금지. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 포함.
+  - translated_summary: Korean summary with KEY FACTS. Include specific numbers, company names, drug names, indications, and important details. 신문 문체(~했다, ~이다, ~됐다) 사용. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 포함.
 - **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 요약. 반드시 존댓말(~입니다, ~됩니다, ~습니다) 사용. "~이다", "~했다", "~한다", "~됐다" 등 반말 절대 금지. 마지막 문장은 반드시 완전한 문장으로 끝내고 "..."로 절대 끝내지 마세요. 불필요한 배경 설명·홍보성 문구는 제외하고 핵심 사실만 포함.
+  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. 마지막 문장은 반드시 완전한 문장으로 끝내고 "..."로 절대 끝내지 마세요. 불필요한 배경 설명·홍보성 문구는 제외하고 핵심 사실만 포함.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
 - translated_summary를 작성할 때, 독자가 모를 수 있는 전문 용어·약물명·기술명이 등장하면 **요약 문장 안에서** 자연스럽게 설명을 포함하세요.
 - 방법: 괄호 삽입, 또는 문장 자체에 녹여서 설명. 요약 뒤에 별도 문장을 덧붙이는 것도 가능.
-- 예시 1: "iPS세포(유도만능줄기세포)를 활용한 파킨슨병 치료제와 혈소판 제제가 심의에 들어갔으며, 승인될 경우 세계 최초 iPS 유래 의료제품이 됩니다."
-- 예시 2: "리툭산(성분명: 리툭시맙, B세포 표적 항체 치료제)이 자가면역용혈성빈혈 적응증으로 허가를 받았습니다."
+- 예시 1: "iPS세포(유도만능줄기세포)를 활용한 파킨슨병 치료제와 혈소판 제제가 심의에 들어갔으며, 승인될 경우 세계 최초 iPS 유래 의료제품이 된다."
+- 예시 2: "리툭산(성분명: 리툭시맙, B세포 표적 항체 치료제)이 자가면역용혈성빈혈 적응증으로 허가를 받았다."
 - 이미 요약만으로 내용이 충분히 이해되면 추가 설명 불필요.
 - 핵심: 요약을 읽는 것만으로 "이게 뭐고, 어디에 쓰이는지" 바로 알 수 있어야 합니다.
 
@@ -976,7 +976,7 @@ async function extractKeywordsAndTranslate(
 - If the article mentions specific numbers, company names, drug names — include them.
 - 핵심 정보(회사명, 약물명, 수치, 결과)를 빠짐없이 담되, 불필요한 배경 설명·홍보성 문구는 제외하세요. 완결성이 중요합니다.
 - **CRITICAL: 모든 문장은 완전한 문장으로 끝내야 합니다. "..."로 끝내거나 문장을 중간에 자르는 것을 절대 금지합니다. 내용이 부족해도 아는 범위 내에서 완전한 문장으로 작성하세요.**
-- **CRITICAL: 모든 요약은 반드시 "~습니다", "~됩니다", "~입니다" 등 존댓말로 끝나야 합니다. "~했다", "~이다", "~한다" 등 반말로 끝나는 문장은 절대 금지입니다.**
+- **CRITICAL: 모든 요약은 신문 문체(~했다, ~이다, ~됐다)로 통일합니다. "..."로 끝내거나 문장을 중간에 자르는 것은 절대 금지입니다.**
 - **HTML 엔티티 금지**: &ldquo; &rdquo; &lsquo; &rsquo; 등 HTML 엔티티를 절대 사용하지 마세요. 대신 유니코드 따옴표("", '')를 직접 사용하세요.
 
 ## Output: JSON array. Include ALL articles (even those with empty apiKeywords).
@@ -1278,7 +1278,7 @@ serve(async (req) => {
               messages: [
                 {
                   role: "system",
-                  content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 한국어 2문장 이내로 요약. 존댓말(~입니다, ~됩니다) 사용.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.`,
+                  content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 한국어로 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. "..."로 끝내지 말고 완전한 문장으로 끝낼 것.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.`,
                 },
                 { role: "user", content: `Translate these articles to Korean:\n\n${articleList}` },
               ],
@@ -1366,7 +1366,7 @@ serve(async (req) => {
               messages: [
                 {
                   role: "system",
-                  content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어 2문장 이내로 간결하게 요약하세요. 존댓말(~입니다, ~됩니다, ~했습니다)을 사용하세요.`,
+                  content: `제약/바이오 뉴스 요약 전문가입니다. 각 기사의 핵심 내용을 한국어로 간결하게 요약하세요. 신문 문체(~했다, ~이다, ~됐다)를 사용하고 "..."로 끝내지 말고 완전한 문장으로 끝낼 것.`,
                 },
                 { role: "user", content: `Summarize these articles:\n\n${articleList}` },
               ],
