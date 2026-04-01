@@ -124,10 +124,10 @@ export const NmpaSection = () => {
                     )}
                     <span className="text-xs text-muted-foreground shrink-0">{notice.date}</span>
                   </div>
-                  <p className="text-sm font-semibold text-foreground leading-snug">
-                    {notice.title_ko || notice.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{notice.title}</p>
+                  <p className="text-sm font-semibold text-foreground leading-snug">{notice.title}</p>
+                  {notice.title_ko && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5 leading-snug">{notice.title_ko}</p>
+                  )}
                 </div>
                 <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
               </div>
