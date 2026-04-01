@@ -40,10 +40,20 @@ export const NmpaSection = () => {
   const { data: notices = [], isLoading, refetch, isFetching } = useNmpaNotices();
   const [alertOnly, setAlertOnly] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
-    return alertOnly ? notices.filter(n => n.is_suspension_alert) : notices;
-  }, [notices, alertOnly]);
+    let list = alertOnly ? notices.filter(n => n.is_suspension_alert) : notices;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(n =>
+        (n.title_ko || "").toLowerCase().includes(q) ||
+        n.title.toLowerCase().includes(q) ||
+        (n.summary || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [notices, alertOnly, search]);
 
   const alertCount = notices.filter(n => n.is_suspension_alert).length;
 
