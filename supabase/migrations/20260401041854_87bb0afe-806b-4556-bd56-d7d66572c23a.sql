@@ -1,0 +1,1 @@
+DELETE FROM public.nmpa_notices WHERE summary IS NULL OR summary = '';
