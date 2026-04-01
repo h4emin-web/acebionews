@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { AlertTriangle, ExternalLink, RefreshCw, FileText } from "lucide-react";
+import { AlertTriangle, ExternalLink, RefreshCw, FileText, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PillLoader } from "@/components/PillLoader";
