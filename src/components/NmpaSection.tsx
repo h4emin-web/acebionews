@@ -23,12 +23,12 @@ function useNmpaNotices() {
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
       const since = twoWeeksAgo.toISOString().split("T")[0];
       const { data, error } = await supabase
-        .from("nmpa_notices")
+        .from("nmpa_notices" as any)
         .select("*")
         .gte("date", since)
         .order("date", { ascending: false });
       if (error) throw error;
-      return (data || []) as NmpaNotice[];
+      return (data || []) as unknown as NmpaNotice[];
     },
     staleTime: 30 * 60 * 1000,
   });
