@@ -78,12 +78,22 @@ function parseListMarkdown(markdown: string): NmpaArticle[] {
   return articles.slice(0, 30);
 }
 
-async function summarizeWithGemini(
+async function summarizeWithAI(
   title: string,
   body: string,
-  geminiKey: string
+  apiKey: string
 ): Promise<{ titleKo: string; summary: string }> {
-  const systemPrompt = `당신은 중국 NMPA(국가약품감독관리국) 공문서를 분석하는 전문가입니다.
+  const resp = await fetch(
+    "https://ai.gateway.lovable.dev/v1/chat/completions",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `당신은 중국 NMPA(국가약품감독관리국) 공문서를 분석하는 전문가입니다.
 
 아래 공문의 제목과 본문을 읽고 JSON으로 응답하세요:
 
@@ -98,37 +108,28 @@ async function summarizeWithGemini(
 - 内容이 "수입 중단(暂停进口)"인 경우 반드시 중단 대상 품목과 이유를 명시하세요.
 - 문장은 완전하게 끝내고 "..."으로 끝내지 마세요.
 - 신문 문체(~했다, ~이다, ~됐다, ~한다)로 통일하세요.
-- 내용이 길어도 핵심 정보가 누락되지 않도록 충분히 작성하세요.`;
-
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
+- 내용이 길어도 핵심 정보가 누락되지 않도록 충분히 작성하세요.`,
+          },
           {
             role: "user",
-            parts: [{ text: `${systemPrompt}\n\n제목: ${title}\n\n본문:\n${body.slice(0, 4000)}` }],
+            content: `제목: ${title}\n\n본문:\n${body.slice(0, 4000)}`,
           },
         ],
-        generationConfig: {
-          responseMimeType: "application/json",
-        },
       }),
       signal: AbortSignal.timeout(30000),
     }
   );
 
   if (!resp.ok) {
-    console.error("Gemini error:", resp.status, await resp.text().catch(() => ""));
+    console.error("AI error:", resp.status, await resp.text().catch(() => ""));
     return { titleKo: title, summary: "" };
   }
 
   const data = await resp.json();
   try {
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-    const parsed = JSON.parse(text);
+    const content = data.choices?.[0]?.message?.content || "{}";
+    const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const parsed = JSON.parse(cleaned);
     return {
       titleKo: parsed.title_ko || title,
       summary: parsed.summary || "",
