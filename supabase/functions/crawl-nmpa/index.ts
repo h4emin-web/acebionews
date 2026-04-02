@@ -44,7 +44,7 @@ function parseListMarkdown(markdown: string): NmpaArticle[] {
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/yaopin\/ypggtg\/[^\)\s]+\.html[^\)]*)\)/g;
+  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/[^\)\s]+\.html[^\)]*)\)/g;
   const dateRegex = /(\d{4}[-\/]\d{2}[-\/]\d{2})/;
 
   let m;
@@ -107,14 +107,16 @@ async function summarizeWithAI(
             role: "system",
             content: `당신은 중국 NMPA(국가약품감독관리국) 공문서를 분석하는 전문가입니다.
 
-아래 공문의 본문을 읽고 JSON으로 응답하세요 (제목 번역 불필요, 내용만 요약):
+아래 공문의 제목과 본문을 읽고 JSON으로 응답하세요:
 
 {
+  "title_ko": "제목의 정확한 한국어 번역",
   "summary": "리포트 형식의 한국어 요약 (신문 문체 ~했다, ~이다, ~됐다 사용)"
 }
 
 요약 작성 규칙:
-- 제목 번역은 포함하지 마세요. 본문 내용만 요약하세요.
+- title_ko: 중국어 제목을 정확하고 완전하게 한국어로 번역하세요.
+- summary: 본문 내용만 요약하세요.
 - 리포트 형식으로 핵심 내용을 빠짐없이 작성하세요.
 - 대상 의약품명(성분명/제품명), 해당 기업, 국가, 조치 내용, 이유, 효력 날짜 등 구체적 사실을 포함하세요.
 - 内容이 "수입 중단(暂停进口)"인 경우 반드시 중단 대상 품목과 이유를 명시하세요.
@@ -143,7 +145,7 @@ async function summarizeWithAI(
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned);
     return {
-      titleKo: "",
+      titleKo: parsed.title_ko || "",
       summary: parsed.summary || "",
     };
   } catch {
