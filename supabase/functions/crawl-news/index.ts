@@ -931,7 +931,7 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: You MUST translate ALL foreign articles. This is NOT optional.**
 - For foreign articles, you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: Korean summary with KEY FACTS. Include specific numbers, company names, drug names, indications, and important details. 신문 문체(~했다, ~이다, ~됐다) 사용. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 포함.
+  - translated_summary: Korean summary with KEY FACTS in MAX 4-5 sentences. Include specific numbers, company names, drug names, indications. 신문 문체(~했다, ~이다, ~됐다) 사용. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 압축. 절대 5문장을 초과하지 마세요.
 - **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
