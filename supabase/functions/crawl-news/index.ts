@@ -1278,7 +1278,7 @@ serve(async (req) => {
               messages: [
                 {
                   role: "system",
-                  content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 한국어로 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. "..."로 끝내지 말고 완전한 문장으로 끝낼 것.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.`,
+                  content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 4~5문장 이내로 한국어 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. "..."로 끝내지 말고 완전한 문장으로 끝낼 것. 절대 5문장 초과 금지.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.`,
                 },
                 { role: "user", content: `Translate these articles to Korean:\n\n${articleList}` },
               ],
