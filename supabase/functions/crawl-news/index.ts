@@ -931,11 +931,11 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: You MUST translate ALL foreign articles. This is NOT optional.**
 - For foreign articles, you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: Korean summary with KEY FACTS. Include specific numbers, company names, drug names, indications, and important details. 신문 문체(~했다, ~이다, ~됐다) 사용. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 포함.
+  - translated_summary: Korean summary with KEY FACTS in MAX 4-5 sentences. Include specific numbers, company names, drug names, indications. 신문 문체(~했다, ~이다, ~됐다) 사용. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 압축. 절대 5문장을 초과하지 마세요.
 - **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. 마지막 문장은 반드시 완전한 문장으로 끝내고 "..."로 절대 끝내지 마세요. 불필요한 배경 설명·홍보성 문구는 제외하고 핵심 사실만 포함.
+  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 최대 4~5문장 이내로 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. "..."로 절대 끝내지 마세요. 불필요한 배경 설명·홍보성 문구 제외, 핵심 사실만 압축.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
 - translated_summary를 작성할 때, 독자가 모를 수 있는 전문 용어·약물명·기술명이 등장하면 **요약 문장 안에서** 자연스럽게 설명을 포함하세요.
@@ -1278,7 +1278,7 @@ serve(async (req) => {
               messages: [
                 {
                   role: "system",
-                  content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 한국어로 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. "..."로 끝내지 말고 완전한 문장으로 끝낼 것.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.`,
+                  content: `제약/바이오 뉴스 번역 전문가입니다. 영어 또는 일본어 기사를 한국어로 번역하세요.\n- translated_title: 기사 제목을 한국어로 번역\n- translated_summary: 기사 핵심 내용을 4~5문장 이내로 한국어 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. "..."로 끝내지 말고 완전한 문장으로 끝낼 것. 절대 5문장 초과 금지.\n모든 기사에 대해 반드시 번역을 제공해야 합니다.`,
                 },
                 { role: "user", content: `Translate these articles to Korean:\n\n${articleList}` },
               ],
