@@ -41,11 +41,11 @@ interface NmpaArticle {
 
 function parseListMarkdown(markdown: string): NmpaArticle[] {
   const articles: NmpaArticle[] = [];
-  const twoWeeksAgo = new Date();
-  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/[^\)\s]+\.html[^\)]*)\)/g;
-  const dateRegex = /(\d{4}[-\/]\d{2}[-\/]\d{2})/;
+  // Only match links under /yaopin/ (药品 drug section)
+  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/yaopin\/[^\)\s]+\.html[^\)]*)\)/g;
 
   let m;
   const seen = new Set<string>();
@@ -56,24 +56,31 @@ function parseListMarkdown(markdown: string): NmpaArticle[] {
     if (title.length < 5 || seen.has(url)) continue;
     if (!title.match(/[\u4e00-\u9fff]/)) continue;
 
-    // Date may be embedded in the link text as "(YYYY-MM-DD)" at the end
-    const titleDateMatch = title.match(/\s*\((\d{4}-\d{2}-\d{2})\)\s*$/);
-    let cleanTitle = title;
-    let dateStr = "";
+    // Date is typically right after the link as (YYYY-MM-DD) in the surrounding text
+    const afterLink = markdown.slice(m.index + m[0].length, m.index + m[0].length + 60);
+    const afterDateMatch = afterLink.match(/\s*\(?(\d{4}-\d{2}-\d{2})\)?/);
 
-    if (titleDateMatch) {
+    // Also check if date is embedded in the link text itself
+    const titleDateMatch = title.match(/\s*[\(（](\d{4}-\d{2}-\d{2})[\)）]\s*$/);
+
+    let dateStr = "";
+    let cleanTitle = title;
+
+    if (afterDateMatch) {
+      dateStr = afterDateMatch[1];
+    } else if (titleDateMatch) {
       dateStr = titleDateMatch[1];
-      cleanTitle = title.replace(/\s*\(\d{4}-\d{2}-\d{2}\)\s*$/, "").trim();
+      cleanTitle = title.replace(/\s*[\(（]\d{4}-\d{2}-\d{2}[\)）]\s*$/, "").trim();
     } else {
-      // Fall back to surrounding context
-      const surrounding = markdown.slice(Math.max(0, m.index - 100), m.index + 200);
-      const dateMatch = surrounding.match(dateRegex);
-      dateStr = dateMatch ? dateMatch[1].replace(/\//g, "-") : "";
+      // Broader surrounding context fallback
+      const surrounding = markdown.slice(Math.max(0, m.index - 50), m.index + m[0].length + 100);
+      const dateMatch = surrounding.match(/(\d{4}-\d{2}-\d{2})/);
+      dateStr = dateMatch ? dateMatch[1] : "";
     }
 
     if (dateStr) {
       const articleDate = new Date(dateStr);
-      if (articleDate < twoWeeksAgo) continue;
+      if (articleDate < threeMonthsAgo) continue;
     }
 
     const fullUrl = url.startsWith("http") ? url : `https://www.nmpa.gov.cn${url}`;
