@@ -44,7 +44,7 @@ function parseListMarkdown(markdown: string): NmpaArticle[] {
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/yaopin\/ypggtg\/[^\)\s]+\.html[^\)]*)\)/g;
+  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/[^\)\s]+\.html[^\)]*)\)/g;
   const dateRegex = /(\d{4}[-\/]\d{2}[-\/]\d{2})/;
 
   let m;
