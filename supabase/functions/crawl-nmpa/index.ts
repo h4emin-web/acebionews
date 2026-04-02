@@ -44,8 +44,8 @@ function parseListMarkdown(markdown: string): NmpaArticle[] {
   const threeMonthsAgo = new Date();
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-  // Only match links under /yaopin/ (药品 drug section)
-  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/yaopin\/[^\)\s]+\.html[^\)]*)\)/g;
+  // Links are under /xxgk/ggtg/ypggtg/ (药品公告通告 section)
+  const linkRegex = /\[([^\]]+)\]\(((?:https?:\/\/www\.nmpa\.gov\.cn)?\/xxgk\/ggtg\/ypggtg\/[^\)\s]+\.html[^\)]*)\)/g;
 
   let m;
   const seen = new Set<string>();
