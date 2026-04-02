@@ -931,11 +931,11 @@ async function extractKeywordsAndTranslate(
 - **CRITICAL: You MUST translate ALL foreign articles. This is NOT optional.**
 - For foreign articles, you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: Korean summary with KEY FACTS in MAX 4-5 sentences. Include specific numbers, company names, drug names, indications. 신문 문체(~했다, ~이다, ~됐다) 사용. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 압축. 절대 5문장을 초과하지 마세요.
+  - translated_summary: Korean summary in MAX 3 sentences with KEY FACTS. Include specific numbers, company names, drug names, indications. 신문 문체(~했다, ~이다, ~됐다) 사용. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 포함.
 - **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
-  - translated_summary: 기사 핵심 내용을 구체적 수치와 사실 중심으로 최대 4~5문장 이내로 요약. 신문 문체(~했다, ~이다, ~됐다) 사용. "..."로 절대 끝내지 마세요. 불필요한 배경 설명·홍보성 문구 제외, 핵심 사실만 압축.
+  - translated_summary: 기사 핵심 내용을 3문장 이내로 요약. 구체적 수치·회사명·약물명 포함. 신문 문체(~했다, ~이다, ~됐다) 사용. 마지막 문장은 반드시 완전한 문장으로 끝내고 "..."로 절대 끝내지 마세요. 불필요한 배경 설명·홍보성 문구는 제외하고 핵심 사실만 포함.
 
 ## TASK 3: 요약 내 생소한 용어 보충 설명 (IMPORTANT)
 - translated_summary를 작성할 때, 독자가 모를 수 있는 전문 용어·약물명·기술명이 등장하면 **요약 문장 안에서** 자연스럽게 설명을 포함하세요.
@@ -972,9 +972,9 @@ async function extractKeywordsAndTranslate(
 - When in doubt, set is_relevant to false. We only want substantive pharmaceutical/biotech/healthcare news that professionals need to know.
 
 ## TASK 5: SUMMARY DEPTH & LENGTH (CRITICAL)
-- **Summaries MUST contain specific details** from the article body text. Do NOT write lazy/vague summaries.
-- If the article mentions specific numbers, company names, drug names — include them.
-- 핵심 정보(회사명, 약물명, 수치, 결과)를 빠짐없이 담되, 불필요한 배경 설명·홍보성 문구는 제외하세요. 완결성이 중요합니다.
+- **요약은 반드시 3문장 이내**로 작성하세요. 4문장 이상은 절대 금지입니다.
+- 3문장 안에 핵심 사실(회사명, 약물명, 수치, 결과)을 압축해서 담으세요. Do NOT write lazy/vague summaries.
+- 불필요한 배경 설명, 시장 전망, 홍보성 문구, 인용구는 제외하세요. 핵심 팩트만 포함하세요.
 - **CRITICAL: 모든 문장은 완전한 문장으로 끝내야 합니다. "..."로 끝내거나 문장을 중간에 자르는 것을 절대 금지합니다. 내용이 부족해도 아는 범위 내에서 완전한 문장으로 작성하세요.**
 - **CRITICAL: 모든 요약은 신문 문체(~했다, ~이다, ~됐다)로 통일합니다. "..."로 끝내거나 문장을 중간에 자르는 것은 절대 금지입니다.**
 - **HTML 엔티티 금지**: &ldquo; &rdquo; &lsquo; &rsquo; 등 HTML 엔티티를 절대 사용하지 마세요. 대신 유니코드 따옴표("", '')를 직접 사용하세요.
