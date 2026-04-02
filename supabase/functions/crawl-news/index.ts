@@ -1051,12 +1051,14 @@ async function extractKeywordsAndTranslate(
       // Hard-coded title keyword filter (safety net — catches what AI misses)
       const titleForFilter = (r.translated_title || article.title || "");
       const blockedTitlePatterns = [
-        /영입/, /위촉/, /선임(?!.*임상|.*신약|.*허가)/, /취임/, /임명/, /부임/,
+        /영입/, /위촉/, /선임(?!.*임상|.*신약|.*허가)/, /취임/, /임명/, /부임/, /인사/, /사외이사/,
+        /대표이사(?!.*파이프라인|.*임상|.*신약)/, /부회장/, /부사장/, /사장 선임/, /이사 선임/,
         /수상/, /시상/, /시상식/, /표창/, /공로상/, /감사패/, /선정(?!.*임상|.*신약|.*허가)/,
-        /개최(?!.*임상|.*결과|.*데이터|.*승인)/, // 개최 but allow if 임상/결과/데이터/승인 also present
+        /개최(?!.*임상|.*결과|.*데이터|.*승인)/, /기념행사/, /기념식/, /개원/, /준공/, /착공/,
         /론칭/, /런칭/,
-        /출시(?!.*FDA|.*EMA|.*MFDS|.*승인|.*허가|.*신약)/, // 출시 but allow if regulatory approval context
+        /출시(?!.*FDA|.*EMA|.*MFDS|.*승인|.*허가|.*신약)/,
         /시위/, /구강케어/, /프로그램(?!.*임상|.*신약|.*허가|.*R&D)/,
+        /주주총회(?!.*파이프라인|.*임상)/, /사옥/, /이전식/, /창립/, /주년/,
       ];
       if (blockedTitlePatterns.some(p => p.test(titleForFilter))) {
         console.log(`Skipping blocked-keyword article: ${titleForFilter}`);
