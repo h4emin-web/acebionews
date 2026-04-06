@@ -1655,7 +1655,7 @@ serve(async (req) => {
         }
         console.log(`DB inserted ${insertedCount}/${dedupedResults.length}`);
       }
-      console.log(`Inserted ${dedupedResults.length} new articles (${recentResults.length - dedupedResults.length} duplicates skipped)`);
+      console.log(`Inserted ${cleanResults.length} new articles (${recentResults.length - cleanResults.length} filtered/duplicates skipped)`);
     }
 
     return new Response(
