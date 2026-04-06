@@ -1629,10 +1629,19 @@ serve(async (req) => {
         dedupedResults.push(r);
       }
 
-      if (dedupedResults.length > 0) {
+      // Filter out articles with overly long summaries (AI summarization failed)
+      const cleanResults = dedupedResults.filter((a: any) => {
+        if (a.summary && a.summary.length > 400) {
+          console.log(`Skipped long summary (${a.summary.length} chars): ${a.title}`);
+          return false;
+        }
+        return true;
+      });
+
+      if (cleanResults.length > 0) {
         // Insert one by one to skip DB-level duplicates (unique index on title+source)
         let insertedCount = 0;
-        for (const article of dedupedResults) {
+        for (const article of cleanResults) {
           const { error } = await supabase.from("news_articles").insert(article);
           if (error) {
             if (error.code === "23505") {
@@ -1646,7 +1655,7 @@ serve(async (req) => {
         }
         console.log(`DB inserted ${insertedCount}/${dedupedResults.length}`);
       }
-      console.log(`Inserted ${dedupedResults.length} new articles (${recentResults.length - dedupedResults.length} duplicates skipped)`);
+      console.log(`Inserted ${cleanResults.length} new articles (${recentResults.length - cleanResults.length} filtered/duplicates skipped)`);
     }
 
     return new Response(
