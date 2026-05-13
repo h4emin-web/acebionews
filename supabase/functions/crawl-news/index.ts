@@ -8,6 +8,9 @@ const corsHeaders = {
 
 // RSS feed sources
 const RSS_SOURCES = [
+  // 데일리팜: Google News RSS로 우회 (직접 스크래핑 시 IP 차단)
+  { rss: "https://news.google.com/rss/search?q=site:dailypharm.com+%EC%A0%9C%EC%95%BD&hl=ko&gl=KR&ceid=KR:ko", name: "데일리팜", region: "국내", country: "KR" },
+  { rss: "https://news.google.com/rss/search?q=site:dailypharm.com+%EB%B0%94%EC%9D%B4%EC%98%A4&hl=ko&gl=KR&ceid=KR:ko", name: "데일리팜", region: "국내", country: "KR" },
   { rss: "https://www.fiercepharma.com/rss/xml", name: "FiercePharma", region: "해외", country: "US" },
   { rss: "https://www.pharmaceutical-technology.com/feed/", name: "Pharma Technology", region: "해외", country: "EU" },
   { rss: "https://www.expresspharma.in/feed/", name: "Express Pharma", region: "해외", country: "IN" },
@@ -15,10 +18,8 @@ const RSS_SOURCES = [
   { rss: "https://www.pharmatimes.com/rss", name: "PharmaTimes", region: "해외", country: "US" },
 ];
 
-// HTML sources — 약업신문 & 데일리팜 + 의약뉴스 + 히트뉴스 + fallback overseas
+// HTML sources — 의약뉴스 + 국내 기타 + 해외
 const HTML_SOURCES = [
-  { url: "https://www.dailypharm.com/user/news?group=%EC%A0%9C%EC%95%BD%C2%B7%EB%B0%94%EC%9D%B4%EC%98%A4", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
-  { url: "https://www.dailypharm.com/user/news?group=%EC%A0%9C%EC%95%BD%C2%B7%EB%B0%94%EC%9D%B4%EC%98%A4&page=2", name: "데일리팜", region: "국내", country: "KR", parser: "dailypharm" },
   { url: "https://www.newsmp.com/news/articleList.html?sc_section_code=S1N2&view_type=sm", name: "의약뉴스", region: "국내", country: "KR", parser: "newsmp" },
   { url: "https://www.kpanews.co.kr/news/articleList.html?sc_section_code=S1N4&view_type=sm", name: "약사공론", region: "국내", country: "KR", parser: "kpanews" },
   { url: "https://www.pharmnews.com/news/articleList.html?view_type=sm", name: "팜뉴스", region: "국내", country: "KR", parser: "pharmnews" },
@@ -126,11 +127,11 @@ function stripHtml(text: string): string {
 }
 
 // 문장 중간에 잘리지 않게 자연스러운 지점에서 자르기
-function cleanSummary(text: string, maxLen = 200): string {
+function cleanSummary(text: string, maxLen = 400): string {
   const cleaned = stripHtml(text);
   if (cleaned.length <= maxLen) return cleaned;
 
-  // 마침표/느낌표/물음표 기준으로 자르기
+  // 마침표 기준으로 자연스럽게 자르기
   const truncated = cleaned.slice(0, maxLen);
   const lastPunct = Math.max(
     truncated.lastIndexOf("다. "),
@@ -140,13 +141,12 @@ function cleanSummary(text: string, maxLen = 200): string {
     truncated.lastIndexOf(". "),
   );
 
-  if (lastPunct > maxLen * 0.5) {
-    // 마침표 뒤까지 포함해서 자르기
+  if (lastPunct > maxLen * 0.4) {
     const end = truncated.lastIndexOf(".", lastPunct) + 1;
     return cleaned.slice(0, end).trim();
   }
 
-  // 마침표 없으면 단어 단위로 자르기
+  // 마침표 없으면 단어 단위로
   const lastSpace = truncated.lastIndexOf(" ");
   return lastSpace > 0 ? cleaned.slice(0, lastSpace).trim() : truncated.trim();
 }
@@ -164,7 +164,10 @@ function parseRss(xml: string): Array<{ title: string; summary: string; url: str
     const dateM = block.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>|<published[^>]*>([\s\S]*?)<\/published>|<dc:date[^>]*>([\s\S]*?)<\/dc:date>|<updated[^>]*>([\s\S]*?)<\/updated>/i);
     const title = stripHtml(stripCdata(titleM?.[1] || ""));
     const summary = cleanSummary(stripCdata(descM?.[1] || descM?.[2] || descM?.[3] || ""));
-    const url = stripCdata(linkM?.[1] || linkM?.[2] || "").trim();
+    let url = stripCdata(linkM?.[1] || linkM?.[2] || "").trim();
+    // Google News RSS: <source url="실제URL"> 에서 원본 링크 추출
+    const sourceUrlM = block.match(/<source[^>]*url="([^"]+)"/i);
+    if (sourceUrlM) url = sourceUrlM[1].trim();
     const date = stripCdata(dateM?.[1] || dateM?.[2] || dateM?.[3] || dateM?.[4] || "");
     if (title) {
       items.push({ title, summary, url, date: normalizeDate(date) });
