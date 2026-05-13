@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, type MouseEvent } from "react";
-import { ChevronDown, ExternalLink, Globe, MapPin, Star } from "lucide-react";
+import { ChevronDown, ExternalLink, Star } from "lucide-react";
 import type { NewsItem } from "@/data/mockNews";
 import { countryFlagCodes } from "@/data/mockNews";
 
@@ -49,9 +49,11 @@ export const NewsCard = ({ news, index, onKeywordClick, isBookmarked, onToggleBo
         onClick={handleToggle}
       >
         {/* 국가/지역 배지 */}
-        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 ${news.region === "국내" ? "region-badge-domestic" : "region-badge-overseas"}`}>
-          {news.region === "국내" ? <MapPin className="w-2.5 h-2.5" /> : <Globe className="w-2.5 h-2.5" />}
-          {flagCode ? <img src={`https://flagcdn.com/16x12/${flagCode}.png`} alt={news.country} className="w-4 h-3 inline-block" /> : "🌍"}
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 ${news.region === "국내" ? "region-badge-domestic" : "region-badge-overseas"}`}>
+          {flagCode
+            ? <img src={`https://flagcdn.com/16x12/${flagCode}.png`} alt={news.country} className="w-4 h-3" />
+            : <span className="text-[10px]">{news.country}</span>
+          }
         </span>
 
         {/* 알림 키워드 */}

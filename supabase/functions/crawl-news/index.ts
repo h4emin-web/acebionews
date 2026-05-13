@@ -659,26 +659,85 @@ async function fetchWithFirecrawl(
   }
 }
 
+// Fetch DailyPharm with session cookie (2-step to bypass bot detection)
+async function fetchDailypharmHtml(url: string): Promise<string | null> {
+  const BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+  };
+
+  try {
+    // Step 1: 홈페이지 방문해서 세션 쿠키 획득
+    const homeResp = await fetch("https://www.dailypharm.com", {
+      headers: BROWSER_HEADERS,
+      signal: AbortSignal.timeout(15000),
+    });
+    const setCookies = homeResp.headers.get("set-cookie") || "";
+    const xsrf = setCookies.match(/XSRF-TOKEN=([^;]+)/)?.[1] || "";
+    const session = setCookies.match(/dailypharm_session=([^;]+)/)?.[1] || "";
+    const cookieHeader = [
+      xsrf ? `XSRF-TOKEN=${xsrf}` : "",
+      session ? `dailypharm_session=${session}` : "",
+    ].filter(Boolean).join("; ");
+
+    // Step 2: 뉴스 목록 요청 (쿠키 포함)
+    const resp = await fetch(url, {
+      headers: {
+        ...BROWSER_HEADERS,
+        "Referer": "https://www.dailypharm.com/",
+        "Sec-Fetch-Site": "same-origin",
+        ...(cookieHeader ? { "Cookie": cookieHeader } : {}),
+      },
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!resp.ok) {
+      console.error(`[데일리팜] fetch failed: ${resp.status}`);
+      return null;
+    }
+    return await resp.text();
+  } catch (err) {
+    console.error(`[데일리팜] fetch error:`, err);
+    return null;
+  }
+}
+
 // Fetch HTML and parse based on parser type
 async function fetchHtml(
   source: typeof HTML_SOURCES[0]
 ): Promise<Array<{ title: string; summary: string; url: string; date: string }>> {
   try {
     console.log(`Fetching HTML: ${source.name}`);
-    const resp = await fetch(source.url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Referer": source.url,
-      },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!resp.ok) {
-      console.error(`HTML fetch failed for ${source.name}: ${resp.status}`);
-      return [];
+
+    let html: string;
+
+    if (source.parser === "dailypharm") {
+      const result = await fetchDailypharmHtml(source.url);
+      if (!result) return [];
+      html = result;
+    } else {
+      const resp = await fetch(source.url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+          "Referer": "https://www.google.com",
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!resp.ok) {
+        console.error(`HTML fetch failed for ${source.name}: ${resp.status}`);
+        return [];
+      }
+      html = await resp.text();
     }
-    const html = await resp.text();
 
     let articles: Array<{ title: string; summary: string; url: string; date: string }> = [];
 
