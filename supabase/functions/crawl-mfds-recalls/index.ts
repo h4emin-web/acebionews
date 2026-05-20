@@ -6,109 +6,66 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function parseRecalls(html: string): Array<{ product_name: string; company: string; recall_reason: string; order_date: string; url: string }> {
+  const recalls: Array<{ product_name: string; company: string; recall_reason: string; order_date: string; url: string }> = [];
+  const rows = html.split(/<tr[^>]*>/gi);
+
+  for (const row of rows) {
+    if (!row.includes("회수명령일자")) continue;
+
+    const productMatch = row.match(/제품명<\/span>\s*<a[^>]*href="([^"]*)"[^>]*>([^<]+)<\/a>/i);
+    if (!productMatch) continue;
+    const product_name = productMatch[2].trim();
+    const itemPath = productMatch[1].trim();
+    const url = itemPath.startsWith("http") ? itemPath : `https://nedrug.mfds.go.kr${itemPath}`;
+
+    const companyMatch = row.match(/업체명<\/span>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i);
+    const company = companyMatch ? companyMatch[1].trim() : "";
+
+    const reasonMatch = row.match(/회수사유<\/span><span>([^<]+)<\/span>/i);
+    const recall_reason = reasonMatch ? reasonMatch[1].trim() : "";
+
+    const dateMatch = row.match(/회수명령일자<\/span><span>(\d{4}-\d{2}-\d{2})<\/span>/i);
+    const order_date = dateMatch ? dateMatch[1] : "";
+
+    if (product_name && order_date) {
+      recalls.push({ product_name, company, recall_reason, order_date, url });
+    }
+  }
+
+  return recalls;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-    const GEMINI_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (!FIRECRAWL_API_KEY || !GEMINI_KEY) throw new Error("Missing API keys");
-
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1. Scrape the recall page
-    const url = "https://nedrug.mfds.go.kr/pbp/CCBAI01";
-    console.log(`Scraping MFDS recalls: ${url}`);
-
-    const scrapeResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
+    console.log("Fetching MFDS recalls from nedrug.mfds.go.kr...");
+    const resp = await fetch("https://nedrug.mfds.go.kr/pbp/CCBAI01", {
       headers: {
-        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "ko-KR,ko;q=0.9",
       },
-      body: JSON.stringify({
-        url,
-        formats: ["markdown"],
-        onlyMainContent: true,
-        timeout: 20000,
-      }),
+      signal: AbortSignal.timeout(20000),
     });
 
-    if (!scrapeResp.ok) {
-      console.error(`Firecrawl scrape failed: ${scrapeResp.status}`);
-      throw new Error(`Scrape failed: ${scrapeResp.status}`);
-    }
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-    const scrapeData = await scrapeResp.json();
-    const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
-    console.log(`Markdown length: ${markdown.length}`);
-    if (!markdown || markdown.length < 50) {
-      return new Response(JSON.stringify({ success: true, count: 0, message: "No content" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // 2. Extract recall data with Gemini
-    const geminiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{
-                text: `You extract pharmaceutical recall/disposal (회수·폐기) notices from the Korean MFDS website.
-
-For each recall entry found in the table, extract:
-1. "product_name": the product name (제품명)
-2. "company": the company name (업체명)  
-3. "recall_reason": a concise Korean summary of the recall reason (회수사유) - keep under 50 characters
-4. "order_date": the order date (명령일자) in YYYY-MM-DD format
-5. "url": if a detail link is available, construct it. Otherwise use empty string.
-
-Return a JSON array of objects. Extract ALL items visible in the table.
-Only return valid JSON array, nothing else.
-
----
-
-${markdown.slice(0, 12000)}`
-              }],
-            },
-          ],
-          generationConfig: { responseMimeType: "application/json" },
-        }),
-      }
-    );
-
-    if (!geminiResp.ok) {
-      console.error(`Gemini error: ${geminiResp.status}`);
-      throw new Error(`Gemini failed: ${geminiResp.status}`);
-    }
-
-    const geminiData = await geminiResp.json();
-    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    let recalls: any[] = [];
-    try {
-      const parsed = JSON.parse(text);
-      recalls = Array.isArray(parsed) ? parsed : parsed.recalls || [];
-    } catch {
-      const match = text.match(/\[[\s\S]*\]/);
-      if (match) recalls = JSON.parse(match[0]);
-    }
-
-    console.log(`Extracted ${recalls.length} recall entries`);
+    const html = await resp.text();
+    const recalls = parseRecalls(html);
+    console.log(`Parsed ${recalls.length} recalls`);
 
     if (recalls.length === 0) {
-      return new Response(JSON.stringify({ success: true, count: 0 }), {
+      return new Response(JSON.stringify({ success: true, count: 0, message: "No recalls parsed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3. Dedup by product_name + order_date
     const { data: existing } = await supabase
       .from("mfds_recalls")
       .select("product_name, order_date");
@@ -116,27 +73,16 @@ ${markdown.slice(0, 12000)}`
       (existing || []).map((e: any) => `${e.product_name}|${e.order_date}`)
     );
 
-    const newRecalls = recalls
-      .filter((r: any) => r.product_name && r.company && r.order_date)
-      .map((r: any) => ({
-        product_name: r.product_name,
-        company: r.company,
-        recall_reason: r.recall_reason || "",
-        order_date: r.order_date,
-        url: r.url || "",
-      }))
-      .filter((r: any) => !existingSet.has(`${r.product_name}|${r.order_date}`));
+    const newRecalls = recalls.filter(
+      (r) => !existingSet.has(`${r.product_name}|${r.order_date}`)
+    );
 
     if (newRecalls.length > 0) {
       const { error } = await supabase.from("mfds_recalls").insert(newRecalls);
-      if (error) {
-        console.error("DB insert error:", error);
-        throw error;
-      }
+      if (error) throw error;
     }
 
-    console.log(`Inserted ${newRecalls.length} new recalls (${recalls.length - newRecalls.length} dupes skipped)`);
-
+    console.log(`Inserted ${newRecalls.length} new recalls`);
     return new Response(
       JSON.stringify({ success: true, total: recalls.length, inserted: newRecalls.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

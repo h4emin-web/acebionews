@@ -22,32 +22,72 @@ const isNew = (approvalDate: string) => {
   return diffMs / (1000 * 60 * 60 * 24) <= 3;
 };
 
+const PHASE_ORDER = ["1상", "1/2상", "2상", "2/3상", "3상", "4상", "생동성"];
+
+function normalizePhase(phase: string): string {
+  const p = phase.trim();
+  if (/^(임상\s*)?1(\s*\/\s*2)?\s*상/.test(p)) return p.includes("2") ? "1/2상" : "1상";
+  if (/^(임상\s*)?2(\s*\/\s*3)?\s*상/.test(p)) return p.includes("3") ? "2/3상" : "2상";
+  if (/^(임상\s*)?3\s*상/.test(p)) return "3상";
+  if (/^(임상\s*)?4\s*상/.test(p)) return "4상";
+  if (/생동/.test(p)) return "생동성";
+  return p;
+}
+
+const PhaseFilters = ({
+  phases,
+  selected,
+  onSelect,
+  counts,
+}: {
+  phases: string[];
+  selected: string | null;
+  onSelect: (p: string | null) => void;
+  counts: Record<string, number>;
+}) => (
+  <div className="flex flex-wrap gap-1.5 px-1">
+    <button
+      onClick={() => onSelect(null)}
+      className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+        selected === null
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+      }`}
+    >
+      전체
+    </button>
+    {phases.map((p) => (
+      <button
+        key={p}
+        onClick={() => onSelect(selected === p ? null : p)}
+        className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+          selected === p
+            ? "bg-primary text-primary-foreground border-primary"
+            : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+        }`}
+      >
+        {p}
+        <span className="ml-1 opacity-60">{counts[p] ?? 0}</span>
+      </button>
+    ))}
+  </div>
+);
+
 const TrialTable = ({ filtered, loading }: { filtered: Trial[]; loading: boolean }) => (
   <div className="overflow-x-auto">
     {loading ? (
       <PillLoader text="데이터 로딩 중..." />
+    ) : filtered.length === 0 ? (
+      <p className="text-xs text-muted-foreground text-center py-8">해당 단계 데이터 없음</p>
     ) : (
       <table className="w-full">
         <thead>
           <tr className="border-b border-border bg-muted/30">
-            <th className="px-3 py-3 text-left w-8">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">#</span>
-            </th>
-            <th className="px-3 py-3 text-left">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">의뢰자</span>
-            </th>
-            <th className="px-3 py-3 text-left">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">제품명</span>
-            </th>
-            <th className="px-3 py-3 text-left">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">임상시험</span>
-            </th>
-            <th className="px-3 py-3 text-left">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">단계</span>
-            </th>
-            <th className="px-3 py-3 text-left">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">승인일</span>
-            </th>
+            {["#", "의뢰자", "제품명", "임상시험", "단계", "승인일"].map((h) => (
+              <th key={h} className="px-3 py-3 text-left">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{h}</span>
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -94,6 +134,7 @@ export const IndApprovalSection = () => {
   const [data, setData] = useState<Trial[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (data.length > 0) return;
@@ -111,31 +152,58 @@ export const IndApprovalSection = () => {
     if (open || expanded) fetchData();
   }, [open, expanded]);
 
-  const filtered = useMemo(() => {
-    if (!search) return data;
-    const q = search.toLowerCase();
-    return data.filter(d =>
-      d.product_name.toLowerCase().includes(q) ||
-      d.sponsor.toLowerCase().includes(q) ||
-      d.trial_title.toLowerCase().includes(q) ||
-      d.phase.toLowerCase().includes(q)
+  // 단계 목록 및 카운트
+  const { phases, phaseCounts } = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const d of data) {
+      const p = normalizePhase(d.phase);
+      counts[p] = (counts[p] ?? 0) + 1;
+    }
+    const phases = PHASE_ORDER.filter((p) => counts[p]).concat(
+      Object.keys(counts).filter((p) => !PHASE_ORDER.includes(p)).sort()
     );
-  }, [data, search]);
+    return { phases, phaseCounts: counts };
+  }, [data]);
 
-  const searchBar = (size: "sm" | "lg" = "sm") => (
-    <div className="relative">
-      <Search className={`text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 ${size === "lg" ? "w-4 h-4" : "w-3.5 h-3.5"}`} />
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="의뢰자, 제품명, 임상시험 검색..."
-        className={`w-full pl-9 pr-4 rounded-lg bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${size === "lg" ? "py-2 text-sm" : "py-1.5 text-[12px]"}`}
+  const filtered = useMemo(() => {
+    let list = data;
+    if (selectedPhase) {
+      list = list.filter((d) => normalizePhase(d.phase) === selectedPhase);
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (d) =>
+          d.product_name.toLowerCase().includes(q) ||
+          d.sponsor.toLowerCase().includes(q) ||
+          d.trial_title.toLowerCase().includes(q) ||
+          d.phase.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [data, search, selectedPhase]);
+
+  const controls = (size: "sm" | "lg" = "sm") => (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className={`text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 ${size === "lg" ? "w-4 h-4" : "w-3.5 h-3.5"}`} />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="의뢰자, 제품명, 임상시험 검색..."
+          className={`w-full pl-9 pr-4 rounded-lg bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${size === "lg" ? "py-2 text-sm" : "py-1.5 text-[12px]"}`}
+        />
+      </div>
+      <PhaseFilters
+        phases={phases}
+        selected={selectedPhase}
+        onSelect={setSelectedPhase}
+        counts={phaseCounts}
       />
     </div>
   );
 
-  // 확대 모달
   if (expanded) {
     return (
       <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-start justify-center overflow-y-auto">
@@ -149,13 +217,14 @@ export const IndApprovalSection = () => {
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   식약처 임상시험 승인 현황 · {filtered.length}건
+                  {selectedPhase && <span className="ml-1 text-primary font-medium">· {selectedPhase}</span>}
                 </p>
               </div>
               <button onClick={() => setExpanded(false)} className="p-2 rounded-lg hover:bg-muted transition-colors">
                 <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
-            {searchBar("lg")}
+            {controls("lg")}
           </div>
           <TrialTable filtered={filtered} loading={loading} />
         </div>
@@ -168,6 +237,11 @@ export const IndApprovalSection = () => {
       <CollapsibleTrigger className="w-full px-5 py-3.5 border-b border-border flex items-center gap-2 hover:bg-muted/50 transition-colors">
         <Beaker className="w-4 h-4 text-primary" />
         <h2 className="text-sm font-semibold text-foreground">국내 IND 승인</h2>
+        {selectedPhase && (
+          <Badge className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/20">
+            {selectedPhase}
+          </Badge>
+        )}
         <button
           onClick={(e) => { e.stopPropagation(); setExpanded(true); setOpen(true); }}
           className="ml-auto mr-1 p-1 rounded hover:bg-muted transition-colors"
@@ -179,8 +253,11 @@ export const IndApprovalSection = () => {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="p-3 space-y-2">
-          {searchBar("sm")}
-          <p className="text-[10px] text-muted-foreground px-1">식약처 임상시험 승인 현황 · {filtered.length}건</p>
+          {controls("sm")}
+          <p className="text-[10px] text-muted-foreground px-1">
+            식약처 임상시험 승인 현황 · {filtered.length}건
+            {selectedPhase && <span className="ml-1 text-primary font-medium">· {selectedPhase}</span>}
+          </p>
           <div className="max-h-[400px] overflow-y-auto">
             <TrialTable filtered={filtered} loading={loading} />
           </div>
