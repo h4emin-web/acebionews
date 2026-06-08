@@ -103,12 +103,12 @@ async function summarizeWithAI(
   apiKey: string
 ): Promise<{ titleKo: string; summary: string }> {
   const resp = await fetch(
-    "https://ai.gateway.lovable.dev/v1/chat/completions",
+    "https://api.groq.com/openai/v1/chat/completions",
     {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
