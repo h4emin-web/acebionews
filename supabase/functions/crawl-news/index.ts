@@ -1090,10 +1090,10 @@ async function extractKeywordsAndTranslate(
       const errText = await aiResp.text().catch(() => "");
       console.error(`Groq API error: ${aiResp.status} - ${errText.slice(0, 200)}`);
       if (aiResp.status === 429) {
-        // Rate limited: wait and retry once
-        console.warn("Rate limited - waiting 30s and retrying");
+        // Rate limited: wait; second-pass retry happens at caller
+        console.warn("Rate limited - waiting 30s before returning");
         await new Promise((r) => setTimeout(r, 30000));
-        return extractKeywordsAndTranslateRetry(articles, GROQ_API_KEY, articleList);
+        return [];
       }
       if (aiResp.status === 413 && articles.length > 1) {
         // Payload too large: split in half and recurse
