@@ -1575,7 +1575,7 @@ serve(async (req) => {
       }
 
       if (i + batchSize < newFetched.length) {
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 4000));
       }
     }
 
