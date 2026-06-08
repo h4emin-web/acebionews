@@ -1190,6 +1190,22 @@ async function extractKeywordsAndTranslate(
       finalTitle = decodeEntities(finalTitle);
       finalSummary = decodeEntities(finalSummary);
 
+      // Reject any translation contaminated with non-Korean scripts (Thai, Hiragana, Katakana, CJK, Cyrillic, Devanagari, Arabic, Hebrew)
+      // Only Hangul, basic Latin (for parenthesized English names), digits, and punctuation are allowed.
+      const contaminationRegex = /[\u0E00-\u0E7F\u3040-\u309F\u30A0-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u0400-\u04FF\u0590-\u05FF\u0600-\u06FF\u0900-\u097F]/;
+      const titleContaminated = contaminationRegex.test(finalTitle);
+      const summaryContaminated = contaminationRegex.test(finalSummary);
+      if (titleContaminated || summaryContaminated) {
+        if (isForeign) {
+          console.log(`Skipping foreign-script contaminated translation: ${article.title.slice(0, 60)}`);
+          continue;
+        } else {
+          // Korean article: fallback to original
+          finalTitle = stripRegionTag(decodeEntities(article.title));
+          finalSummary = decodeEntities(article.summary || "");
+        }
+      }
+
       results.push({
         title: finalTitle,
         summary: finalSummary,
