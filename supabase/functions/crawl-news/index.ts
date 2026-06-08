@@ -1528,7 +1528,7 @@ serve(async (req) => {
     await enrichForeignArticles(newFetched);
 
     // 3. Extract keywords + translate foreign articles using Gemini
-    const batchSize = 25;
+    const batchSize = 6;
     const allResults: any[] = [];
     for (let i = 0; i < newFetched.length; i += batchSize) {
       const batch = newFetched.slice(i, i + batchSize);
