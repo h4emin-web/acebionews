@@ -953,21 +953,21 @@ async function enrichForeignArticles(
 // Use Gemini API to extract keywords AND translate/summarize foreign articles
 async function extractKeywordsAndTranslate(
   articles: Array<{ title: string; summary: string; source: string; region: string; country: string; url: string; date: string }>,
-  GOOGLE_GEMINI_API_KEY: string
+  GROQ_API_KEY: string
 ): Promise<any[]> {
   if (articles.length === 0) return [];
 
   const articleList = articles.map((a, i) => `[${i}] ${a.title} | ${a.summary}`).join("\n");
 
   try {
-    const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`,
+        Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash-lite",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
@@ -1196,8 +1196,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -1246,11 +1246,11 @@ serve(async (req) => {
         const batch = needsFix.slice(i, i + kBatchSize);
         const kwList = batch.map((a: any, idx: number) => `[${idx}] ${JSON.stringify(a.api_keywords)}`).join("\n");
         try {
-          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+          const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "gemini-2.5-flash-lite",
+              model: "llama-3.3-70b-versatile",
               messages: [
                 {
                   role: "system",
@@ -1334,11 +1334,11 @@ serve(async (req) => {
         const batch = needsTranslation.slice(i, i + tBatchSize);
         const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary?.slice(0, 200) || ""}`).join("\n");
         try {
-          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+          const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "gemini-2.5-flash-lite",
+              model: "llama-3.3-70b-versatile",
               messages: [
                 {
                   role: "system",
@@ -1422,11 +1422,11 @@ serve(async (req) => {
         const batch = needsSummary.slice(i, i + batchSize);
         const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary.slice(0, 200)}`).join("\n");
         try {
-          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+          const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`, "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "gemini-2.5-flash-lite",
+              model: "llama-3.3-70b-versatile",
               messages: [
                 {
                   role: "system",
@@ -1519,7 +1519,7 @@ serve(async (req) => {
     const allResults: any[] = [];
     for (let i = 0; i < newFetched.length; i += batchSize) {
       const batch = newFetched.slice(i, i + batchSize);
-      const results = await extractKeywordsAndTranslate(batch, GOOGLE_GEMINI_API_KEY);
+      const results = await extractKeywordsAndTranslate(batch, GROQ_API_KEY);
 
       // Fallback: collect articles the AI missed for a second translation pass
       const returnedUrls = new Set(results.map((r: any) => r.url));
@@ -1534,7 +1534,7 @@ serve(async (req) => {
       // Second pass: translate missed foreign articles individually
       if (missedArticles.length > 0) {
         console.log(`AI missed ${missedArticles.length} articles, attempting second translation pass`);
-        const retryResults = await extractKeywordsAndTranslate(missedArticles, GOOGLE_GEMINI_API_KEY);
+        const retryResults = await extractKeywordsAndTranslate(missedArticles, GROQ_API_KEY);
         const retryUrls = new Set(retryResults.map((r: any) => r.url));
         allResults.push(...retryResults);
         
