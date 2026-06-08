@@ -957,7 +957,8 @@ async function extractKeywordsAndTranslate(
 ): Promise<any[]> {
   if (articles.length === 0) return [];
 
-  const articleList = articles.map((a, i) => `[${i}] ${a.title} | ${a.summary}`).join("\n");
+  // Truncate to avoid Groq 413 (payload too large) errors on free tier
+  const articleList = articles.map((a, i) => `[${i}] ${a.title} | ${(a.summary || "").slice(0, 1200)}`).join("\n");
 
   try {
     const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -1086,9 +1087,21 @@ async function extractKeywordsAndTranslate(
     });
 
     if (!aiResp.ok) {
-      console.error(`Gemini API error: ${aiResp.status}`);
+      const errText = await aiResp.text().catch(() => "");
+      console.error(`Groq API error: ${aiResp.status} - ${errText.slice(0, 200)}`);
       if (aiResp.status === 429) {
-        console.warn("Rate limited - skipping this batch");
+        // Rate limited: wait; second-pass retry happens at caller
+        console.warn("Rate limited - waiting 30s before returning");
+        await new Promise((r) => setTimeout(r, 30000));
+        return [];
+      }
+      if (aiResp.status === 413 && articles.length > 1) {
+        // Payload too large: split in half and recurse
+        console.warn(`Payload too large with ${articles.length} articles - splitting`);
+        const mid = Math.ceil(articles.length / 2);
+        const left = await extractKeywordsAndTranslate(articles.slice(0, mid), GROQ_API_KEY);
+        const right = await extractKeywordsAndTranslate(articles.slice(mid), GROQ_API_KEY);
+        return [...left, ...right];
       }
       return [];
     }
@@ -1515,7 +1528,7 @@ serve(async (req) => {
     await enrichForeignArticles(newFetched);
 
     // 3. Extract keywords + translate foreign articles using Gemini
-    const batchSize = 25;
+    const batchSize = 6;
     const allResults: any[] = [];
     for (let i = 0; i < newFetched.length; i += batchSize) {
       const batch = newFetched.slice(i, i + batchSize);
@@ -1562,7 +1575,7 @@ serve(async (req) => {
       }
 
       if (i + batchSize < newFetched.length) {
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 4000));
       }
     }
 
