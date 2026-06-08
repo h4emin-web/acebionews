@@ -995,7 +995,13 @@ async function extractKeywordsAndTranslate(
 - For foreign articles, you MUST provide:
   - translated_title: Korean translation of the title. NEVER leave this empty. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
   - translated_summary: Korean summary in MAX 3 sentences with KEY FACTS. Include specific numbers, company names, drug names, indications. 신문 문체(~했다, ~이다, ~됐다) 사용. NEVER end with "..." or incomplete sentences. 불필요한 배경 설명 없이 핵심 사실만 포함.
-- **CRITICAL: Do NOT write vague summaries like "중요한 성과를 기록했습니다" — always include the SPECIFIC details (what company, what drug, what numbers, what market).**
+- **LANGUAGE PURITY (CRITICAL — NO EXCEPTIONS):**
+  - translated_title 과 translated_summary 는 오직 한국어(한글)로만 작성합니다.
+  - 일본어(ひらがな/カタカナ/漢字), 중국어(简体/繁體 한자), 태국어, 아랍어, 키릴문자, 데바나가리, 베트남어 등 한글이 아닌 문자를 절대 포함하지 마세요.
+  - 회사명·약물명·고유명사는 반드시 한글로 음차 번역하세요. 예: "Paravillis社" → "파라빌리스", "バイオジェン" → "바이오젠", "BioNTech" → "바이오엔테크".
+  - 영어 알파벳은 오직 괄호 안에 보조 표기 용도로만 허용됩니다. 예: "바이오젠(Biogen)". 영어 단어를 본문에 그대로 노출하지 마세요.
+  - "社", "株式会社", "公司", "บริษัท" 같은 외국어 접미사 사용 금지. 반드시 "사" 또는 "제약사"로 통일.
+  - 외국어 문자가 한 글자라도 섞이면 번역 실패로 간주합니다.
 - For Korean articles:
   - translated_title: set to the original Korean title AS-IS. NEVER add [국내]/[해외]/(국내)/(해외) prefixes.
   - translated_summary: 기사 핵심 내용을 3문장 이내로 요약. 구체적 수치·회사명·약물명 포함. 신문 문체(~했다, ~이다, ~됐다) 사용. 마지막 문장은 반드시 완전한 문장으로 끝내고 "..."로 절대 끝내지 마세요. 불필요한 배경 설명·홍보성 문구는 제외하고 핵심 사실만 포함.
