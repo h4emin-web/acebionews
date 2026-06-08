@@ -103,12 +103,12 @@ async function summarizeWithAI(
   apiKey: string
 ): Promise<{ titleKo: string; summary: string }> {
   const resp = await fetch(
-    "https://ai.gateway.lovable.dev/v1/chat/completions",
+    "https://api.groq.com/openai/v1/chat/completions",
     {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
@@ -164,9 +164,9 @@ serve(async (req) => {
 
   try {
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not set");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not set");
+    if (!LOVABLE_API_KEY) throw new Error("GROQ_API_KEY not set");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

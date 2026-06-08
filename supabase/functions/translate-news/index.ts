@@ -9,8 +9,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY not configured");
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -55,11 +55,11 @@ Deno.serve(async (req) => {
       const articleList = batch.map((a: any, idx: number) => `[${idx}] ${a.title} | ${a.summary?.slice(0, 200) || ""}`).join("\n");
 
       try {
-        const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+        const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
-          headers: { Authorization: `Bearer ${GOOGLE_GEMINI_API_KEY}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "gemini-2.5-flash-lite",
+            model: "llama-3.3-70b-versatile",
             messages: [
               {
                 role: "system",
