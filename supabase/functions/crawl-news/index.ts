@@ -1087,9 +1087,21 @@ async function extractKeywordsAndTranslate(
     });
 
     if (!aiResp.ok) {
-      console.error(`Gemini API error: ${aiResp.status}`);
+      const errText = await aiResp.text().catch(() => "");
+      console.error(`Groq API error: ${aiResp.status} - ${errText.slice(0, 200)}`);
       if (aiResp.status === 429) {
-        console.warn("Rate limited - skipping this batch");
+        // Rate limited: wait and retry once
+        console.warn("Rate limited - waiting 30s and retrying");
+        await new Promise((r) => setTimeout(r, 30000));
+        return extractKeywordsAndTranslateRetry(articles, GROQ_API_KEY, articleList);
+      }
+      if (aiResp.status === 413 && articles.length > 1) {
+        // Payload too large: split in half and recurse
+        console.warn(`Payload too large with ${articles.length} articles - splitting`);
+        const mid = Math.ceil(articles.length / 2);
+        const left = await extractKeywordsAndTranslate(articles.slice(0, mid), GROQ_API_KEY);
+        const right = await extractKeywordsAndTranslate(articles.slice(mid), GROQ_API_KEY);
+        return [...left, ...right];
       }
       return [];
     }
