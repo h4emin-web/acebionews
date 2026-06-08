@@ -97,10 +97,9 @@ serve(async (req) => {
       );
     }
 
-    // Generate AI summaries
-    const GEMINI_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (GEMINI_KEY) {
-      // Summarize all at once (max ~50 new trials expected)
+    // Generate AI summaries via Groq
+    const GROQ_KEY = Deno.env.get("GROQ_API_KEY");
+    if (GROQ_KEY) {
       const batch = allTrials.filter((t: any) => t.trial_title);
       if (batch.length > 0) {
         try {
@@ -115,17 +114,18 @@ serve(async (req) => {
 
 ${batch.map((t: any, idx: number) => `${idx + 1}. ${t.trial_title}`).join("\n")}`;
 
-          const geminiResp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_KEY}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-            }
-          );
-          if (geminiResp.ok) {
-            const geminiData = await geminiResp.json();
-            const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          const groqResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "gemma2-9b-it",
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.1,
+            }),
+          });
+          if (groqResp.ok) {
+            const groqData = await groqResp.json();
+            const text = groqData.choices?.[0]?.message?.content || "";
             const lines = text.split("\n").filter((l: string) => l.trim());
             for (const line of lines) {
               const match = line.match(/^(\d+)\|(.+)/);

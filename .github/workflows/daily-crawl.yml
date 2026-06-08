@@ -1,0 +1,38 @@
+name: Daily Crawl
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 매일 오전 9시 KST (UTC 00:00)
+  workflow_dispatch:      # 수동 실행 가능
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Crawl Clinical Trials (IND 승인)
+        run: |
+          curl -s -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/crawl-clinical-trials" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}' || true
+
+      - name: Crawl NMPA
+        run: |
+          curl -s -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/crawl-nmpa" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}' || true
+
+      - name: Crawl IBRIC Reports
+        run: |
+          curl -s -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/crawl-ibric" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"pages": 2, "limit": 10}' || true
+
+      - name: Translate Foreign News
+        run: |
+          curl -s -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/translate-news" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"limit": 50}' || true
