@@ -50,7 +50,7 @@ serve(async (req: Request) => {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "AI 서비스 오류" }), {
+      return new Response(JSON.stringify({ error: `Groq 오류 ${response.status}: ${errText}` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
