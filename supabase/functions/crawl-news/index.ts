@@ -957,7 +957,8 @@ async function extractKeywordsAndTranslate(
 ): Promise<any[]> {
   if (articles.length === 0) return [];
 
-  const articleList = articles.map((a, i) => `[${i}] ${a.title} | ${a.summary}`).join("\n");
+  // Truncate to avoid Groq 413 (payload too large) errors on free tier
+  const articleList = articles.map((a, i) => `[${i}] ${a.title} | ${(a.summary || "").slice(0, 1200)}`).join("\n");
 
   try {
     const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
